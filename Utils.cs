@@ -32,27 +32,6 @@ namespace NEMO
         EmitSignal,
     }
 
-    public class GeneField
-    {
-        public string name;
-        public int bitLength;
-        public ushort maxValue;
-
-        public GeneField(string name, int bitLength)
-        {
-            this.name = name;
-            this.bitLength = bitLength;
-
-            if (name == "srcType" || name == "tgtType"){
-                this.maxValue = (ushort) (Enum.GetNames(typeof(NType)).Length -1);
-            }
-            if (name == "srcFunc" || name == "tgtFunc"){
-                this.maxValue = (ushort) (Enum.GetNames(typeof(NFunc)).Length -1);
-            }
-            else { this.maxValue = (ushort) Math.Pow(2, bitLength); }
-        }
-    }
-
     public class Utils
     {
         public static Genome GenerateGenome(int length)
@@ -83,8 +62,41 @@ namespace NEMO
                 {
                     ushort value = (ushort) rand.Next(0, field.maxValue+1);
 
-                    //How to handle differing bitLengths?
-                    //How to set gene variable of name "field.name" to cutValue?
+                    switch (field.name)
+                    {
+                        case "srcType":
+                            gene.srcType = (NType)value;
+                            break;
+                        case "srcFunc":
+                            gene.srcFunc = (NFunc)value;
+                            break;
+                        case "srcID":
+                            gene.srcID = (byte)value;
+                            break;
+                        case "srcData":
+                            gene.srcData = value;
+                            break;
+
+                        case "tgtType":
+                            gene.tgtType = (NType)value;
+                            break;
+                        case "tgtFunc":
+                            gene.tgtFunc = (NFunc)value;
+                            break;
+                        case "tgtID":
+                            gene.tgtID = (byte)value;
+                            break;
+                        case "tgtData":
+                            gene.tgtData = value;
+                            break;
+
+                        case "slot":
+                            gene.slot = (byte)value;
+                            break;
+                        case "weight":
+                            gene.weight = value;
+                            break;
+                    }
                 }
             }
 
