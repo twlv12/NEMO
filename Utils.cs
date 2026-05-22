@@ -36,7 +36,7 @@ namespace NEMO
     {
         public string name;
         public int bitLength;
-        public int maxValue;
+        public ushort maxValue;
 
         public GeneField(string name, int bitLength)
         {
@@ -44,13 +44,12 @@ namespace NEMO
             this.bitLength = bitLength;
 
             if (name == "srcType" || name == "tgtType"){
-                this.maxValue = Enum.GetNames(typeof(NType)).Length -1;
+                this.maxValue = (ushort) (Enum.GetNames(typeof(NType)).Length -1);
             }
             if (name == "srcFunc" || name == "tgtFunc"){
-                this.maxValue = Enum.GetNames(typeof(NFunc)).Length -1;
+                this.maxValue = (ushort) (Enum.GetNames(typeof(NFunc)).Length -1);
             }
-
-            else { this.maxValue = (int) Math.Pow(2, bitLength); }
+            else { this.maxValue = (ushort) Math.Pow(2, bitLength); }
         }
     }
 
@@ -67,18 +66,25 @@ namespace NEMO
                     new GeneField("srcType", 2),
                     new GeneField("srcFunc", 6),
                     new GeneField("srcID", 8),
+                    new GeneField("srcData", 16),
 
                     new GeneField("tgtType", 2),
                     new GeneField("tgtFunc", 6),
                     new GeneField("tgtID", 8),
+                    new GeneField("tgtData", 16),
 
+                    new GeneField("slot", 2),
                     new GeneField("weight", 16),
-                    new GeneField("data", 16),
                 };
 
+                Random rand = new Random();
+                Gene gene = new Gene();
                 foreach (GeneField field in template)
                 {
+                    ushort value = (ushort) rand.Next(0, field.maxValue+1);
 
+                    //How to handle differing bitLengths?
+                    //How to set gene variable of name "field.name" to cutValue?
                 }
             }
 
