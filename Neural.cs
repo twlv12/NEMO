@@ -1,33 +1,6 @@
 ﻿
 namespace NEMO
 {
-
-    public class Genome
-    {
-        public List<Gene> genes;
-
-        public Genome(List<Gene> genes)
-        {
-            this.genes = genes;
-        }
-    }
-
-    public class Gene
-    {
-        public NType srcType; // 2/8 bits
-        public NFunc srcFunc; // 6/8 bits
-        public byte srcID; // 8/8 bits
-        public ushort srcData; //16 bits
-
-        public NType tgtType;
-        public NFunc tgtFunc;
-        public byte tgtID;
-        public ushort tgtData;
-
-        public byte slot; // 2/8 bits
-        public ushort weight; //16 bits
-    }
-
     public class Connection
     {
         public byte sourceID;
@@ -68,6 +41,13 @@ namespace NEMO
             slotASum = 0; slotBSum = 0;
             value = 0; memory = 0;
         }
+
+        public void Update()
+        {
+            //3. ADD CASE FOR NEW NEURON FUNC
+        }
+
+        //2. ADD NEURON METHOD
     }
 
     public class Brain

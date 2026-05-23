@@ -16,14 +16,16 @@ namespace NEMO
             {
                 this.maxValue = (ushort)(Enum.GetNames(typeof(NType)).Length - 1);
             }
-            if (name == "srcFunc" || name == "tgtFunc")
+            else if (name == "srcFunc" || name == "tgtFunc")
             {
                 this.maxValue = (ushort)(Enum.GetNames(typeof(NFunc)).Length - 1);
             }
-            else { this.maxValue = (ushort)Math.Pow(2, bitLength); }
+            else
+            {
+                this.maxValue = (ushort) ((ushort)(1 << bitLength) - 1);
+            }
         }
     }
-
     public class DataField
     {
         public required string name;
@@ -32,250 +34,155 @@ namespace NEMO
         public int bitLength;
 
         public int? maxValue;
+
+        public bool isSignedFloat = false;
+        public bool isFloat = false;
+        public bool isBool = false;
     }
 
-    public class NeuronDict
+    public enum NType : byte
     {
-        public Dictionary<NFunc, List<DataField>> NeuronDefinitions;
+        Sensor,
+        Math,
+        Action,
+    }
+    public enum NFunc : byte
+    {
+        Constant,
+        GetRandom,
+        Blockage,
+        Gradient,
+        MoveDelta,
+        Density,
+        GetSignal,
+        GeneSimilarity,
 
-        public NeuronDict()
+        Relay, //tanh sum+bias
+        Threshold,
+        Multiply,
+        Memory,
+        Compare, //slots A & B
+        //Sum up all of A and same with B
+        //Compare A & B using
+
+        MoveX,
+        MoveY,
+        Jitter,
+        EmitSignal,
+    } //1. ADD NEURON TYPE ENTRY
+
+    public static class NeuronDicts
+    {
+        public static Dictionary<NFunc, List<DataField>> DataDefinitions = new()
         {
-            NeuronDefinitions = new Dictionary<NFunc, List<DataField>>();
+            {NFunc.Constant, new()
+        {
+            new(){name="value", startBit=0, bitLength=8, isSignedFloat=true},
+        }},
+            {NFunc.Gradient, new()
+        {
+            new(){name="axis", startBit=0, bitLength=1, isBool=true},
+        }},
+            {NFunc.MoveDelta, new()
+        {
+            new(){name="axis", startBit=0, bitLength=1, isBool=true},
+        }},
+            {NFunc.Blockage, new()
+        {
+            new(){name="direction", startBit=0, bitLength=3},
+            new(){name="distance", startBit=3, bitLength=4},
+        }},
+            {NFunc.Density, new()
+        {
+            new(){name="radius", startBit=0, bitLength=2, maxValue=3},
+        }},
+            {NFunc.GetSignal, new()
+        {
+            new(){name="channel", startBit=0, bitLength=3},
+            new(){name="detectMode", startBit=3, bitLength=3, maxValue=1, isBool=true}, //maxValue here is temp for more modes later
+            new(){name="filterSpecies", startBit=6, bitLength=1, isBool=true},
+        }},
+            {NFunc.GeneSimilarity, new()
+        {
+            new(){name="direction", startBit=0, bitLength=2},
+            new(){name="distance", startBit=2, bitLength=3, maxValue=4},
+            new(){name="exact", startBit=5, bitLength=1, isBool=true},
+        }},
+            {NFunc.GetRandom, new()
+        {
 
-            //SENSOR
-            NeuronDefinitions.Add(
-                NFunc.Constant, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "value",
-                        startBit = 0,
-                        bitLength = 8,
-                    }
-                });
-            NeuronDefinitions.Add(
-                NFunc.Blockage, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "direction",
-                        startBit = 0,
-                        bitLength = 3,
-                    },
-                    new DataField
-                    {
-                        name = "distance",
-                        startBit = 5,
-                        bitLength = 4,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Gradient, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "axis",
-                        startBit = 0,
-                        bitLength = 1,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.MoveDelta, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "axis",
-                        startBit = 0,
-                        bitLength = 1,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Density, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "radius",
-                        startBit = 0,
-                        bitLength = 2,
-                        maxValue = 3,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.GetSignal, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "channel",
-                        startBit = 0,
-                        bitLength = 3,
-                    },
-                    new DataField
-                    {
-                        name = "detectMode",
-                        startBit = 3,
-                        bitLength = 3,
-                        maxValue = 1,
-                    },
-                    new DataField
-                    {
-                        name = "filterSpecies",
-                        startBit = 6,
-                        bitLength = 1,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.GeneSimilarity, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "direction",
-                        startBit = 0,
-                        bitLength = 2,
-                    },
-                    new DataField
-                    {
-                        name = "distance",
-                        startBit = 2,
-                        bitLength = 3,
-                        maxValue = 4,
-                    },
-                    new DataField
-                    {
-                        name = "exact",
-                        startBit = 5,
-                        bitLength = 1,
-                    },
-                });
+        }},
+            {NFunc.Relay, new()
+        {
+            new(){name="bias", startBit=0, bitLength=8, isSignedFloat=true},
+        }},
+            {NFunc.Threshold, new()
+        {
+            new(){name="threshold", startBit=0, bitLength=8, isSignedFloat=true},
+            new(){name="invert", startBit=8, bitLength=1, isBool=true},
+        }},
+            {NFunc.Multiply, new()
+        {
+            new(){name="grouped", startBit=0, bitLength=1, isBool=true},
+        }},
+            {NFunc.Memory, new()
+        {
+            new(){name="decayRate", startBit=0, bitLength=8, isFloat = true},
+        }},
+            {NFunc.Compare, new()
+        {
+            new(){name="direction", startBit=0, bitLength=1, isBool=true},
+            new(){name="sharpness", startBit=1, bitLength=8, isFloat=true},
+        }},
+            {NFunc.MoveX, new()
+        {
+            new(){name="sensitivity", startBit=0, bitLength=8, isFloat=true},
+        }},
+            {NFunc.MoveY, new()
+        {
+            new(){name="sensitivity", startBit=0, bitLength=8, isFloat=true},
+        }},
+            {NFunc.Jitter, new()
+        {
+            new(){name="sensitivity", startBit=0, bitLength=8, isFloat=true},
+        }},
+            {NFunc.EmitSignal, new()
+        {
+            new(){name="channel", startBit=0, bitLength=2},
+            new(){name="decayRate", startBit=2, bitLength=6, isFloat=true},
+            new(){name="species", startBit=8, bitLength=1, isBool=true},
+            new(){name="deltaVector", startBit=9, bitLength=1, isBool=true},
+        }},
+        };
 
-            //MATH
-            NeuronDefinitions.Add(
-                NFunc.Relay, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "bias",
-                        startBit = 0,
-                        bitLength = 8,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Threshold, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "threshold",
-                        startBit = 0,
-                        bitLength = 8,
-                    },
-                    new DataField
-                    {
-                        name = "invert",
-                        startBit = 8,
-                        bitLength = 1,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Multiply, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "mode",
-                        startBit = 0,
-                        bitLength = 1,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Memory, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "decayRate",
-                        startBit = 0,
-                        bitLength = 8,
-                    },
-                    new DataField
-                    {
-                        name = "mode",
-                        startBit = 8,
-                        bitLength = 1,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Compare, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "direction",
-                        startBit = 0,
-                        bitLength = 1,
-                    },
-                    new DataField
-                    {
-                        name = "sharpness",
-                        startBit = 1,
-                        bitLength = 8,
-                    },
-                });
-
-            //ACTION
-            NeuronDefinitions.Add(
-                NFunc.MoveX, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "sensitivity",
-                        startBit = 0,
-                        bitLength = 8,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.MoveY, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "sensitivity",
-                        startBit = 0,
-                        bitLength = 8,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.Jitter, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "sensitivity",
-                        startBit = 0,
-                        bitLength = 8,
-                    },
-                });
-            NeuronDefinitions.Add(
-                NFunc.EmitSignal, new List<DataField>
-                {
-                    new DataField
-                    {
-                        name = "channel",
-                        startBit = 0,
-                        bitLength = 2,
-                    },
-                    new DataField
-                    {
-                        name = "decayRate",
-                        startBit = 2,
-                        bitLength = 6,
-                    },
-                    new DataField
-                    {
-                        name = "depositSpecies",
-                        startBit = 8,
-                        bitLength = 1,
-                    },
-                    new DataField
-                    {
-                        name = "depositVector",
-                        startBit = 9,
-                        bitLength = 1,
-                    },
-                });
-        }
+        public static Dictionary<NType, List<NFunc>> FuncsOfType = new()
+        {
+            {NType.Sensor,
+                new(){
+                    NFunc.Constant,
+                    NFunc.GetRandom,
+                    NFunc.Blockage,
+                    NFunc.Gradient,
+                    NFunc.MoveDelta,
+                    NFunc.Density,
+                    NFunc.GetSignal,
+                    NFunc.GeneSimilarity,
+            }},
+            {NType.Math,
+                new(){
+                    NFunc.Relay,
+                    NFunc.Threshold,
+                    NFunc.Multiply,
+                    NFunc.Memory,
+                    NFunc.Compare,
+            }},
+            {NType.Action,
+                new(){
+                    NFunc.MoveX,
+                    NFunc.MoveY,
+                    NFunc.Jitter,
+                    NFunc.EmitSignal,
+            }},
+        };
     }
 }
