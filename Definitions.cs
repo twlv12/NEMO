@@ -35,6 +35,8 @@ namespace NEMO
 
         public int? maxValue;
 
+        public float mutateSensitivity = 1f;
+
         public bool isSignedFloat = false;
         public bool isFloat = false;
         public bool isBool = false;
@@ -99,7 +101,7 @@ namespace NEMO
             {NFunc.GetSignal, new()
         {
             new(){name="channel", startBit=0, bitLength=3},
-            new(){name="detectMode", startBit=3, bitLength=3, maxValue=1, isBool=true}, //maxValue here is temp for more modes later
+            new(){name="detectMode", startBit=3, bitLength=3, maxValue=1}, //maxValue here is temp for more modes later
             new(){name="filterSpecies", startBit=6, bitLength=1, isBool=true},
         }},
             {NFunc.GeneSimilarity, new()
@@ -127,7 +129,7 @@ namespace NEMO
         }},
             {NFunc.Memory, new()
         {
-            new(){name="decayRate", startBit=0, bitLength=8, isFloat = true},
+            new(){name="decayRate", startBit=0, bitLength=8, isFloat = true, mutateSensitivity = 0.33f},
         }},
             {NFunc.Compare, new()
         {
@@ -149,7 +151,7 @@ namespace NEMO
             {NFunc.EmitSignal, new()
         {
             new(){name="channel", startBit=0, bitLength=2},
-            new(){name="decayRate", startBit=2, bitLength=6, isFloat=true},
+            new(){name="decayRate", startBit=2, bitLength=6, isFloat=true, mutateSensitivity=0.25f},
             new(){name="species", startBit=8, bitLength=1, isBool=true},
             new(){name="deltaVector", startBit=9, bitLength=1, isBool=true},
         }},

@@ -60,10 +60,5 @@ namespace NEMO
             this.neurons = neurons;
             this.connections = connections;
         }
-
-        public void Update()
-        {
-
-        }
     }
 }

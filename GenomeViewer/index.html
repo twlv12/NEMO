@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+
+<body style="margin:0;background:#111;">
+    <div id="graph"
+         style="width:100vw;height:100vh;"></div>
+
+    <script>
+
+        const container =
+            document.getElementById("graph");
+
+        const data = {
+            nodes: new vis.DataSet([]),
+            edges: new vis.DataSet([])
+        };
+
+        const options = {
+            physics: {
+                enabled: true,
+                stabilization: false
+            },
+
+            nodes: {
+                shape: "dot",
+                size: 20,
+                font: {
+                    color: "white"
+                }
+            },
+
+            edges: {
+                smooth: true
+            }
+        };
+
+        const network =
+            new vis.Network(
+                container,
+                data,
+                options);
+
+        async function update() {
+            const response =
+                await fetch(
+                    "graph.json?t=" + Date.now());
+
+            const graph =
+                await response.json();
+
+            data.nodes.update(graph.nodes);
+            data.edges.update(graph.edges);
+        }
+
+        update();
+
+        setInterval(update, 300);
+
+    </script>
+</body>
+</html>
