@@ -22,7 +22,7 @@ namespace NEMO
     {
         public NType neuronType;
         public NFunc neuronFunc;
-        public byte ID;
+        public uint ID;
 
         public float value; //previous tick value, expired
         public float slotASum; //current tick values , pre-activation
@@ -31,12 +31,12 @@ namespace NEMO
 
         public ushort data;
 
-        public Neuron(byte ID, NType type, NFunc func, ushort data)
+        public Neuron(NeuronGeneData geneData)
         {
-            this.ID = ID;
-            this.neuronType = type;
-            this.neuronFunc = func;
-            this.data = data;
+            this.ID = geneData.ID;
+            this.neuronType = geneData.type;
+            this.neuronFunc = geneData.func;
+            this.data = geneData.data;
 
             slotASum = 0; slotBSum = 0;
             value = 0; memory = 0;

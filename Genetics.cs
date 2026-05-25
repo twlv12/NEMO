@@ -6,6 +6,7 @@ namespace NEMO
     public class Genome
     {
         public List<Gene> genes;
+        public int nextGeneID = 0;
 
         public Genome(List<Gene> genes)
         {
@@ -23,159 +24,173 @@ namespace NEMO
 
     public class Gene
     {
-        public NType srcType; // 2/8 bits
-        public NFunc srcFunc; // 6/8 bits
-        public byte srcID; // 8/8 bits
-        public ushort srcData; //16 bits
-
-        public NType tgtType;
-        public NFunc tgtFunc;
-        public byte tgtID;
-        public ushort tgtData;
+        public NeuronGeneData src;
+        public NeuronGeneData tgt;
 
         public byte slot; // 2/8 bits
         public ushort weight; //16 bits
 
         public bool disabled; //1 bit
+        public int graphID = -1;
 
         public override string ToString()
         {
             string srcDatas = "";
-            foreach (DataField dataField in NeuronDicts.DataDefinitions[srcFunc])
+            foreach (DataField dataField in NeuronDicts.DataDefinitions[src.func])
             {
                 srcDatas += $"{dataField.name.Substring(0, 4)}=";
-                srcDatas += Math.Round(GeneTools.DecodeField(srcData, dataField), 2);
+                srcDatas += Math.Round(GeneTools.DecodeField(src.data, dataField), 2);
                 srcDatas += "; ";
             }
             string tgtDatas = "";
-            foreach (DataField dataField in NeuronDicts.DataDefinitions[tgtFunc])
+            foreach (DataField dataField in NeuronDicts.DataDefinitions[tgt.func])
             {
                 tgtDatas += $"{dataField.name.Substring(0, 4)}=";
-                tgtDatas += Math.Round(GeneTools.DecodeField(tgtData, dataField), 2);
+                tgtDatas += Math.Round(GeneTools.DecodeField(tgt.data, dataField), 2);
                 tgtDatas += "; ";
             }
 
-            string srcText = $"{srcType.ToString()}:{srcFunc.ToString()}:{srcID.ToString()}:({srcDatas})";
-            string tgtText = $"{tgtType.ToString()}:{tgtFunc.ToString()}:{tgtID.ToString()}:({tgtDatas})";
+            string srcText = $"{src.type.ToString()}:{src.func.ToString()}:{src.ID.ToString()}:({srcDatas})";
+            string tgtText = $"{tgt.type.ToString()}:{tgt.func.ToString()}:{tgt.ID.ToString()}:({tgtDatas})";
 
             double decWeight = Math.Round((weight / 65535.0) * 2f - 1f, 2);
 
-            return $"{srcText} ==({decWeight})==> {tgtText}";
+            return $"{graphID}:::{srcText} ==({decWeight})==> {tgtText}";
         }
     }
 
-    public class GeneTools
+    public class NeuronGeneData
+    {
+        public NType type;
+        public NFunc func;
+        public uint ID;
+        public ushort data;
+    }
+
+    public static class GeneTools
     {
         public static Random rand = new Random();
 
-        public static List<GeneField> template = new List<GeneField>
-        {
-            new GeneField("srcType", 2),
-            new GeneField("srcFunc", 6),
-            new GeneField("srcData", 16),
-            new GeneField("srcID", 8),
-
-            new GeneField("tgtType", 2),
-            new GeneField("tgtFunc", 6),
-            new GeneField("tgtData", 16),
-            new GeneField("tgtID", 8),
-
-            new GeneField("slot", 1),
-            new GeneField("weight", 16),
-        };
-
         public static Genome MutateGenome(Genome genome)
         {
+            PrintMut($"Mutating Genome...");
+
             List<Gene> genesToRemove = new();
             List<Gene> genesToAdd = new();
 
-            List<(byte id, NType type, NFunc func, ushort data)> allNeurons = new();
+            HashSet<NeuronGeneData> mutatedNeurons = new();
+            List <NeuronGeneData> allNeurons = new();   
             foreach (Gene gene in genome.genes)
             {
-                if (!allNeurons.Contains((gene.srcID, gene.srcType, gene.srcFunc, gene.srcData)))
-                    allNeurons.Add((gene.srcID, gene.srcType, gene.srcFunc, gene.srcData));
+                if (!allNeurons.Contains(gene.src))
+                    allNeurons.Add(gene.src);
 
-                if (!allNeurons.Contains((gene.tgtID, gene.tgtType, gene.tgtFunc, gene.tgtData)))
-                    allNeurons.Add((gene.tgtID, gene.tgtType, gene.tgtFunc, gene.tgtData));
+                if (!allNeurons.Contains(gene.tgt))
+                    allNeurons.Add(gene.tgt);
             }
-            byte nextID = (byte) allNeurons.Count;
+            uint nextID = (allNeurons.Max(n => n.ID) + 1);
 
-            //Gene Duplication
-            if (rand.NextSingle() <= Config.geneDuplicationChance){
-                if (genome.genes.Count < Config.maxGenes){
-                    Gene chosenGene = genome.genes[rand.Next(0, genome.genes.Count)];
-                    genome.genes.Add(chosenGene);
-                }
-            }
+            float scale = Config.globalNewGeneRate / (float)genome.genes.Count;
 
             foreach (Gene gene in genome.genes)
             {
                 //Weight Flux
                 float w = (gene.weight / 65535f) * 2f - 1f;
-                w += Gaussian(Config.weightSharpness) * Config.weightFlux;
+                w += Gaussian(Config.weightSharpness) * Config.weightFlux *Config.globalMutationRate;
                 gene.weight = (ushort)((w + 1f) * 0.5f * 65535f);
 
                 //Data Flux Src
-                gene.srcData = MutateData(gene.srcData, gene.srcFunc);
+                if (!mutatedNeurons.Contains(gene.src))
+                {
+                    gene.src.data = MutateData(gene.src.data, gene.src.func);
+                    mutatedNeurons.Add(gene.src);
+                }
                 //Data Flux Tgt
-                gene.srcData = MutateData(gene.tgtData, gene.tgtFunc);
+                if (!mutatedNeurons.Contains(gene.tgt))
+                {
+                    gene.tgt.data = MutateData(gene.tgt.data, gene.tgt.func);
+                    mutatedNeurons.Add(gene.tgt);
+                }
 
                 //Slot Flip
-                if (rand.NextSingle() <= Config.slotFlipChance){
+                if (rand.NextSingle() <= 
+                    Config.slotFlipChance * Config.globalMutationRate*Config.topologyMutationRate)
+                {
                     gene.slot = (byte)(gene.slot == 0 ? 1 : 0);
+                    PrintMut($"{gene.graphID}:::Slot Flipped");
                 }
 
                 //Weight Sign Flip
-                if (rand.NextSingle() <= Config.wSignFlipChance){
-                    gene.weight = (ushort)-gene.weight;
+                if (rand.NextSingle() <= 
+                    Config.wSignFlipChance * Config.globalMutationRate * Config.topologyMutationRate)
+                {
+                    float w2 = (gene.weight / 65535f) * 2f - 1f;
+                    w2 = -w2;
+                    gene.weight = (ushort)((w2 + 1f) * 0.5f * 65535f);
+                    PrintMut($"{gene.graphID}:::W Sign Flipped");
                 }
 
                 //RewireOne & RegenOne
-                if (rand.NextSingle() <= Config.rewireOneChance)
+                if (rand.NextSingle() <= 
+                    Config.rewireOneChance * Config.globalMutationRate*Config.topologyMutationRate)
                 {
-                    var newNeuron = allNeurons[rand.Next(0, allNeurons.Count)];
-                    if (rand.NextSingle() > 0.5f) //Mutate Src
-                    {
-                        gene.srcType = newNeuron.type;
-                        gene.srcFunc = newNeuron.func;
-                        gene.srcID = newNeuron.id;
-                        gene.srcData = newNeuron.data;
+                    if (rand.NextSingle() > 0.5f){ //Mutate Src
+                        var compatible = allNeurons.Where(
+                            n => n.type == NType.Sensor
+                               || n.type == NType.Math).ToList();
+                        var newNeuron = compatible[rand.Next(0, compatible.Count)];
+                        gene.src = newNeuron;
+
+                        PrintMut($"{gene.graphID}:::Rewired SRC");
                     }
-                    else
-                    {
-                        gene.tgtType = newNeuron.type;
-                        gene.tgtFunc = newNeuron.func;
-                        gene.tgtID = newNeuron.id;
-                        gene.tgtData = newNeuron.data;
+                    else{
+                        var compatible = allNeurons.Where(
+                            n => n.type == NType.Action
+                               || n.type == NType.Math).ToList();
+                        var newNeuron = compatible[rand.Next(0, compatible.Count)];
+                        gene.tgt = newNeuron;
+
+                        PrintMut($"{gene.graphID}:::Rewired TGT");
                     }
                 }
-                if (rand.NextSingle() <= Config.regenOneChance){
-                    Gene newGene = GenerateGene(ref nextID, allNeurons);
-                    if (rand.NextSingle() > 0.5f) //Mutate Src
-                    {
-                        gene.srcType = newGene.srcType;
-                        gene.srcFunc = newGene.srcFunc;
-                        gene.srcID = newGene.srcID;
-                        gene.srcData = newGene.srcData;
+                if (rand.NextSingle() <= 
+                    Config.regenOneChance*Config.globalMutationRate*Config.topologyMutationRate)
+                {
+                    NeuronGeneData newN = new();
+                    bool mutateSource = rand.NextSingle() > 0.5f;
+
+                    if (mutateSource){
+                        newN.type = ChooseNeuronType(genome, true, false);
                     }
-                    else
-                    {
-                        gene.tgtType = newGene.tgtType;
-                        gene.tgtFunc = newGene.tgtFunc;
-                        gene.tgtID = newGene.tgtID;
-                        gene.tgtData = newGene.tgtData;
+                    else{
+                        newN.type = ChooseNeuronType(genome, false, true);
+                    }
+
+                    newN = RandNeuronOfType(newN.type, ref nextID);
+                    allNeurons.Add(newN);
+
+                    if (mutateSource){
+                        gene.src = newN;
+                        PrintMut($"{gene.graphID}:::Regenerated SRC");
+                    }
+                    else{
+                        gene.tgt = newN;
+                        PrintMut($"{gene.graphID}:::Regenerated TGT");
                     }
                 }
 
                 //Toggle Active
-                if (rand.NextSingle() <= Config.geneToggleChance){
+                if (rand.NextSingle() <= 
+                    Config.geneToggleChance*Config.globalMutationRate*Config.topologyMutationRate){
                     gene.disabled = !gene.disabled;
+                    PrintMut($"{gene.graphID}:::Toggled Active");
                 }
 
                 //Gene Splitting
-                if (rand.NextSingle() <= Config.geneSplitChance)
+                if (rand.NextSingle() <= 
+                    Config.geneSplitChance*scale*Config.globalMutationRate*Config.topologyMutationRate)
                 {
-                    (byte ID, NType type, NFunc func, ushort data) newNeuron = new();
+                    NeuronGeneData newNeuron = new();
 
                     newNeuron.type = (NType)1;
                     var funcs = NeuronDicts.FuncsOfType[newNeuron.type];
@@ -183,128 +198,144 @@ namespace NEMO
                     newNeuron.ID = nextID;
                     nextID++;
                     newNeuron.data = GenerateData(newNeuron.func);
+                    allNeurons.Add(newNeuron);
 
                     Gene gene1 = new Gene();
-                    gene1.srcType = gene.srcType;
-                    gene1.srcFunc = gene.srcFunc;
-                    gene1.srcID = gene.srcID;
-                    gene1.srcData = gene.srcData;
-
-                    gene1.tgtType = newNeuron.type;
-                    gene1.tgtFunc = newNeuron.func;
-                    gene1.tgtID = newNeuron.ID;
-                    gene1.tgtData = newNeuron.data;
-
+                    gene1.src = gene.src;
+                    gene1.tgt = newNeuron;
                     gene1.weight = 1;
                     gene1.slot = 0;
 
                     Gene gene2 = new Gene();
-                    gene2.srcType = newNeuron.type;
-                    gene2.srcFunc = newNeuron.func;
-                    gene2.srcID = newNeuron.ID;
-                    gene2.srcData = newNeuron.data;
-
-                    gene2.tgtType = gene.tgtType;
-                    gene2.tgtFunc = gene.tgtFunc;
-                    gene2.tgtID = gene.tgtID;
-                    gene2.tgtData = gene.tgtData;
-
+                    gene2.src = newNeuron;
+                    gene2.tgt = gene.tgt;
                     gene2.weight = gene.weight;
                     gene2.slot = gene.slot;
 
                     genesToAdd.Add(gene1);
                     genesToAdd.Add(gene2);
                     genesToRemove.Add(gene);
+
+                    PrintMut($"{gene.graphID}:::Split to {gene1.graphID}+{gene2.graphID}");
                 }
 
                 //Neuron Replacement
-                if (rand.NextSingle() <= Config.neuronReplaceChance)
+                if (rand.NextSingle() <= 
+                    Config.neuronReplaceChance*Config.globalMutationRate*Config.topologyMutationRate)
                 {
                     bool replacingSource;
-                    (byte ID, NType type, NFunc func, ushort data) oldNeuron = new();
+                    NeuronGeneData oldNeuron = new();
                     if (rand.NextSingle() <= 0.5f)
                     {
-                        oldNeuron.type = gene.srcType;
-                        oldNeuron.func = gene.srcFunc;
-                        oldNeuron.ID = gene.srcID;
-                        oldNeuron.data = gene.srcData;
+                        oldNeuron = gene.src;
                         replacingSource = true;
                     }
                     else
                     {
-                        oldNeuron.type = gene.tgtType;
-                        oldNeuron.func = gene.tgtFunc;
-                        oldNeuron.ID = gene.tgtID;
-                        oldNeuron.data = gene.tgtData;
+                        oldNeuron = gene.tgt;
                         replacingSource = false;
                     }
 
-                    (byte ID, NType type, NFunc func, ushort data) newNeuron = new();
+                    NeuronGeneData newNeuron = new();
                     newNeuron.ID = oldNeuron.ID;
 
                     if (rand.NextSingle() <= Config.sameTypeChance){
                         newNeuron.type = oldNeuron.type;
                     }
-                    else{ 
-                        newNeuron.type = NType.Math; 
+                    else{
+                        bool validAsSource = false;
+                        bool validAsTarget = false;
+                        foreach (Gene gene4 in genome.genes)
+                        {
+                            if (gene4.src == oldNeuron)
+                                validAsSource = true;
+                            if (gene4.tgt == oldNeuron)
+                                validAsTarget = true;
+                        }
+                        newNeuron.type = ChooseNeuronType(genome, validAsSource, validAsTarget);
                     }
 
-                    var funcs = NeuronDicts.FuncsOfType[newNeuron.type];
-                    newNeuron.func = funcs[rand.Next(0, funcs.Count)];
-                    newNeuron.data = GenerateData(newNeuron.func);
+                    newNeuron = RandNeuronOfType(newNeuron.type, ref nextID);
 
-                    if (replacingSource)
-                    {
-                        gene.srcType = newNeuron.type;
-                        gene.srcFunc = newNeuron.func;
-                        gene.srcID = newNeuron.ID;
-                        gene.srcData = newNeuron.data;
+                    if (replacingSource){
+                        gene.src = newNeuron;
                     }
-                    else
-                    {
-                        gene.tgtType = newNeuron.type;
-                        gene.tgtFunc = newNeuron.func;
-                        gene.tgtID = newNeuron.ID;
-                        gene.tgtData = newNeuron.data;
+                    else{
+                        gene.tgt = newNeuron;
                     }
 
                     foreach (Gene gene3 in genome.genes)
                     {
-                        if (gene3.srcID == oldNeuron.ID)
-                        {
-                            gene3.srcType = newNeuron.type;
-                            gene3.srcFunc = newNeuron.func;
-                            gene3.srcID = newNeuron.ID;
-                            gene3.srcData = newNeuron.data;
+                        if (gene3.src == oldNeuron){
+                            gene3.src = newNeuron;
                         }
-                        if (gene3.tgtID == oldNeuron.ID)
-                        {
-                            gene3.tgtType = newNeuron.type;
-                            gene3.tgtFunc = newNeuron.func;
-                            gene3.tgtID = newNeuron.ID;
-                            gene3.tgtData = newNeuron.data;
+                        if (gene3.tgt == oldNeuron){
+                            gene3.tgt = newNeuron;
                         }
+                    }
+
+                    allNeurons.Remove(oldNeuron);
+                    allNeurons.Add(newNeuron);
+                    PrintMut($"{gene.graphID}:::Replaced {oldNeuron.func.ToString()} -> {newNeuron.func.ToString()}");
+                }
+
+                //Gene Duplication
+                if (rand.NextSingle() <= 
+                    Config.geneDuplicationChance*scale*Config.globalMutationRate*Config.topologyMutationRate)
+                {
+                    if (genome.genes.Count < Config.maxGenes)
+                    {
+                        Gene chosenGene = genome.genes[rand.Next(0, genome.genes.Count)];
+                        Gene clone = new();
+                        clone.src = chosenGene.src;
+                        clone.tgt = chosenGene.tgt;
+                        clone.weight = chosenGene.weight;
+                        clone.slot = chosenGene.slot;
+                        clone.disabled = chosenGene.disabled;
+                        clone.graphID = genome.nextGeneID;
+                        genome.nextGeneID++;
+                        genesToAdd.Add(clone);
+                    }
+
+                    PrintMut($"{gene.graphID}:::Duplicated");
+                }
+
+                //Gene Insertion & Removal
+                if (rand.NextSingle() <= 
+                    Config.geneInsertionChance*scale*Config.globalMutationRate*Config.topologyMutationRate)
+                {
+                    if (genome.genes.Count < Config.maxGenes)
+                    {
+                        Gene newGene = GenerateGene(ref nextID, allNeurons);
+                        newGene.graphID = genome.nextGeneID;
+                        genome.nextGeneID++;
+                        genesToAdd.Add(newGene);
+                        PrintMut($"{newGene.graphID}:::<- Inserted New Gene");
+                    }
+                }
+                if (rand.NextSingle() <= 
+                    Config.geneRemovalChance *scale*Config.globalMutationRate*Config.topologyMutationRate)
+                {
+                    if (genome.genes.Count > Config.minGenes)
+                    {
+                        Gene geneToRemove = genome.genes[rand.Next(0, genome.genes.Count)];
+                        genesToRemove.Add(geneToRemove);
+                        PrintMut($"{geneToRemove.graphID}:::<- Removed");
                     }
                 }
             }
 
-            //Gene Insertion & Removal
-            if (rand.NextSingle() <= Config.geneInsertionChance){
-                if (genome.genes.Count < Config.maxGenes){
-                    genome.genes.Add(GenerateGene(ref nextID, allNeurons));
-                }
-            }
-            if (rand.NextSingle() <= Config.geneRemovalChance){
-                if (genome.genes.Count > Config.minGenes){
-                    genome.genes.RemoveAt(rand.Next(0,genome.genes.Count));
-                }
-            }
-
             foreach (Gene gene in genesToRemove){
-                genome.genes.Remove(gene);
+                if (genome.genes.Count > Config.minGenes){
+                    genome.genes.Remove(gene);
+                }
             }
             foreach (Gene gene in genesToAdd){
-                genome.genes.Add(gene);
+                if (genome.genes.Count < Config.maxGenes){
+                    gene.graphID = genome.nextGeneID;
+                    genome.nextGeneID++;
+                    genome.genes.Add(gene);
+                }
             }
             return genome;
         }
@@ -315,7 +346,7 @@ namespace NEMO
                 if (field.isSignedFloat)
                 {
                     float value = DecodeField(data, field);
-                    value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * field.mutateSensitivity;
+                    value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * field.mutateSensitivity * Config.globalMutationRate;
                     value = Math.Clamp(value, -1f, 1f);
                     ushort encoded = (ushort)(((value + 1f) * 0.5f)
                                      *
@@ -325,7 +356,7 @@ namespace NEMO
                 else if (field.isFloat)
                 {
                     float value = DecodeField(data, field);
-                    value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * 0.5f *field.mutateSensitivity;
+                    value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * 0.5f *field.mutateSensitivity * Config.globalMutationRate;
                     value = Math.Clamp(value, 0f, 1f);
                     ushort encoded = (ushort)(value
                                      *
@@ -362,36 +393,86 @@ namespace NEMO
             return data;
         }
 
-        public static Genome GenerateGenome(int length)
+        public static NType ChooseNeuronType(Genome genome, 
+            bool validAsSrc, bool validAsTgt)
         {
+            float sWeight = Config.baseSensorWeight;
+            float aWeight = Config.baseActionWeight;
+
+            if (validAsSrc && validAsTgt)
+                return NType.Math;
+            if (!validAsSrc)
+                sWeight = 0;
+            if (!validAsTgt)
+                aWeight = 0;
+
+            HashSet<NeuronGeneData> mathNeurons = new();
+            HashSet<NeuronGeneData> allNeurons = new();
+            foreach (Gene gene in genome.genes)
+            {
+                allNeurons.Add(gene.src);
+                allNeurons.Add(gene.tgt);
+                if (gene.src.type == NType.Math){
+                    mathNeurons.Add(gene.src);}
+                if (gene.tgt.type == NType.Math){
+                    mathNeurons.Add(gene.tgt);}
+            }
+
+            float mathFraction = (float)mathNeurons.Count / (float)allNeurons.Count;
+            float mWeight = (float) Math.Pow(1 - mathFraction, Config.mathSuppressionExponent);
+
+            mWeight *= Config.mathWeightMultiplier;
+
+            float total = sWeight + aWeight + mWeight;
+            float r = rand.NextSingle() * total;
+
+            if (r < sWeight){
+                return NType.Sensor;
+            }
+            r -= sWeight;
+            if (r < mWeight){
+                return NType.Math;
+            }
+            return NType.Action;
+        }
+        public static NeuronGeneData RandNeuronOfType(NType type, ref uint nextID)
+        {
+            NeuronGeneData newNeuron = new NeuronGeneData();
+            var funcs = NeuronDicts.FuncsOfType[type];
+            newNeuron.type = type;
+            newNeuron.func = funcs[rand.Next(0, funcs.Count)];
+            newNeuron.data = GenerateData(newNeuron.func);
+            newNeuron.ID = nextID;
+            nextID++;
+            return newNeuron;
+        }
+
+        public static Genome GenerateGenome()
+        {
+            int length = Config.baseGenes;
             Genome genome = new Genome(new List<Gene>());
-            List<(byte ID, NType type, NFunc func, ushort data)> existingNeurons = new();
-            byte nextNeuronID = 0;
+            List<NeuronGeneData> existingNeurons = new();
+            uint nextNeuronID = 0;
 
             for (int i = 0; i < length; i++)
             {
-                genome.genes.Add(GenerateGene(ref nextNeuronID, existingNeurons));
+                Gene newGene = GenerateGene(ref nextNeuronID, existingNeurons);
+                newGene.graphID = genome.nextGeneID;
+                genome.nextGeneID++;
+                genome.genes.Add(newGene);
             }
 
             return genome;
         }
-        public static Gene GenerateGene(ref byte nextNeuronID, List<(byte ID, NType type, NFunc func, ushort data)>  existingNeurons)
+        public static Gene GenerateGene(ref uint nextNeuronID, 
+            List<NeuronGeneData>  existingNeurons)
         {
             Gene gene = new Gene();
 
-            gene.srcType = (NType)rand.Next(0, 2); ;
-            var srcFuncs = NeuronDicts.FuncsOfType[gene.srcType];
-            gene.srcFunc = srcFuncs[rand.Next(srcFuncs.Count)];
-
-            (gene.srcID, gene.srcData) = GetNeuronID(
-                existingNeurons, gene.srcType, gene.srcFunc, ref nextNeuronID);
-
-            gene.tgtType = (NType)rand.Next(1, 3);
-            var tgtFuncs = NeuronDicts.FuncsOfType[gene.tgtType];
-            gene.tgtFunc = tgtFuncs[rand.Next(tgtFuncs.Count)];
-
-            (gene.tgtID, gene.tgtData) = GetNeuronID(
-                existingNeurons, gene.tgtType, gene.tgtFunc, ref nextNeuronID);
+            gene.src = GetOrCreateNeuron(
+                ref nextNeuronID, existingNeurons, true);
+            gene.tgt = GetOrCreateNeuron(
+                ref nextNeuronID, existingNeurons, false);
 
             gene.slot = (byte)rand.Next(0, 2);
             gene.weight = (ushort)rand.Next(0, 65536);
@@ -400,10 +481,48 @@ namespace NEMO
             return gene;
         }
 
+        public static NeuronGeneData GetOrCreateNeuron(ref uint nextNeuronID, 
+            List<NeuronGeneData> existingNeurons, bool isSource)
+        {
+            bool reuse =
+                existingNeurons.Count > 0
+                &&
+                rand.NextSingle() <= Config.neuronReuse;
+
+            if (reuse)
+            {
+                var compatible = existingNeurons.Where(
+                    n => 
+                    isSource ?n.type != NType.Action :n.type != NType.Sensor
+                    ).ToList();
+
+                if (compatible.Any()){
+                    return compatible[rand.Next(compatible.Count)];
+                }
+            }
+
+            NeuronGeneData neuron = new();
+
+            if (isSource){
+                neuron.type = (NType)rand.Next(0, 2); }
+            else{
+                neuron.type = (NType)rand.Next(1, 3); }
+
+            var funcs = NeuronDicts.FuncsOfType[neuron.type];
+            neuron.func = funcs[rand.Next(0, funcs.Count)];
+
+            neuron.ID = nextNeuronID;
+            nextNeuronID++;
+
+            neuron.data = GenerateData(neuron.func);
+            
+            existingNeurons.Add(neuron);
+            return neuron;
+
+        }
         public static ushort GenerateData(NFunc func)
         {
             ushort fullDataField = 0;
-
             foreach (DataField field in NeuronDicts.DataDefinitions[func])
             {
                 ushort dataField;
@@ -416,36 +535,11 @@ namespace NEMO
                 }
 
                 ushort shiftedDataField = (ushort)(dataField << field.startBit);
-
                 fullDataField |= shiftedDataField;
             }
-
             return fullDataField;
         }
-        public static (byte ID, ushort data) GetNeuronID(
-        List<(byte ID, NType type, NFunc func, ushort data)> existingNeurons,
-        NType type, NFunc func, ref byte nextNeuronID)
-        {
-            bool reuse =
-                existingNeurons.Count > 0
-                &&
-                rand.NextSingle() <= Config.neuronReuse;
-
-            if (reuse)
-            {
-                var neuron = existingNeurons[rand.Next(0, existingNeurons.Count)];
-                return (neuron.ID, neuron.data);
-            }
-
-            ushort data = GenerateData(func);
-
-            byte ID = nextNeuronID;
-            nextNeuronID++;
-
-            existingNeurons.Add((ID, type, func, data));
-            return (ID, data);
-        }
-
+        
         public static ushort SetField(ushort data, DataField field, ushort newData)
         {
             ushort mask = (ushort) 
@@ -491,28 +585,29 @@ namespace NEMO
             return Math.Round(rawVal,1).ToString();
         }
 
-        public static void RenderGraph(Genome genome)
+        public static void RenderGraph(Genome genome, string graphID)
         {
             HashSet<string> emittedNodes = new();
             List<object> nodes = new();
             List<object> edges = new();
 
-            string BuildNodeLabel(NFunc func, ushort data)
+            string BuildNodeLabel(string name, NeuronGeneData neuron)
             {
-                string label = func.ToString();
-                foreach (var field in NeuronDicts.DataDefinitions[func]){
-                    string val = DecodeFieldToString(data, field);
+                string label = name;
+                foreach (var field in NeuronDicts.DataDefinitions[neuron.func]){
+                    string val = DecodeFieldToString(neuron.data, field);
                     label += $"\n{field.name}={val}";
                 }
                 return label;
             }
-            void AddNode(string name, NType type, NFunc func, ushort data)
+            void AddNode(NeuronGeneData neuron)
             {
+                string name = $"{neuron.func}_{neuron.ID}";
                 if (emittedNodes.Contains(name))
                     return;
 
                 emittedNodes.Add(name);
-                string color = type switch
+                string color = neuron.type switch
                     {
                         NType.Sensor =>
                             "skyblue",
@@ -526,7 +621,8 @@ namespace NEMO
                 nodes.Add(new
                 {
                     id = name,
-                    label = BuildNodeLabel(func, data),
+                    label = neuron.func.ToString(),
+                    title = BuildNodeLabel(name, neuron),
                     color = color,
                     shape = "dot",
                     size = 25,
@@ -539,19 +635,11 @@ namespace NEMO
 
             foreach (Gene gene in genome.genes)
             {
-                string src = $"{gene.srcFunc}_{gene.srcID}";
-                string tgt = $"{gene.tgtFunc}_{gene.tgtID}";
+                string srcName = $"{gene.src.func}_{gene.src.ID}";
+                string tgtName = $"{gene.tgt.func}_{gene.tgt.ID}";
 
-                AddNode(
-                    src,
-                    gene.srcType,
-                    gene.srcFunc,
-                    gene.srcData); //src
-                AddNode(
-                    tgt,
-                    gene.tgtType,
-                    gene.tgtFunc,
-                    gene.tgtData); //tgt
+                AddNode(gene.src); //src
+                AddNode(gene.tgt); //tgt
 
                 float weight = (gene.weight / 65535f) * 2f - 1f;
                 string color = weight >= 0 ?"green" :"red";
@@ -559,8 +647,9 @@ namespace NEMO
 
                 edges.Add(new
                 {
-                    from = src,
-                    to = tgt,
+                    id = gene.graphID,
+                    from = srcName,
+                    to = tgtName,
                     color = color,
                     width = 1f + Math.Abs(weight) * 4f,
                     dashes = dashed,
@@ -576,10 +665,10 @@ namespace NEMO
                         WriteIndented = true
                     });
 
-            string path = @"C:\Users\ethan\source\repos\NEMO\GenomeViewer\graph.json";
+            string path = $"{Config.GraphOutputFolder}{graphID}.json";
 
             File.WriteAllText(path, json);
-            Console.WriteLine($"Wrote graph to {path}");
+            //Console.WriteLine($"{id}:::Wrote graph to {path}");
         }
 
         public static float Gaussian(float sharpness = 1f)
@@ -594,6 +683,12 @@ namespace NEMO
                 MathF.Cos(2f * MathF.PI * y);
 
             return normal / sharpness;
+        }
+
+        public static void PrintMut(string text){
+            if (Config.printMutations){
+                Console.WriteLine(text);
+            }
         }
     }
 }

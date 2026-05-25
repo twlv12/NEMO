@@ -1,31 +1,7 @@
 ﻿
 namespace NEMO
 {
-    public class GeneField
-    {
-        public string name;
-        public int bitLength;
-        public ushort maxValue;
 
-        public GeneField(string name, int bitLength)
-        {
-            this.name = name;
-            this.bitLength = bitLength;
-
-            if (name == "srcType" || name == "tgtType")
-            {
-                this.maxValue = (ushort)(Enum.GetNames(typeof(NType)).Length - 1);
-            }
-            else if (name == "srcFunc" || name == "tgtFunc")
-            {
-                this.maxValue = (ushort)(Enum.GetNames(typeof(NFunc)).Length - 1);
-            }
-            else
-            {
-                this.maxValue = (ushort) ((ushort)(1 << bitLength) - 1);
-            }
-        }
-    }
     public class DataField
     {
         public required string name;

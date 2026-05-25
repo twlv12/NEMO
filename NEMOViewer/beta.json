@@ -1,0 +1,596 @@
+{
+  "nodes": [
+    {
+      "id": "Threshold_28",
+      "label": "Threshold",
+      "title": "Threshold_28\nthreshold=-0.99\ninvert=Y|False",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_1",
+      "label": "MoveX",
+      "title": "MoveX_1\nsensitivity=0.15",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_62",
+      "label": "Relay",
+      "title": "Relay_62\nbias=0.11",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_59",
+      "label": "Threshold",
+      "title": "Threshold_59\nthreshold=0.77\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetSignal_64",
+      "label": "GetSignal",
+      "title": "GetSignal_64\nchannel=0\ndetectMode=0\nfilterSpecies=Y|False",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_50",
+      "label": "Compare",
+      "title": "Compare_50\ndirection=X|True\nsharpness=0.01",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_14",
+      "label": "Threshold",
+      "title": "Threshold_14\nthreshold=-0.97\ninvert=Y|False",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetRandom_48",
+      "label": "GetRandom",
+      "title": "GetRandom_48",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_49",
+      "label": "Threshold",
+      "title": "Threshold_49\nthreshold=-1\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_32",
+      "label": "Relay",
+      "title": "Relay_32\nbias=-1",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_35",
+      "label": "Memory",
+      "title": "Memory_35\ndecayRate=0.03",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Multiply_39",
+      "label": "Multiply",
+      "title": "Multiply_39\ngrouped=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_42",
+      "label": "Threshold",
+      "title": "Threshold_42\nthreshold=-0.93\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_25",
+      "label": "EmitSignal",
+      "title": "EmitSignal_25\nchannel=0\ndecayRate=0\nspecies=X|True\ndeltaVector=Y|False",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_44",
+      "label": "Compare",
+      "title": "Compare_44\ndirection=X|True\nsharpness=0.17",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Blockage_61",
+      "label": "Blockage",
+      "title": "Blockage_61\ndirection=7\ndistance=1",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GeneSimilarity_36",
+      "label": "GeneSimilarity",
+      "title": "GeneSimilarity_36\ndirection=0\ndistance=4\nexact=X|True",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_65",
+      "label": "Jitter",
+      "title": "Jitter_65\nsensitivity=0.14",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_58",
+      "label": "Relay",
+      "title": "Relay_58\nbias=-0.47",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_53",
+      "label": "Memory",
+      "title": "Memory_53\ndecayRate=0.59",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Constant_8",
+      "label": "Constant",
+      "title": "Constant_8\nvalue=-0.94",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_60",
+      "label": "Memory",
+      "title": "Memory_60\ndecayRate=0.01",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetRandom_54",
+      "label": "GetRandom",
+      "title": "GetRandom_54",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_29",
+      "label": "EmitSignal",
+      "title": "EmitSignal_29\nchannel=3\ndecayRate=0\nspecies=Y|False\ndeltaVector=X|True",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetSignal_27",
+      "label": "GetSignal",
+      "title": "GetSignal_27\nchannel=3\ndetectMode=0\nfilterSpecies=X|True",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_40",
+      "label": "Relay",
+      "title": "Relay_40\nbias=-0.91",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveY_16",
+      "label": "MoveY",
+      "title": "MoveY_16\nsensitivity=0.25",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_51",
+      "label": "Threshold",
+      "title": "Threshold_51\nthreshold=-0.42\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_63",
+      "label": "Relay",
+      "title": "Relay_63\nbias=-0.51",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_3",
+      "label": "MoveX",
+      "title": "MoveX_3\nsensitivity=0.12",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "from": "Threshold_28",
+      "to": "MoveX_1",
+      "color": "green",
+      "width": 2.7736478,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 1,
+      "from": "Relay_62",
+      "to": "Threshold_59",
+      "color": "green",
+      "width": 3.7236133,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 2,
+      "from": "GetSignal_64",
+      "to": "Threshold_59",
+      "color": "green",
+      "width": 3.7732968,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 3,
+      "from": "Compare_50",
+      "to": "Threshold_14",
+      "color": "green",
+      "width": 1.9827418,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 4,
+      "from": "GetRandom_48",
+      "to": "Threshold_49",
+      "color": "green",
+      "width": 4.3730373,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 5,
+      "from": "Threshold_49",
+      "to": "Relay_32",
+      "color": "red",
+      "width": 4.2147098,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 6,
+      "from": "Memory_35",
+      "to": "Threshold_28",
+      "color": "red",
+      "width": 4.111681,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 7,
+      "from": "Multiply_39",
+      "to": "Threshold_42",
+      "color": "red",
+      "width": 2.5387807,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 8,
+      "from": "Multiply_39",
+      "to": "EmitSignal_25",
+      "color": "red",
+      "width": 3.7563286,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 10,
+      "from": "Compare_44",
+      "to": "Compare_50",
+      "color": "red",
+      "width": 2.6839247,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 12,
+      "from": "Blockage_61",
+      "to": "Compare_50",
+      "color": "red",
+      "width": 1.0256963,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 13,
+      "from": "GeneSimilarity_36",
+      "to": "Threshold_59",
+      "color": "red",
+      "width": 4.3300676,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 14,
+      "from": "Relay_32",
+      "to": "Jitter_65",
+      "color": "green",
+      "width": 4.920531,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 15,
+      "from": "Relay_58",
+      "to": "Relay_62",
+      "color": "red",
+      "width": 2.9696956,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 16,
+      "from": "Memory_35",
+      "to": "Memory_53",
+      "color": "green",
+      "width": 4.6240177,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 18,
+      "from": "Constant_8",
+      "to": "MoveX_1",
+      "color": "green",
+      "width": 4.756466,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 19,
+      "from": "Constant_8",
+      "to": "MoveX_1",
+      "color": "red",
+      "width": 1.9594262,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 20,
+      "from": "Compare_50",
+      "to": "Threshold_14",
+      "color": "red",
+      "width": 1.8700695,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 22,
+      "from": "Compare_50",
+      "to": "Memory_60",
+      "color": "green",
+      "width": 4.9472647,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 23,
+      "from": "GetRandom_54",
+      "to": "EmitSignal_29",
+      "color": "red",
+      "width": 1.6004119,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 24,
+      "from": "GetSignal_27",
+      "to": "Relay_40",
+      "color": "red",
+      "width": 4.1973753,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 25,
+      "from": "Memory_53",
+      "to": "MoveY_16",
+      "color": "red",
+      "width": 4.081895,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 27,
+      "from": "Threshold_59",
+      "to": "Threshold_51",
+      "color": "green",
+      "width": 1.3150072,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 29,
+      "from": "GetRandom_48",
+      "to": "Relay_40",
+      "color": "green",
+      "width": 3.7637749,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 30,
+      "from": "GeneSimilarity_36",
+      "to": "Relay_63",
+      "color": "red",
+      "width": 4.629389,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 31,
+      "from": "Relay_63",
+      "to": "MoveX_3",
+      "color": "green",
+      "width": 2.0844283,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    }
+  ]
+}

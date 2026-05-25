@@ -1,0 +1,46 @@
+{
+  "minGenes": 8,
+  "baseGenes": 24,
+  "maxGenes": 64,
+  "neuronReuse": 0.6,
+    
+
+
+  "globalMutationRate": 1,
+  "topologyMutationRate": 1,
+  
+  "mathSuppressionExponent": 0.25,
+  "mathWeightMultiplier": 1.4,
+  "baseActionWeight": 0.7,
+  "baseSensorWeight": 0.7,
+
+  "weightSharpness": 7,
+  "weightFlux": 0.25,
+  "wSignFlipChance": 0.002,
+
+  "floatDataSharpness": 7,
+  "floatDataFlux": 0.25,
+  "boolFlipChance": 0.005,
+  "intRandChance": 0.005,
+
+  "slotFlipChance": 0.005,
+  "rewireOneChance": 0.004,
+  "regenOneChance": 0.0015,
+
+  "neuronReplaceChance": 0.001,
+  "sameTypeChance": 0.85,
+
+  "globalNewGeneRate": 1,
+
+  "geneToggleChance": 0.001,
+  "geneSplitChance": 0.001,
+  "geneDuplicationChance": 0.001,
+  "geneInsertionChance": 0.003,
+  "geneRemovalChance": 0.005,
+
+
+
+  "screenHeight": 1024,
+  "screenWidth": 1024,
+  "printMutations": false
+}

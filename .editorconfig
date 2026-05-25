@@ -5,3 +5,6 @@ dotnet_diagnostic.CS8600.severity = suggestion
 
 # CS8602: Dereference of a possibly null reference.
 dotnet_diagnostic.CS8602.severity = suggestion
+
+# CS8618: Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+dotnet_diagnostic.CS8618.severity = suggestion

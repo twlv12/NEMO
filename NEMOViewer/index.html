@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body style="
+    margin:0;
+    background:#111;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    padding:12px;
+    box-sizing:border-box;">
+
+    <div id="controls"
+         style="
+        position:fixed;
+        top:10px;
+        right:10px;
+        z-index:1000;
+        background:#222;
+        padding:12px;
+        border:1px solid #444;
+        color:white;
+        font-family:consolas;
+        min-width:220px;
+        max-height:90vh;
+        overflow-y:auto;
+     ">
+    </div>
+
+    <script>
+        const sliderDefs =
+            [
+                {
+                    key: "globalMutationRate",
+                    min: 0,
+                    max: 5,
+                    step: 0.25,
+                },
+                {
+                    key: "topologyMutationRate",
+                    min: 0,
+                    max: 5,
+                    step: 0.25,
+                },
+                {
+                    key: "globalNewGeneRate",
+                    min: 0,
+                    max: 5,
+                    step: 0.25,
+                },
+                {
+                    key: "mathSuppressionExponent",
+                    min: -1,
+                    max: 3,
+                    step: 0.25,
+                },
+                {
+                    key: "mathWeightMultiplier",
+                    min: 0,
+                    max: 2,
+                    step: 0.1,
+                },
+                {
+                    key: "baseActionWeight",
+                    min: 0,
+                    max: 2,
+                    step: 0.1,
+                },
+                {
+                    key: "baseSensorWeight",
+                    min: 0,
+                    max: 2,
+                    step: 0.1,
+                },
+                {
+                    key: "weightFlux",
+                    min: 0,
+                    max: 2,
+                    step: 0.01,
+                },
+                {
+                    key: "rewireOneChance",
+                    min: 0,
+                    max: 0.1,
+                    step: 0.001,
+                },
+                {
+                    key: "neuronReplaceChance",
+                    min: 0,
+                    max: 0.1,
+                    step: 0.001,
+                },
+                {
+                    key: "sameTypeChance",
+                    min: 0,
+                    max: 1,
+                    step: 0.05,
+                },
+
+            ];
+        const graphNames = [
+            "alpha",
+            "beta",
+            "gamma",
+            "delta"
+        ];
+        let runtimeConfig = {};
+        const networks = [];
+
+        const controls = document.getElementById("controls");
+        //#region resetButton
+        const resetButton = document.createElement("button");
+        resetButton.innerText = "Reload Default";
+        resetButton.style.width = "100%";
+        resetButton.style.marginBottom = "12px";
+        resetButton.style.padding = "6px";
+        resetButton.style.background = "#333";
+        resetButton.style.color = "white";
+        resetButton.style.border = "1px solid #555";
+        resetButton.onclick = async () => {
+            const response = await fetch("Config.json");
+            runtimeConfig = await response.json();
+            await fetch("/config",
+                {
+                    method: "POST",
+                    headers:
+                    {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify(runtimeConfig)
+                });
+            location.reload();
+        };
+        controls.appendChild(resetButton);
+        //#endregion
+
+        function createSlider(def) {
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "10px";
+
+            const label = document.createElement("div");
+            label.innerText =`${def.key}: ${runtimeConfig[def.key]}`;
+            label.style.fontSize = "12px";
+
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = def.min;
+            slider.max = def.max;
+            slider.step = def.step;
+            console.log(def.key, runtimeConfig[def.key]);
+            slider.value = runtimeConfig[def.key];;
+            slider.style.width = "100%";
+
+            slider.oninput = async () => {
+                const value = parseFloat(slider.value);
+                runtimeConfig[def.key] = value;;
+                label.innerText = `${def.key}: ${value.toFixed(4)}`;
+
+                await fetch("/config",
+                    {
+                        method: "POST",
+                        headers:
+                        {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(runtimeConfig)
+                    });
+            };
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(slider);
+
+            controls.appendChild(wrapper);
+        }
+        function createGraphContainer(name) {
+            const box = document.createElement("div");
+
+            box.style.width = "48%";
+            box.style.height = "500px";
+            box.style.background = "#1a1a1a";
+            box.style.border = "1px solid #333";
+            box.style.position = "relative";
+
+            const title = document.createElement("div");
+            title.innerText = name;
+
+            title.style.position = "absolute";
+            title.style.left = "10px";
+            title.style.top = "6px";
+            title.style.color = "white";
+            title.style.fontFamily = "consolas";
+            title.style.fontSize = "14px";
+            title.style.zIndex = "10";
+
+            const graphDiv = document.createElement("div");
+
+            graphDiv.style.width = "100%";
+            graphDiv.style.height = "100%";
+
+            box.appendChild(title);
+            box.appendChild(graphDiv);
+
+            document.body.appendChild(box);
+
+            const data = {
+                nodes: new vis.DataSet([]),
+                edges: new vis.DataSet([])
+            };
+
+            const options = {
+                physics: {
+                    solver: "forceAtlas2Based",
+                    forceAtlas2Based: {
+                        gravitationalConstant: -20,
+                        centralGravity: 0.002,
+                        springLength: 220,
+                        springConstant: 0.02,
+                        damping: 0.85,
+                        avoidOverlap: 1
+                    },
+
+                    maxVelocity: 2,
+                    minVelocity: 0.02,
+                    timestep: 0.35,
+                    stabilization: false
+                },
+                nodes: {
+                    shape: "dot",
+                    size: 14,
+                    font: {
+                        color: "white"
+                    }
+                },
+                edges: {
+                    smooth: {
+                        type: "dynamic"
+                    },
+
+                    font: {
+                        color: "white"
+                    }
+                }
+            };
+
+            const network = new vis.Network(graphDiv, data, options);
+            networks.push({ name, data, network });
+        }
+        async function updateGraph(graphObj) {
+            const response = await fetch(
+                graphObj.name + ".json?t=" + Date.now()
+            );
+
+            const graph = await response.json();
+            const nodeIDs = new Set(graph.nodes.map(n => n.id));
+            const edgeIDs = new Set(graph.edges.map(e => e.id));
+
+            graphObj.data.nodes.forEach(node => {
+                if (!nodeIDs.has(node.id)) {
+                    graphObj.data.nodes.remove(node.id);
+                }
+            });
+            graphObj.data.edges.forEach(edge => {
+                if (!edgeIDs.has(edge.id)) {
+                    graphObj.data.edges.remove(edge.id);
+                }
+            });
+
+            graphObj.data.nodes.update(graph.nodes);
+            graphObj.data.edges.update(graph.edges);
+        }
+        function updateAll() {
+            for (const graph of networks) {
+                updateGraph(graph);
+            }
+        }
+        async function loadConfig()  {
+            const response = await fetch("Config.json");
+            runtimeConfig = await response.json();
+            console.log(runtimeConfig);
+        }
+        async function start() {
+            await loadConfig();
+
+            for (const def of sliderDefs) {
+                createSlider(def);
+            }
+
+            for (const name of graphNames) {
+                createGraphContainer(name);
+            }
+
+            updateAll();
+            setInterval(updateAll, 250);
+        }
+
+        start();
+
+    </script>
+</body>
+</html>

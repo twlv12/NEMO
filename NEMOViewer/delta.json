@@ -1,0 +1,447 @@
+{
+  "nodes": [
+    {
+      "id": "GetSignal_44",
+      "label": "GetSignal",
+      "title": "GetSignal_44\nchannel=1\ndetectMode=0\nfilterSpecies=X|True",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_53",
+      "label": "Threshold",
+      "title": "Threshold_53\nthreshold=-1\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetRandom_3",
+      "label": "GetRandom",
+      "title": "GetRandom_3",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_58",
+      "label": "MoveX",
+      "title": "MoveX_58\nsensitivity=0.08",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetSignal_43",
+      "label": "GetSignal",
+      "title": "GetSignal_43\nchannel=3\ndetectMode=1\nfilterSpecies=X|True",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_56",
+      "label": "Threshold",
+      "title": "Threshold_56\nthreshold=-0.66\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_28",
+      "label": "Threshold",
+      "title": "Threshold_28\nthreshold=-0.33\ninvert=Y|False",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_45",
+      "label": "Jitter",
+      "title": "Jitter_45\nsensitivity=0.01",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_7",
+      "label": "Density",
+      "title": "Density_7\nradius=0",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_40",
+      "label": "Density",
+      "title": "Density_40\nradius=1",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_8",
+      "label": "Jitter",
+      "title": "Jitter_8\nsensitivity=0.16",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_60",
+      "label": "Threshold",
+      "title": "Threshold_60\nthreshold=-0.91\ninvert=X|True",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_48",
+      "label": "Compare",
+      "title": "Compare_48\ndirection=X|True\nsharpness=0.09",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_12",
+      "label": "Threshold",
+      "title": "Threshold_12\nthreshold=-0.98\ninvert=Y|False",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_59",
+      "label": "Threshold",
+      "title": "Threshold_59\nthreshold=0.54\ninvert=Y|False",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_37",
+      "label": "Compare",
+      "title": "Compare_37\ndirection=X|True\nsharpness=0",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_47",
+      "label": "Relay",
+      "title": "Relay_47\nbias=-1",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_57",
+      "label": "Jitter",
+      "title": "Jitter_57\nsensitivity=0.04",
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_46",
+      "label": "Compare",
+      "title": "Compare_46\ndirection=Y|False\nsharpness=0.01",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_26",
+      "label": "Threshold",
+      "title": "Threshold_26\nthreshold=-0.8\ninvert=Y|False",
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetSignal_49",
+      "label": "GetSignal",
+      "title": "GetSignal_49\nchannel=6\ndetectMode=0\nfilterSpecies=Y|False",
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": 1,
+      "from": "GetSignal_44",
+      "to": "Threshold_53",
+      "color": "green",
+      "width": 2.1220264,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 3,
+      "from": "GetRandom_3",
+      "to": "MoveX_58",
+      "color": "green",
+      "width": 1.5596399,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 4,
+      "from": "GetSignal_43",
+      "to": "Threshold_56",
+      "color": "red",
+      "width": 1.3023117,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 5,
+      "from": "Threshold_28",
+      "to": "Jitter_45",
+      "color": "green",
+      "width": 1.8079348,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 6,
+      "from": "Density_7",
+      "to": "Jitter_45",
+      "color": "green",
+      "width": 3.3025866,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 7,
+      "from": "GetRandom_3",
+      "to": "MoveX_58",
+      "color": "red",
+      "width": 4.842893,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 8,
+      "from": "Density_40",
+      "to": "Jitter_8",
+      "color": "green",
+      "width": 3.5398946,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 9,
+      "from": "Threshold_60",
+      "to": "Threshold_53",
+      "color": "red",
+      "width": 2.5917602,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 11,
+      "from": "Compare_48",
+      "to": "Threshold_56",
+      "color": "green",
+      "width": 4.7742887,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 12,
+      "from": "Threshold_12",
+      "to": "Threshold_59",
+      "color": "red",
+      "width": 2.3179522,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 13,
+      "from": "GetSignal_43",
+      "to": "Compare_37",
+      "color": "red",
+      "width": 1.2799726,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 14,
+      "from": "Relay_47",
+      "to": "Threshold_28",
+      "color": "green",
+      "width": 1.8001223,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 16,
+      "from": "Density_40",
+      "to": "Jitter_57",
+      "color": "green",
+      "width": 4.450309,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 18,
+      "from": "Threshold_60",
+      "to": "Threshold_59",
+      "color": "green",
+      "width": 3.8650951,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 20,
+      "from": "Compare_46",
+      "to": "Relay_47",
+      "color": "red",
+      "width": 1.0908828,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 21,
+      "from": "Compare_37",
+      "to": "MoveX_58",
+      "color": "green",
+      "width": 3.35288,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 22,
+      "from": "Threshold_26",
+      "to": "Compare_48",
+      "color": "green",
+      "width": 2.3937593,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 23,
+      "from": "Compare_46",
+      "to": "Jitter_8",
+      "color": "red",
+      "width": 2.2279851,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 25,
+      "from": "Threshold_28",
+      "to": "Compare_37",
+      "color": "red",
+      "width": 4.210315,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 27,
+      "from": "Density_40",
+      "to": "Threshold_12",
+      "color": "green",
+      "width": 1.4928665,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 29,
+      "from": "GetSignal_49",
+      "to": "Threshold_12",
+      "color": "red",
+      "width": 1.2919357,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    }
+  ]
+}
