@@ -1,0 +1,70 @@
+[
+  {
+    "func": "Constant",
+    "type": "Sensor"
+  },
+  {
+    "func": "GetRandom",
+    "type": "Sensor"
+  },
+  {
+    "func": "Blockage",
+    "type": "Sensor"
+  },
+  {
+    "func": "Gradient",
+    "type": "Sensor"
+  },
+  {
+    "func": "MoveDelta",
+    "type": "Sensor"
+  },
+  {
+    "func": "Density",
+    "type": "Sensor"
+  },
+  {
+    "func": "GetSignal",
+    "type": "Sensor"
+  },
+  {
+    "func": "GeneSimilarity",
+    "type": "Sensor"
+  },
+  {
+    "func": "Relay",
+    "type": "Math"
+  },
+  {
+    "func": "Threshold",
+    "type": "Math"
+  },
+  {
+    "func": "Multiply",
+    "type": "Math"
+  },
+  {
+    "func": "Memory",
+    "type": "Math"
+  },
+  {
+    "func": "Compare",
+    "type": "Math"
+  },
+  {
+    "func": "MoveX",
+    "type": "Action"
+  },
+  {
+    "func": "MoveY",
+    "type": "Action"
+  },
+  {
+    "func": "Jitter",
+    "type": "Action"
+  },
+  {
+    "func": "EmitSignal",
+    "type": "Action"
+  }
+]

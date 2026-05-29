@@ -6,13 +6,13 @@
     
 
 
-  "globalMutationRate": 1,
+  "globalMutationRate": 0,
   "topologyMutationRate": 1,
   
   "mathSuppressionExponent": 0.25,
   "mathWeightMultiplier": 1.4,
-  "baseActionWeight": 0.7,
-  "baseSensorWeight": 0.7,
+  "baseActionWeight": 0.55,
+  "baseSensorWeight": 0.85,
 
   "weightSharpness": 7,
   "weightFlux": 0.25,
@@ -42,5 +42,9 @@
 
   "screenHeight": 1024,
   "screenWidth": 1024,
-  "printMutations": false
+  "printMutations": false,
+
+
+
+  "currentView": 0
 }

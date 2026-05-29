@@ -104,10 +104,16 @@
             "alpha",
             "beta",
             "gamma",
-            "delta"
+            "delta",
         ];
         let runtimeConfig = {};
         const networks = [];
+        let neuronDefs = {};
+        let connectionStartNode = null;
+        let connectionGraph = null;
+        let selectedEdge = null;
+        let selectedGraph = null;
+        let selectedNode = null;
 
         const controls = document.getElementById("controls");
         //#region resetButton
@@ -135,6 +141,30 @@
             location.reload();
         };
         controls.appendChild(resetButton);
+        //#endregion
+        //#region buttonToBrain
+        const switchToBrain = document.createElement("button");
+        switchToBrain.innerText = "Generate Brains";
+        switchToBrain.style.width = "100%";
+        switchToBrain.style.marginBottom = "12px";
+        switchToBrain.style.padding = "6px";
+        switchToBrain.style.background = "#333";
+        switchToBrain.style.color = "white";
+        switchToBrain.style.border = "1px solid #555";
+        switchToBrain.onclick = async () => {
+            runtimeConfig.currentView = 1;
+            await fetch("/config",
+                {
+                    method: "POST",
+                    headers:
+                    {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(runtimeConfig)
+                });
+            window.location.href = "brain.html";
+        };
+        controls.appendChild(switchToBrain);
         //#endregion
 
         function createSlider(def) {
@@ -176,8 +206,8 @@
             controls.appendChild(wrapper);
         }
         function createGraphContainer(name) {
+            //#region Elements
             const box = document.createElement("div");
-
             box.style.width = "48%";
             box.style.height = "500px";
             box.style.background = "#1a1a1a";
@@ -186,7 +216,6 @@
 
             const title = document.createElement("div");
             title.innerText = name;
-
             title.style.position = "absolute";
             title.style.left = "10px";
             title.style.top = "6px";
@@ -196,20 +225,18 @@
             title.style.zIndex = "10";
 
             const graphDiv = document.createElement("div");
-
             graphDiv.style.width = "100%";
             graphDiv.style.height = "100%";
 
             box.appendChild(title);
             box.appendChild(graphDiv);
-
             document.body.appendChild(box);
+            //#endregion
 
             const data = {
                 nodes: new vis.DataSet([]),
                 edges: new vis.DataSet([])
             };
-
             const options = {
                 physics: {
                     solver: "forceAtlas2Based",
@@ -238,16 +265,482 @@
                     smooth: {
                         type: "dynamic"
                     },
-
                     font: {
                         color: "white"
+                    },
+                },
+            };
+            const network = new vis.Network(graphDiv, data, options);
+            const graphObj =
+            {
+                name,
+                data,
+                network,
+                box,
+                graphDiv
+            };
+            
+            network.on("click", async function (params) {
+                const nodeID = network.getNodeAt(params.pointer.DOM);
+
+                if (!params.event.srcEvent.shiftKey)
+                    return;
+                if (connectionStartNode == null) {
+                    if (nodeID) {
+                        connectionStartNode = nodeID;
+                        connectionGraph = graphObj;
+                        console.log("Selected source:",nodeID);
                     }
+                    return;
+                }
+                if (nodeID) {
+                    await createConnection(
+                        connectionGraph,
+                        connectionStartNode,
+                        nodeID
+                    );
+                    connectionStartNode = null;
+                    connectionGraph = null;
+                }
+                else {
+                    openAddNeuronMenu(
+                        graphObj,
+                        params.event.srcEvent.clientX,
+                        params.event.srcEvent.clientY
+                    );
+                }
+            });
+            network.on("click", async function (params) {
+                if (params.nodes.length > 0) {
+                    selectedNode = params.nodes[0];
+                    selectedEdge = null;
+                    selectedGraph = graphObj;
+                    return;
+                }
+                if (params.edges.length > 0) {
+                    const edge = graphObj.data.edges.get(params.edges[0]);
+                    selectedEdge = edge.id;
+                    selectedNode = null;
+                    selectedGraph = graphObj;
+
+                    console.log(selectedEdge);
+                    console.log(typeof selectedEdge);
+                    return;
+                }
+                selectedNode = null;
+                selectedEdge = null;
+                selectedGraph = null;
+            });
+            network.on("oncontext", async function (params) {
+                params.event.preventDefault();
+
+                const edgeID = network.getEdgeAt(params.pointer.DOM);
+                if (edgeID) {
+                    await fetch(
+                        "http://localhost:8000/editor",
+                        {
+                            method: "POST",
+                            headers:
+                            {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(
+                                {
+                                    action: "toggleSlot",
+                                    graph: graphObj.name,
+                                    edgeID: edgeID
+                                })
+                        });
+
+                    return;
+                }
+
+                const nodeID = network.getNodeAt(params.pointer.DOM);
+                if (nodeID) {
+                    openNeuronEditor(
+                        graphObj,
+                        nodeID,
+                        params.event.clientX,
+                        params.event.clientY
+                    );
+                }
+            });
+            graphDiv.addEventListener(
+                "keydown",
+                function (e) {
+                    if (e.key === "Escape") {
+                        selectedEdge = null;
+                        selectedGraph = null;
+                        connectionStartNode = null;
+                        connectionGraph = null;
+                    }
+                });
+            graphDiv.addEventListener("wheel",
+                async function (e) {
+                    if (!selectedEdge)
+                        return;
+
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    const delta = e.deltaY < 0
+                            ? 0.2
+                            : -0.2;
+                    console.log("SCROLL");
+
+                    await fetch(
+                        "http://localhost:8000/editor",
+                        {
+                            method: "POST",
+                            headers:
+                            {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(
+                                {
+                                    action: "changeWeight",
+                                    graph: selectedGraph.name,
+                                    edgeID: selectedEdge,
+                                    delta: delta
+                                })
+                        });
+                },
+                {
+                    passive: false,
+                    capture: true
+                });
+            graphDiv.addEventListener(
+                "keydown",
+                async function (e) {
+                    if (e.key.toLowerCase() !== "x")
+                        return;
+                    if (selectedEdge) {
+                        await fetch(
+                            "http://localhost:8000/editor",
+                            {
+                                method: "POST",
+                                headers:
+                                {
+                                    "Content-Type":"application/json"
+                                },
+
+                                body: JSON.stringify(
+                                    {
+                                        action: "deleteEdge",
+                                        graph: selectedGraph.name,
+                                        edgeID:selectedEdge
+                                    })
+                            });
+
+                        selectedEdge = null;
+                    }
+                });
+
+            networks.push({ name, data, network, box, graphDiv});
+        }
+
+        function openAddNeuronMenu(graphObj, x, y) {
+            const rect = graphObj.box.getBoundingClientRect();
+            const localX = x - rect.left;
+            const localY = y - rect.top;
+
+            //#region Elements
+            const menu = document.createElement("div");
+            menu.style.position = "absolute";
+            menu.style.left = localX + "px";
+            menu.style.top = localY + "px";
+            menu.style.background = "#222";
+            menu.style.padding = "20px";
+            menu.style.border = "1px solid #555";
+            graphObj.box.appendChild(menu);
+
+            const select = document.createElement("select");
+            select.style.background = "#1a1a1a";
+            select.style.color = "white";
+            select.style.border = "1px solid #555";
+            select.style.padding = "6px";
+            select.style.borderRadius = "6px";
+            select.style.fontFamily = "consolas";
+            select.style.fontSize = "13px";
+            select.style.outline = "none";
+            select.style.width = "180px";
+
+            const createButton = document.createElement("button");
+            createButton.innerText = "Create";
+            createButton.style.width = "76%";
+            createButton.style.marginBottom = "12px";
+            createButton.style.padding = "6px";
+            createButton.style.background = "#333";
+            createButton.style.color = "white";
+            createButton.style.border = "1px solid #555";
+            createButton.onclick = async () => {
+                const selectedFunc = select.value;
+                await fetch(
+                    "http://localhost:8000/editor",
+                    {
+                        method: "POST",
+                        headers:
+                        {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify(
+                            {
+                                action: "addNeuron",
+                                graph: graphObj.name,
+                                src:connectionStartNode,
+                                func:selectedFunc,
+                                x: localX,
+                                y: localY
+                            })
+                    });
+                connectionStartNode = null;
+                connectionGraph = null;
+                menu.remove();
+            };
+            //#endregion
+
+            for (const def of neuronDefs) {
+                const option = document.createElement("option");
+
+                option.value = def.func;
+                option.text =
+                    `${def.func} (${def.type})`;
+
+                select.appendChild(option);
+            }
+
+            menu.appendChild(createButton);
+            menu.appendChild(select);
+            menu.addEventListener(
+                "mousedown",
+                e => e.stopPropagation()
+            );
+            function closeMenu(e) {
+                if (!menu.contains(e.target))
+                {
+                    connectionStartNode = null;
+                    connectionGraph = null;
+                    menu.remove();
+                    document.removeEventListener(
+                        "mousedown",
+                        closeMenu);
+
+                }
+            }
+            document.addEventListener(
+                "mousedown",
+                closeMenu
+            );
+        }
+        function openNeuronEditor(graphObj, nodeID, x, y) {
+            const node = graphObj.data.nodes.get(nodeID);
+            const menu = document.createElement("div");
+            menu.style.position = "absolute";
+            menu.style.left = x + "px";
+            menu.style.top = y + "px";
+            menu.style.background = "#222";
+            menu.style.padding = "20px";
+            menu.style.border = "1px solid #555";
+            document.body.appendChild(menu);
+            const title = document.createElement("div");
+            title.innerText = node.label;
+            title.style.fontSize = "15px";
+            title.style.fontWeight = "bold";
+            title.style.marginBottom = "14px";
+            title.style.color = "#8fdfff";
+            title.style.fontFamily = "consolas";
+
+            menu.appendChild(title);
+            for (const field of node.fields) {
+                console.log(field);
+                menu.appendChild(createFieldEditor(field));
+            }
+
+            const saveButton = document.createElement("button");
+            saveButton.innerText = "Save";
+            saveButton.style.width = "100%";
+            saveButton.style.padding = "8px";
+            saveButton.style.marginTop = "10px";
+            saveButton.style.background = "#333";
+            saveButton.style.color = "white";
+            saveButton.style.border = "1px solid #555";
+            saveButton.onclick = async () => {
+                try {
+                    console.log("FETCH START");
+                    console.log(graphObj);
+                    console.log(nodeID);
+                    console.log(node.fields);
+                    const response =
+                        await fetch(
+                            "http://localhost:8000/editor",
+                            {
+                                method: "POST",
+                                headers:
+                                {
+                                    "Content-Type":"application/json"
+                                },
+
+                                body: JSON.stringify(
+                                    {
+                                        action: "editNeuron",
+                                        graph: graphObj.name,
+                                        nodeID: nodeID,
+                                        fields: node.fields
+                                    })
+                            });
+
+                    console.log(response);
+                    console.log(window.location.href);
+                    menu.remove();
+                }
+                catch (err) {
+                    console.error(err);
                 }
             };
+            menu.appendChild(saveButton);
 
-            const network = new vis.Network(graphDiv, data, options);
-            networks.push({ name, data, network });
+            menu.addEventListener(
+                "mousedown",
+                e => e.stopPropagation()
+            );
+            function closeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener(
+                        "mousedown",
+                        closeMenu);
+                }
+            }
+            document.addEventListener(
+                "mousedown",
+                closeMenu
+            );
         }
+        function createFieldEditor(field) {
+            const wrapper = document.createElement("div");
+
+            wrapper.style.display = "flex";
+            wrapper.style.flexDirection = "column";
+            wrapper.style.gap = "4px";
+            wrapper.style.marginBottom = "14px";
+            wrapper.style.fontFamily = "consolas";
+
+            const label = document.createElement("div");
+            label.innerText = field.name;
+
+            label.style.color = "white";
+            label.style.fontSize = "13px";
+            wrapper.appendChild(label);
+
+            if (field.type === "Float"
+                || field.type === "SignedFloat") {
+
+                const slider =document.createElement("input");
+                slider.type = "range";
+                if (field.type === "Float") {
+                    slider.min = 0;
+                    slider.max = 1;
+                }
+                else {
+                    slider.min = -1;
+                    slider.max = 1;
+                }
+
+                slider.step = 0.01;
+                slider.value = getFieldValue(field);
+                slider.style.width = "180px";
+                slider.style.cursor = "pointer";
+                const valueText = document.createElement("div");
+                valueText.style.color = "#8fdfff";
+                valueText.style.fontSize = "12px";
+                valueText.innerText = parseFloat(slider.value).toFixed(2);
+                slider.oninput = () => {
+                    const v = parseFloat(slider.value);
+                    setFieldValue(field, v);
+                    valueText.innerText = v.toFixed(2);
+                };
+                wrapper.appendChild(slider);
+                wrapper.appendChild(valueText);
+            }
+            if (field.type === "Bool") {
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = getFieldValue(field);
+                checkbox.style.transform = "scale(1.2)";
+                checkbox.style.cursor = "pointer";
+                checkbox.onchange = () => {
+                    setFieldValue(field, checkbox.checked);
+                };
+                wrapper.appendChild(checkbox);
+            }
+            if (field.type === "Int") {
+                const input = document.createElement("input");
+                input.type = "number";
+                input.step = 1;
+                input.value =getFieldValue(field);
+                input.style.width = "70px";
+                input.style.background = "#111";
+                input.style.color = "white";
+                input.style.border = "1px solid #555";
+                input.style.padding = "4px";
+
+                input.oninput = () => {
+                    setFieldValue(field, parseInt(input.value));
+                };
+                wrapper.appendChild(input);
+            }
+
+
+
+            return wrapper;
+        }
+        function getFieldValue(field) {
+            switch (field.type) {
+                case "Float":
+                case "SignedFloat":
+                    return field.floatVal;
+                case "Int":
+                    return field.intVal;
+                case "Bool":
+                    return field.boolVal;
+            }
+        }
+        function setFieldValue(field, value) {
+            switch (field.type) {
+                case "Float":
+                case "SignedFloat":
+                    field.floatVal = value;
+                    break;
+                case "Int":
+                    field.intVal = value;
+                    break;
+                case "Bool":
+                    field.boolVal = value;
+                    break;
+            }
+        }
+
+        async function createConnection(graphObj, srcNode, tgtNode) {
+            await fetch(
+                "http://localhost:8000/editor",
+                {
+                    method: "POST",
+                    headers:
+                    {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify(
+                        {
+                            action: "addConnection",
+                            graph: graphObj.name,
+                            src: srcNode,
+                            tgt: tgtNode
+                        })
+                });
+        }
+
         async function updateGraph(graphObj) {
             const response = await fetch(
                 graphObj.name + ".json?t=" + Date.now()
@@ -276,13 +769,19 @@
                 updateGraph(graph);
             }
         }
+
         async function loadConfig()  {
             const response = await fetch("Config.json");
             runtimeConfig = await response.json();
             console.log(runtimeConfig);
         }
+        async function loadNeuronDefs() {
+            const response = await fetch("NeuronDefs.json?t=" + Date.now());
+            neuronDefs = await response.json();
+        }
         async function start() {
             await loadConfig();
+            await loadNeuronDefs();
 
             for (const def of sliderDefs) {
                 createSlider(def);

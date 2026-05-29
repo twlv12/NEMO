@@ -1,0 +1,148 @@
+{
+  "Constant": [
+    {
+      "name": "value",
+      "type": "SignedFloat"
+    }
+  ],
+  "Gradient": [
+    {
+      "name": "axis",
+      "type": "Int"
+    }
+  ],
+  "MoveDelta": [
+    {
+      "name": "axis",
+      "type": "Bool"
+    }
+  ],
+  "Blockage": [
+    {
+      "name": "direction",
+      "type": "Float"
+    },
+    {
+      "name": "distance",
+      "type": "Float"
+    }
+  ],
+  "Density": [
+    {
+      "name": "radius",
+      "type": "Float"
+    }
+  ],
+  "GetSignal": [
+    {
+      "name": "channel",
+      "type": "Float"
+    },
+    {
+      "name": "detectMode",
+      "type": "Float"
+    },
+    {
+      "name": "filterSpecies",
+      "type": "Bool"
+    }
+  ],
+  "GeneSimilarity": [
+    {
+      "name": "direction",
+      "type": "Float"
+    },
+    {
+      "name": "distance",
+      "type": "Float"
+    },
+    {
+      "name": "exact",
+      "type": "Bool"
+    }
+  ],
+  "GetRandom": [
+    {
+      "name": "averageCount",
+      "type": "Int"
+    }
+  ],
+  "Relay": [
+    {
+      "name": "bias",
+      "type": "SignedFloat"
+    }
+  ],
+  "Threshold": [
+    {
+      "name": "threshold",
+      "type": "SignedFloat"
+    },
+    {
+      "name": "invert",
+      "type": "Bool"
+    },
+    {
+      "name": "sharpness",
+      "type": "Float"
+    }
+  ],
+  "Multiply": [
+    {
+      "name": "grouped",
+      "type": "Bool"
+    }
+  ],
+  "Memory": [
+    {
+      "name": "decayRate",
+      "type": "Float"
+    }
+  ],
+  "Compare": [
+    {
+      "name": "direction",
+      "type": "Bool"
+    },
+    {
+      "name": "sharpness",
+      "type": "Float"
+    }
+  ],
+  "MoveX": [
+    {
+      "name": "sensitivity",
+      "type": "Float"
+    }
+  ],
+  "MoveY": [
+    {
+      "name": "sensitivity",
+      "type": "Float"
+    }
+  ],
+  "Jitter": [
+    {
+      "name": "sensitivity",
+      "type": "Float"
+    }
+  ],
+  "EmitSignal": [
+    {
+      "name": "channel",
+      "type": "Int"
+    },
+    {
+      "name": "decayRate",
+      "type": "Float"
+    },
+    {
+      "name": "species",
+      "type": "Bool"
+    },
+    {
+      "name": "deltaVector",
+      "type": "Bool"
+    }
+  ]
+}

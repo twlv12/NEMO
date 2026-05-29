@@ -37,6 +37,7 @@ namespace NEMO
         public int screenHeight { get; set; }
         public int screenWidth { get; set; }
         public bool printMutations { get; set; }
+        public int currentView { get; set; }
         #endregion
 
     }
@@ -45,6 +46,8 @@ namespace NEMO
         //SET THESE!!
         public static string MainConfigFile = @"C:\Users\ethan\source\repos\NEMO\NemoViewer\Config.json"; //FILE
         public static string RuntimeConfigFile = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\runtimeConfig.json"; //FILE
+        public static string StimuliFile = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\stimuli.json"; //FILE
+        public static string EditorActionFile = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\editorAction.json"; //FILE
         public static string GraphOutputFolder = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\"; //FOLDER
 
         #region Set1
@@ -79,6 +82,7 @@ namespace NEMO
         public static int screenHeight;
         public static int screenWidth;
         public static bool printMutations;
+        public static int currentView;
         #endregion
 
         public static ConfigData configData = new();

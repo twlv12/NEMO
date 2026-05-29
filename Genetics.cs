@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.VisualBasic.FileIO;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace NEMO
@@ -19,6 +20,31 @@ namespace NEMO
             {
                 Console.WriteLine(gene.ToString());
             }
+        }
+
+        public uint GetNextNeuronID()
+        {
+            uint max = 0;
+            foreach (var gene in genes)
+            {
+                if (gene.src.ID > max)
+                    max = gene.src.ID;
+                if (gene.tgt.ID > max)
+                    max = gene.tgt.ID;
+            }
+            return max + 1;
+        }
+        public int GetNextGeneID()
+        {
+            int max = 0;
+
+            foreach (var gene in genes)
+            {
+                if (gene.graphID > max)
+                    max = gene.graphID;
+            }
+
+            return max + 1;
         }
     }
 
@@ -343,7 +369,7 @@ namespace NEMO
         {
             foreach (DataField field in NeuronDicts.DataDefinitions[func])
             {
-                if (field.isSignedFloat)
+                if (field.fieldType==FType.SignedFloat)
                 {
                     float value = DecodeField(data, field);
                     value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * field.mutateSensitivity * Config.globalMutationRate;
@@ -353,7 +379,7 @@ namespace NEMO
                                      ((1 << field.bitLength) - 1));
                     data = SetField(data, field, encoded);
                 }
-                else if (field.isFloat)
+                else if (field.fieldType==FType.Float)
                 {
                     float value = DecodeField(data, field);
                     value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * 0.5f *field.mutateSensitivity * Config.globalMutationRate;
@@ -363,7 +389,7 @@ namespace NEMO
                                      ((1 << field.bitLength) - 1));
                     data = SetField(data, field, encoded);
                 }
-                else if (field.isBool)
+                else if (field.fieldType==FType.Bool)
                 {
                     if (rand.NextSingle() < Config.boolFlipChance)
                     {
@@ -480,6 +506,46 @@ namespace NEMO
 
             return gene;
         }
+        public static Gene CreateGene(NeuronGeneData src,NeuronGeneData tgt,
+            byte slot,ushort weight)
+        {
+            return new Gene
+            {
+                src = src,
+                tgt = tgt,
+                slot = slot,
+                weight = weight,
+                disabled = false
+            };
+        }
+        public static Genome GenerateSimpleGenome()
+        {
+            NeuronGeneData constant = new()
+            {
+                type = NType.Sensor,
+                func = NFunc.Constant,
+                ID = 0,
+                data = GenerateData(NFunc.Constant)
+            };
+            NeuronGeneData relay = new()
+            {
+                type = NType.Math,
+                func = NFunc.Relay,
+                ID = 1,
+                data = GenerateData(NFunc.Relay)
+            };
+            Gene gene = new Gene
+            {
+                src = constant,
+                tgt = relay,
+                slot = 0,
+                weight = EncodeFloat(1,16,FType.SignedFloat)
+            };
+            List<Gene> genes = new List<Gene> { gene };
+            Genome genome = new Genome(genes);
+
+            return genome;
+        }
 
         public static NeuronGeneData GetOrCreateNeuron(ref uint nextNeuronID, 
             List<NeuronGeneData> existingNeurons, bool isSource)
@@ -560,10 +626,10 @@ namespace NEMO
         {
             float rawVal = ExtractField(data, field);
 
-            if (field.isSignedFloat) {
+            if (field.fieldType==FType.SignedFloat) {
                 return rawVal / ((1 << field.bitLength) - 1f) * 2f - 1f;
             }
-            if (field.isFloat) {
+            if (field.fieldType == FType.Float) {
                 return rawVal / ((1 << field.bitLength) - 1f);
             }
             return rawVal;
@@ -572,17 +638,62 @@ namespace NEMO
         {
             float rawVal = ExtractField(data, field);
 
-            if (field.isSignedFloat) {
+            if (field.fieldType==FType.SignedFloat) {
                 return Math.Round((rawVal / ((1 << field.bitLength) - 1f) * 2f - 1f), 2).ToString();
             }
-            if (field.isFloat) {
+            if (field.fieldType == FType.Float) {
                 return Math.Round((rawVal / ((1 << field.bitLength) - 1f)), 2).ToString();
             }
-            if (field.isBool) {
-                return rawVal == 0 ?"X|True" :"Y|False";
+            if (field.fieldType == FType.Bool) {
+                return rawVal == 1 ?"X|True" :"Y|False";
             }
 
             return Math.Round(rawVal,1).ToString();
+        }
+        public static ushort EncodeFloat(float value, int bits, FType type)
+        {
+            int max = (1 << bits) - 1;
+            value = type switch
+            {
+                FType.Float => Math.Clamp(value, 0f, 1f),
+                FType.SignedFloat => Math.Clamp(value, -1f, 1f),
+                _ => value
+            };
+            float normalized = type == FType.SignedFloat
+                ? (value + 1f) * 0.5f
+                : value;
+            return (ushort)(normalized * max);
+        }
+        public static ushort EncodeFields(NFunc func, List<NeuronDataField> fields)
+        {
+            ushort data = 0;
+            List<DataField> defs = NeuronDicts.DataDefinitions[func];
+            for (int i = 0; i < defs.Count; i++)
+            {
+                DataField def = defs[i];
+                NeuronDataField field = fields[i];
+                ushort encoded = 0;
+
+                switch (field.type)
+                {
+                    case FType.Bool:
+                        encoded = (ushort)(field.boolVal ?1 :0);
+                        break;
+                    case FType.Int:
+                        encoded = (ushort)field.intVal;
+                        break;
+                    case FType.Float:
+                    case FType.SignedFloat:
+                        encoded =EncodeFloat(
+                                field.floatVal,
+                                def.bitLength,
+                                field.type);
+                        break;
+                }
+
+                data = SetField(data,def,encoded);
+            }
+            return data;
         }
 
         public static void RenderGraph(Genome genome, string graphID)
@@ -623,6 +734,7 @@ namespace NEMO
                     id = name,
                     label = neuron.func.ToString(),
                     title = BuildNodeLabel(name, neuron),
+                    fields = ExportFields(neuron),
                     color = color,
                     shape = "dot",
                     size = 25,
@@ -631,6 +743,36 @@ namespace NEMO
                         color = "white"
                     }
                 });
+            }
+            List<DataFieldLive> ExportFields(NeuronGeneData neuron)
+            {
+                List<DataFieldLive> fields = new();
+                foreach (var fieldDef in NeuronDicts.DataDefinitions[neuron.func])
+                {
+                    DataFieldLive export = new();
+                    export.name = fieldDef.name;
+                    export.type = fieldDef.fieldType.ToString();
+
+                    float decoded = DecodeField(neuron.data, fieldDef);
+
+                    switch (fieldDef.fieldType)
+                    {
+                        case FType.Float:
+                        case FType.SignedFloat:
+                            export.floatVal = decoded;
+                            break;
+                        case FType.Int:
+                            export.intVal = (int)decoded;
+                            break;
+                        case FType.Bool:
+                            export.boolVal = decoded > 0.5f;
+                            break;
+                    }
+
+                    fields.Add(export);
+                }
+
+                return fields;
             }
 
             foreach (Gene gene in genome.genes)
