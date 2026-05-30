@@ -109,6 +109,22 @@
       "type": "Float"
     }
   ],
+  "Amplify": [
+    {
+      "name": "gain",
+      "type": "Float"
+    }
+  ],
+  "Pulse": [
+    {
+      "name": "deltaRequired",
+      "type": "Float"
+    },
+    {
+      "name": "strength",
+      "type": "Float"
+    }
+  ],
   "MoveX": [
     {
       "name": "sensitivity",

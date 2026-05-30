@@ -1,0 +1,838 @@
+{
+  "nodes": [
+    {
+      "id": "GetSignal_0",
+      "label": "GetSignal",
+      "title": "GetSignal_0\nchannel=1\ndetectMode=0.14\nfilterSpecies=X|True",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Float",
+          "floatVal": 1,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "detectMode",
+          "type": "Float",
+          "floatVal": 0.14285715,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "filterSpecies",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_1",
+      "label": "Compare",
+      "title": "Compare_1\ndirection=Y|False\nsharpness=0.1",
+      "fields": [
+        {
+          "name": "direction",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "sharpness",
+          "type": "Float",
+          "floatVal": 0.09803922,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Amplify_2",
+      "label": "Amplify",
+      "title": "Amplify_2\ngain=0.34",
+      "fields": [
+        {
+          "name": "gain",
+          "type": "Float",
+          "floatVal": 0.3372549,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_3",
+      "label": "EmitSignal",
+      "title": "EmitSignal_3\nchannel=0\ndecayRate=0.35\nspecies=X|True\ndeltaVector=X|True",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.34920636,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "species",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        },
+        {
+          "name": "deltaVector",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_4",
+      "label": "Density",
+      "title": "Density_4\nradius=0",
+      "fields": [
+        {
+          "name": "radius",
+          "type": "Float",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_5",
+      "label": "Jitter",
+      "title": "Jitter_5\nsensitivity=0.79",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.7882353,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetSignal_6",
+      "label": "GetSignal",
+      "title": "GetSignal_6\nchannel=0.14\ndetectMode=0\nfilterSpecies=Y|False",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Float",
+          "floatVal": 0.14285715,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "detectMode",
+          "type": "Float",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "filterSpecies",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_7",
+      "label": "MoveX",
+      "title": "MoveX_7\nsensitivity=0.43",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.43137255,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Amplify_8",
+      "label": "Amplify",
+      "title": "Amplify_8\ngain=0.31",
+      "fields": [
+        {
+          "name": "gain",
+          "type": "Float",
+          "floatVal": 0.30980393,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Blockage_9",
+      "label": "Blockage",
+      "title": "Blockage_9\ndirection=1\ndistance=0.2",
+      "fields": [
+        {
+          "name": "direction",
+          "type": "Float",
+          "floatVal": 1,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "distance",
+          "type": "Float",
+          "floatVal": 0.2,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Gradient_10",
+      "label": "Gradient",
+      "title": "Gradient_10\naxis=1",
+      "fields": [
+        {
+          "name": "axis",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 1,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_11",
+      "label": "Memory",
+      "title": "Memory_11\ndecayRate=0.32",
+      "fields": [
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.32156864,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_12",
+      "label": "Compare",
+      "title": "Compare_12\ndirection=X|True\nsharpness=0.51",
+      "fields": [
+        {
+          "name": "direction",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        },
+        {
+          "name": "sharpness",
+          "type": "Float",
+          "floatVal": 0.5137255,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_13",
+      "label": "Memory",
+      "title": "Memory_13\ndecayRate=0.84",
+      "fields": [
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.8392157,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_14",
+      "label": "Density",
+      "title": "Density_14\nradius=0.33",
+      "fields": [
+        {
+          "name": "radius",
+          "type": "Float",
+          "floatVal": 0.33333334,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Pulse_15",
+      "label": "Pulse",
+      "title": "Pulse_15\ndeltaRequired=0.74\nstrength=0.65",
+      "fields": [
+        {
+          "name": "deltaRequired",
+          "type": "Float",
+          "floatVal": 0.7372549,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "strength",
+          "type": "Float",
+          "floatVal": 0.6509804,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveDelta_16",
+      "label": "MoveDelta",
+      "title": "MoveDelta_16\naxis=Y|False",
+      "fields": [
+        {
+          "name": "axis",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetRandom_17",
+      "label": "GetRandom",
+      "title": "GetRandom_17\naverageCount=15",
+      "fields": [
+        {
+          "name": "averageCount",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 15,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_18",
+      "label": "Compare",
+      "title": "Compare_18\ndirection=X|True\nsharpness=0.34",
+      "fields": [
+        {
+          "name": "direction",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        },
+        {
+          "name": "sharpness",
+          "type": "Float",
+          "floatVal": 0.3372549,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Multiply_19",
+      "label": "Multiply",
+      "title": "Multiply_19\ngrouped=X|True",
+      "fields": [
+        {
+          "name": "grouped",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_20",
+      "label": "EmitSignal",
+      "title": "EmitSignal_20\nchannel=3\ndecayRate=0.06\nspecies=Y|False\ndeltaVector=X|True",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 3,
+          "boolVal": false
+        },
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.06349207,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "species",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "deltaVector",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Pulse_21",
+      "label": "Pulse",
+      "title": "Pulse_21\ndeltaRequired=0.67\nstrength=0.9",
+      "fields": [
+        {
+          "name": "deltaRequired",
+          "type": "Float",
+          "floatVal": 0.6666667,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "strength",
+          "type": "Float",
+          "floatVal": 0.8980392,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_22",
+      "label": "MoveX",
+      "title": "MoveX_22\nsensitivity=0.19",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.19215687,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Amplify_23",
+      "label": "Amplify",
+      "title": "Amplify_23\ngain=0.08",
+      "fields": [
+        {
+          "name": "gain",
+          "type": "Float",
+          "floatVal": 0.078431375,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "from": "GetSignal_0",
+      "to": "Compare_1",
+      "color": "red",
+      "width": 1.2470131,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 1,
+      "from": "Amplify_2",
+      "to": "EmitSignal_3",
+      "color": "red",
+      "width": 2.1065233,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 2,
+      "from": "Density_4",
+      "to": "Jitter_5",
+      "color": "red",
+      "width": 2.0413368,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 3,
+      "from": "GetSignal_6",
+      "to": "MoveX_7",
+      "color": "red",
+      "width": 3.9385824,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 4,
+      "from": "Compare_1",
+      "to": "Amplify_2",
+      "color": "green",
+      "width": 2.422202,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 5,
+      "from": "GetSignal_0",
+      "to": "Amplify_8",
+      "color": "red",
+      "width": 1.1362936,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 6,
+      "from": "GetSignal_0",
+      "to": "Jitter_5",
+      "color": "red",
+      "width": 1.5927215,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 7,
+      "from": "Blockage_9",
+      "to": "Compare_1",
+      "color": "green",
+      "width": 1.6494851,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 8,
+      "from": "GetSignal_6",
+      "to": "MoveX_7",
+      "color": "green",
+      "width": 2.7729154,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 9,
+      "from": "Compare_1",
+      "to": "MoveX_7",
+      "color": "green",
+      "width": 4.8708477,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 10,
+      "from": "Gradient_10",
+      "to": "EmitSignal_3",
+      "color": "green",
+      "width": 4.095567,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 11,
+      "from": "Memory_11",
+      "to": "Compare_1",
+      "color": "red",
+      "width": 3.4974136,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 12,
+      "from": "Memory_11",
+      "to": "EmitSignal_3",
+      "color": "red",
+      "width": 3.496193,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 13,
+      "from": "Blockage_9",
+      "to": "Amplify_2",
+      "color": "red",
+      "width": 2.7820706,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 14,
+      "from": "Compare_12",
+      "to": "Memory_11",
+      "color": "red",
+      "width": 4.62414,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 15,
+      "from": "Memory_13",
+      "to": "Memory_11",
+      "color": "green",
+      "width": 3.608377,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 16,
+      "from": "Density_14",
+      "to": "Pulse_15",
+      "color": "green",
+      "width": 4.9924316,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 17,
+      "from": "MoveDelta_16",
+      "to": "MoveX_7",
+      "color": "green",
+      "width": 4.5718927,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 18,
+      "from": "Compare_1",
+      "to": "Memory_13",
+      "color": "green",
+      "width": 3.3812008,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 19,
+      "from": "GetRandom_17",
+      "to": "Compare_18",
+      "color": "green",
+      "width": 4.1495233,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 20,
+      "from": "Multiply_19",
+      "to": "EmitSignal_20",
+      "color": "red",
+      "width": 4.7711143,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 21,
+      "from": "GetRandom_17",
+      "to": "Amplify_2",
+      "color": "green",
+      "width": 4.7742887,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 22,
+      "from": "Pulse_21",
+      "to": "MoveX_22",
+      "color": "green",
+      "width": 2.7821927,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 23,
+      "from": "MoveDelta_16",
+      "to": "Amplify_23",
+      "color": "green",
+      "width": 4.3588767,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    }
+  ]
+}

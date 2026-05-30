@@ -55,6 +55,9 @@ namespace NEMO
                 case FType.Float:
                     this.floatVal = floatVal;
                     break;
+                case FType.SignedFloat:
+                    this.floatVal = floatVal;
+                    break;
                 case FType.Bool:
                     this.boolVal = boolVal;
                     break;
@@ -106,13 +109,14 @@ namespace NEMO
         GetSignal,
         GeneSimilarity,
 
-        Relay, //tanh sum+bias
+        Relay,
         Threshold,
         Multiply,
         Memory,
-        Compare, //slots A & B
-        //Sum up all of A and same with B
-        //Compare A & B using
+        Compare,
+        Amplify,
+        Pulse,
+        Sign,
 
         MoveX,
         MoveY,
@@ -161,9 +165,10 @@ namespace NEMO
         {
             new(){name="averageCount", startBit=0, bitLength=4, fieldType=FType.Int},
         }},
+
             {NFunc.Relay, new()
         {
-            new(){name="bias", startBit=0, bitLength=8, fieldType=FType.SignedFloat},
+            new(){name="bias", startBit=0, bitLength=8, fieldType=FType.SignedFloat, mutateSensitivity=0.33f},
         }},
             {NFunc.Threshold, new()
         {
@@ -184,6 +189,16 @@ namespace NEMO
             new(){name="direction", startBit=0, bitLength=1, fieldType=FType.Bool},
             new(){name="sharpness", startBit=1, bitLength=8, fieldType=FType.Float},
         }},
+            {NFunc.Amplify, new()
+        {
+            new(){name="gain", startBit=0, bitLength=8, fieldType=FType.Float},
+        }},
+            {NFunc.Pulse, new()
+        {
+            new(){name="deltaRequired", startBit=0, bitLength=8, fieldType=FType.Float},
+            new(){name="strength", startBit=8, bitLength=8, fieldType=FType.Float},
+        }},
+
             {NFunc.MoveX, new()
         {
             new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float },
@@ -225,6 +240,8 @@ namespace NEMO
                     NFunc.Multiply,
                     NFunc.Memory,
                     NFunc.Compare,
+                    NFunc.Amplify,
+                    NFunc.Pulse,
             }},
             {NType.Action,
                 new(){
@@ -250,6 +267,8 @@ namespace NEMO
             { NFunc.Multiply,NType.Math },
             { NFunc.Memory,NType.Math },
             { NFunc.Compare,NType.Math },
+            { NFunc.Amplify,NType.Math },
+            { NFunc.Pulse,NType.Math },
         
             { NFunc.MoveX,NType.Action },
             { NFunc.MoveY,NType.Action },

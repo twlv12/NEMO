@@ -1,0 +1,671 @@
+{
+  "nodes": [
+    {
+      "id": "MoveDelta_0",
+      "label": "MoveDelta",
+      "title": "MoveDelta_0\naxis=Y|False",
+      "fields": [
+        {
+          "name": "axis",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_1",
+      "label": "Threshold",
+      "title": "Threshold_1\nthreshold=-0.53\ninvert=Y|False\nsharpness=0.48",
+      "fields": [
+        {
+          "name": "threshold",
+          "type": "SignedFloat",
+          "floatVal": -0.52755904,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "invert",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "sharpness",
+          "type": "Float",
+          "floatVal": 0.48031497,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Pulse_2",
+      "label": "Pulse",
+      "title": "Pulse_2\ndeltaRequired=0.82\nstrength=0.71",
+      "fields": [
+        {
+          "name": "deltaRequired",
+          "type": "Float",
+          "floatVal": 0.8156863,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "strength",
+          "type": "Float",
+          "floatVal": 0.7137255,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveY_3",
+      "label": "MoveY",
+      "title": "MoveY_3\nsensitivity=0.18",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.18039216,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_4",
+      "label": "Compare",
+      "title": "Compare_4\ndirection=Y|False\nsharpness=0.57",
+      "fields": [
+        {
+          "name": "direction",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "sharpness",
+          "type": "Float",
+          "floatVal": 0.57254905,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_5",
+      "label": "Relay",
+      "title": "Relay_5\nbias=0.04",
+      "fields": [
+        {
+          "name": "bias",
+          "type": "SignedFloat",
+          "floatVal": 0.035294175,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Relay_6",
+      "label": "Relay",
+      "title": "Relay_6\nbias=0.59",
+      "fields": [
+        {
+          "name": "bias",
+          "type": "SignedFloat",
+          "floatVal": 0.5921569,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_7",
+      "label": "EmitSignal",
+      "title": "EmitSignal_7\nchannel=2\ndecayRate=0.56\nspecies=X|True\ndeltaVector=X|True",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 2,
+          "boolVal": false
+        },
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.5555556,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "species",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        },
+        {
+          "name": "deltaVector",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Threshold_8",
+      "label": "Threshold",
+      "title": "Threshold_8\nthreshold=-0.73\ninvert=X|True\nsharpness=0.93",
+      "fields": [
+        {
+          "name": "threshold",
+          "type": "SignedFloat",
+          "floatVal": -0.7322835,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "invert",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        },
+        {
+          "name": "sharpness",
+          "type": "Float",
+          "floatVal": 0.92913383,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_9",
+      "label": "Density",
+      "title": "Density_9\nradius=0.33",
+      "fields": [
+        {
+          "name": "radius",
+          "type": "Float",
+          "floatVal": 0.33333334,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_10",
+      "label": "Jitter",
+      "title": "Jitter_10\nsensitivity=0.98",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.9843137,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_11",
+      "label": "Jitter",
+      "title": "Jitter_11\nsensitivity=0.57",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.57254905,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveDelta_12",
+      "label": "MoveDelta",
+      "title": "MoveDelta_12\naxis=X|True",
+      "fields": [
+        {
+          "name": "axis",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_13",
+      "label": "EmitSignal",
+      "title": "EmitSignal_13\nchannel=0\ndecayRate=0.44\nspecies=Y|False\ndeltaVector=X|True",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.44444445,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "species",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "deltaVector",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_14",
+      "label": "EmitSignal",
+      "title": "EmitSignal_14\nchannel=3\ndecayRate=0.87\nspecies=X|True\ndeltaVector=Y|False",
+      "fields": [
+        {
+          "name": "channel",
+          "type": "Int",
+          "floatVal": 0,
+          "intVal": 3,
+          "boolVal": false
+        },
+        {
+          "name": "decayRate",
+          "type": "Float",
+          "floatVal": 0.8730159,
+          "intVal": 0,
+          "boolVal": false
+        },
+        {
+          "name": "species",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": true
+        },
+        {
+          "name": "deltaVector",
+          "type": "Bool",
+          "floatVal": 0,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_15",
+      "label": "MoveX",
+      "title": "MoveX_15\nsensitivity=0.75",
+      "fields": [
+        {
+          "name": "sensitivity",
+          "type": "Float",
+          "floatVal": 0.7529412,
+          "intVal": 0,
+          "boolVal": false
+        }
+      ],
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "from": "MoveDelta_0",
+      "to": "Threshold_1",
+      "color": "red",
+      "width": 4.216907,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 1,
+      "from": "Threshold_1",
+      "to": "Threshold_1",
+      "color": "green",
+      "width": 3.7043262,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 2,
+      "from": "Pulse_2",
+      "to": "MoveY_3",
+      "color": "red",
+      "width": 3.613138,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 3,
+      "from": "Pulse_2",
+      "to": "MoveY_3",
+      "color": "green",
+      "width": 4.399039,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 4,
+      "from": "MoveDelta_0",
+      "to": "Compare_4",
+      "color": "red",
+      "width": 1.3049974,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 5,
+      "from": "Compare_4",
+      "to": "Compare_4",
+      "color": "red",
+      "width": 4.7022657,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 6,
+      "from": "Relay_5",
+      "to": "Relay_6",
+      "color": "green",
+      "width": 2.082231,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 7,
+      "from": "Pulse_2",
+      "to": "Relay_5",
+      "color": "green",
+      "width": 2.6535287,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 8,
+      "from": "MoveDelta_0",
+      "to": "Pulse_2",
+      "color": "red",
+      "width": 1.1963532,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 9,
+      "from": "Pulse_2",
+      "to": "EmitSignal_7",
+      "color": "red",
+      "width": 3.2333715,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 10,
+      "from": "Threshold_8",
+      "to": "MoveY_3",
+      "color": "green",
+      "width": 4.0455174,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 11,
+      "from": "Density_9",
+      "to": "Relay_6",
+      "color": "green",
+      "width": 4.1657586,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 12,
+      "from": "Threshold_8",
+      "to": "MoveY_3",
+      "color": "green",
+      "width": 4.7570763,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 13,
+      "from": "Threshold_1",
+      "to": "Jitter_10",
+      "color": "green",
+      "width": 1.0569468,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 14,
+      "from": "Threshold_8",
+      "to": "Jitter_11",
+      "color": "green",
+      "width": 1.3230639,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 15,
+      "from": "Threshold_8",
+      "to": "Relay_6",
+      "color": "green",
+      "width": 3.5701685,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 16,
+      "from": "MoveDelta_12",
+      "to": "Threshold_1",
+      "color": "red",
+      "width": 4.161364,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 17,
+      "from": "Density_9",
+      "to": "Relay_5",
+      "color": "red",
+      "width": 2.3085527,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 18,
+      "from": "Relay_6",
+      "to": "Relay_6",
+      "color": "green",
+      "width": 1.4391546,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 19,
+      "from": "Pulse_2",
+      "to": "EmitSignal_13",
+      "color": "green",
+      "width": 1.7466545,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 20,
+      "from": "Relay_6",
+      "to": "EmitSignal_13",
+      "color": "red",
+      "width": 1.7567863,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 21,
+      "from": "Pulse_2",
+      "to": "EmitSignal_14",
+      "color": "green",
+      "width": 2.6368046,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 22,
+      "from": "MoveDelta_0",
+      "to": "MoveX_15",
+      "color": "green",
+      "width": 4.917357,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 23,
+      "from": "Pulse_2",
+      "to": "Relay_5",
+      "color": "red",
+      "width": 4.279408,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    }
+  ]
+}

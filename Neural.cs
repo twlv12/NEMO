@@ -37,7 +37,8 @@ namespace NEMO
         public List<Connection> outgoingConnections;
         public List<Connection> incomingConnections;
 
-        public List<float> lastValues = new() {0};
+        public List<float> lastValues = new() {0}; //Used for random
+        public float lastValue = 0f; //Used for pulse
 
         public void RunFunction()
         {
@@ -92,8 +93,9 @@ namespace NEMO
                     }
                     break;
                 case NFunc.Memory:
-                    value = NeuralTools.FastTanh((value * dataFields[0].floatVal)
-                        +(slotASum+slotBSum)*(1-dataFields[0].floatVal));
+                    value = Math.Clamp
+                        ((value * dataFields[0].floatVal)
+                        +(slotASum+slotBSum)*(1-dataFields[0].floatVal), -1, 1);
                     break;
                 case NFunc.Compare:
                     if (dataFields[0].boolVal)
@@ -102,6 +104,16 @@ namespace NEMO
                     else
                         value = NeuralTools.FastTanh
                             ((slotBSum - slotASum) * (0.5f+dataFields[1].floatVal*7f));
+                    break;
+                case NFunc.Amplify:
+                    value = NeuralTools.FastTanh((slotASum+slotBSum) * (1f+ dataFields[0].floatVal *4f));
+                    break;
+                case NFunc.Pulse:
+                    if (Math.Abs((slotASum+slotBSum) - lastValue) > dataFields[0].floatVal)
+                        value = dataFields[1].floatVal;
+                    else
+                        value = 0f;
+                    lastValue = (slotASum+slotBSum);
                     break;
 
                 case NFunc.MoveX:
@@ -218,12 +230,12 @@ namespace NEMO
             {
                 if (field.fieldType==FType.Float || field.fieldType==FType.SignedFloat){
                     float floatValue = GeneTools.DecodeField(neuronData.data, field);
-                    NeuronDataField data = new(FType.Float, floatVal: floatValue);
+                    NeuronDataField data = new(field.fieldType, floatVal: floatValue);
                     data.name = field.name;
                     datas.Add(data);
                 }
                 else if (field.fieldType==FType.Bool){
-                    bool boolValue = GeneTools.DecodeField(neuronData.data, field) == 0;
+                    bool boolValue = GeneTools.DecodeField(neuronData.data, field) != 0;
                     NeuronDataField data = new(FType.Bool, boolVal: boolValue);
                     data.name = field.name;
                     datas.Add(data);

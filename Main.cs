@@ -16,15 +16,16 @@ namespace NEMO //Neural Emergence thru Mutating Organisms
             int previousView = Config.currentView;
             DateTime lastReload = DateTime.Now;
 
-            List<Simulation> sims =
-            [
+            List<Simulation> sims = [
                 new("alpha", true),
                 new("beta"),
                 new("gamma"),
                 new("delta")
             ];
-            foreach (var sim in sims)
+            foreach (var sim in sims) {
+                Console.WriteLine($"Genome for [{sim.name}] graph:");
                 sim.genome.PrintGenes();
+            }
             
             while (true)
             {

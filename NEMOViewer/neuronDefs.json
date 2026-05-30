@@ -52,6 +52,14 @@
     "type": "Math"
   },
   {
+    "func": "Amplify",
+    "type": "Math"
+  },
+  {
+    "func": "Pulse",
+    "type": "Math"
+  },
+  {
     "func": "MoveX",
     "type": "Action"
   },

@@ -356,10 +356,7 @@
                 }
 
                 let border;
-                if (v < 0.02) {
-                    border = "rgba(0,0,0,0)";
-                }
-                else if (node.activation >= 0) {
+                if (node.activation >= 0) {
                     border = "rgb(150,240,255)";
                 }
                 else {
@@ -384,9 +381,7 @@
                     y:0
                 };
 
-                node.borderWidth = v < 0.02
-                    ? 0
-                    : 3 + v * 10;
+                node.borderWidth = v * 15
 
                 const degree =
                     (node.incoming || 0)

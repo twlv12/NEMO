@@ -229,7 +229,7 @@ namespace NEMO
                     Gene gene1 = new Gene();
                     gene1.src = gene.src;
                     gene1.tgt = newNeuron;
-                    gene1.weight = 1;
+                    gene1.weight = EncodeFloat(1f, 16, FType.SignedFloat);
                     gene1.slot = 0;
 
                     Gene gene2 = new Gene();
@@ -263,7 +263,6 @@ namespace NEMO
                     }
 
                     NeuronGeneData newNeuron = new();
-                    newNeuron.ID = oldNeuron.ID;
 
                     if (rand.NextSingle() <= Config.sameTypeChance){
                         newNeuron.type = oldNeuron.type;
@@ -282,6 +281,7 @@ namespace NEMO
                     }
 
                     newNeuron = RandNeuronOfType(newNeuron.type, ref nextID);
+                    newNeuron.ID = oldNeuron.ID;
 
                     if (replacingSource){
                         gene.src = newNeuron;

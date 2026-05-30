@@ -1,0 +1,630 @@
+{
+  "nodes": [
+    {
+      "id": "GetSignal_0",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "GetSignal",
+      "title": "GetSignal_0\nSumA = 0\nSumB = 0\nValue = 0\n\nchannel=1\ndetectMode=0.14285715\nfilterSpecies=True",
+      "incoming": 0,
+      "outgoing": 3,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_1",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Compare",
+      "title": "Compare_1\nSumA = 0\nSumB = 0\nValue = 0\n\ndirection=False\nsharpness=0.09803922",
+      "incoming": 3,
+      "outgoing": 3,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Amplify_2",
+      "neuronType": "Math",
+      "activation": -0.039958235,
+      "label": "Amplify",
+      "title": "Amplify_2\nSumA = -0.017718606\nSumB = 0\nValue = -0.039958235\n\ngain=0.3372549",
+      "incoming": 3,
+      "outgoing": 1,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_3",
+      "neuronType": "Action",
+      "activation": 0.045862477,
+      "label": "EmitSignal",
+      "title": "EmitSignal_3\nSumA = 0\nSumB = 0.045862477\nValue = 0.045862477\n\nchannel=0\ndecayRate=0.34920636\nspecies=True\ndeltaVector=True",
+      "incoming": 3,
+      "outgoing": 0,
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_4",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "Density",
+      "title": "Density_4\nSumA = 0\nSumB = 0\nValue = 0\n\nradius=0",
+      "incoming": 0,
+      "outgoing": 1,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Jitter_5",
+      "neuronType": "Action",
+      "activation": 0,
+      "label": "Jitter",
+      "title": "Jitter_5\nSumA = 0\nSumB = 0\nValue = 0\n\nsensitivity=0.7882353",
+      "incoming": 2,
+      "outgoing": 0,
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetSignal_6",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "GetSignal",
+      "title": "GetSignal_6\nSumA = 0\nSumB = 0\nValue = 0\n\nchannel=0.14285715\ndetectMode=0\nfilterSpecies=False",
+      "incoming": 0,
+      "outgoing": 2,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_7",
+      "neuronType": "Action",
+      "activation": 0,
+      "label": "MoveX",
+      "title": "MoveX_7\nSumA = 0\nSumB = 0\nValue = 0\n\nsensitivity=0.43137255",
+      "incoming": 4,
+      "outgoing": 0,
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Amplify_8",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Amplify",
+      "title": "Amplify_8\nSumA = 0\nSumB = 0\nValue = 0\n\ngain=0.30980393",
+      "incoming": 1,
+      "outgoing": 0,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Blockage_9",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "Blockage",
+      "title": "Blockage_9\nSumA = 0\nSumB = 0\nValue = 0\n\ndirection=1\ndistance=0.2",
+      "incoming": 0,
+      "outgoing": 2,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Gradient_10",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "Gradient",
+      "title": "Gradient_10\nSumA = 0\nSumB = 0\nValue = 0\n\naxis=1",
+      "incoming": 0,
+      "outgoing": 1,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_11",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Memory",
+      "title": "Memory_11\nSumA = 0\nSumB = 0\nValue = 0\n\ndecayRate=0.32156864",
+      "incoming": 2,
+      "outgoing": 2,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_12",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Compare",
+      "title": "Compare_12\nSumA = 0\nSumB = 0\nValue = 0\n\ndirection=True\nsharpness=0.5137255",
+      "incoming": 0,
+      "outgoing": 1,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Memory_13",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Memory",
+      "title": "Memory_13\nSumA = 0\nSumB = 0\nValue = 0\n\ndecayRate=0.8392157",
+      "incoming": 1,
+      "outgoing": 1,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Density_14",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "Density",
+      "title": "Density_14\nSumA = 0\nSumB = 0\nValue = 0\n\nradius=0.33333334",
+      "incoming": 0,
+      "outgoing": 1,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Pulse_15",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Pulse",
+      "title": "Pulse_15\nSumA = 0\nSumB = 0\nValue = 0\n\ndeltaRequired=0.7372549\nstrength=0.6509804",
+      "incoming": 1,
+      "outgoing": 0,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveDelta_16",
+      "neuronType": "Sensor",
+      "activation": 0,
+      "label": "MoveDelta",
+      "title": "MoveDelta_16\nSumA = 0\nSumB = 0\nValue = 0\n\naxis=False",
+      "incoming": 0,
+      "outgoing": 2,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "GetRandom_17",
+      "neuronType": "Sensor",
+      "activation": -0.06430473,
+      "label": "GetRandom",
+      "title": "GetRandom_17\nSumA = 0\nSumB = 0\nValue = -0.06430473\n\naverageCount=15",
+      "incoming": 0,
+      "outgoing": 2,
+      "color": "skyblue",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Compare_18",
+      "neuronType": "Math",
+      "activation": 0.04058189,
+      "label": "Compare",
+      "title": "Compare_18\nSumA = 0\nSumB = -0.01478561\nValue = 0.04058189\n\ndirection=True\nsharpness=0.3372549",
+      "incoming": 1,
+      "outgoing": 0,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Multiply_19",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Multiply",
+      "title": "Multiply_19\nSumA = 0\nSumB = 0\nValue = 0\n\ngrouped=True",
+      "incoming": 0,
+      "outgoing": 1,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "EmitSignal_20",
+      "neuronType": "Action",
+      "activation": 0,
+      "label": "EmitSignal",
+      "title": "EmitSignal_20\nSumA = 0\nSumB = 0\nValue = 0\n\nchannel=3\ndecayRate=0.06349207\nspecies=False\ndeltaVector=True",
+      "incoming": 1,
+      "outgoing": 0,
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Pulse_21",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Pulse",
+      "title": "Pulse_21\nSumA = 0\nSumB = 0\nValue = 0\n\ndeltaRequired=0.6666667\nstrength=0.8980392",
+      "incoming": 0,
+      "outgoing": 1,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "MoveX_22",
+      "neuronType": "Action",
+      "activation": 0,
+      "label": "MoveX",
+      "title": "MoveX_22\nSumA = 0\nSumB = 0\nValue = 0\n\nsensitivity=0.19215687",
+      "incoming": 1,
+      "outgoing": 0,
+      "color": "tomato",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    },
+    {
+      "id": "Amplify_23",
+      "neuronType": "Math",
+      "activation": 0,
+      "label": "Amplify",
+      "title": "Amplify_23\nSumA = 0\nSumB = 0\nValue = 0\n\ngain=0.078431375",
+      "incoming": 1,
+      "outgoing": 0,
+      "color": "palegreen",
+      "shape": "dot",
+      "size": 25,
+      "font": {
+        "color": "white"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "signal": -0,
+      "from": "GetSignal_0",
+      "to": "Compare_1",
+      "color": "red",
+      "width": 1.2470131,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 1,
+      "signal": 0.0110536795,
+      "from": "Amplify_2",
+      "to": "EmitSignal_3",
+      "color": "red",
+      "width": 2.1065233,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 2,
+      "signal": -0,
+      "from": "Density_4",
+      "to": "Jitter_5",
+      "color": "red",
+      "width": 2.0413368,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 3,
+      "signal": -0,
+      "from": "GetSignal_6",
+      "to": "MoveX_7",
+      "color": "red",
+      "width": 3.9385824,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 4,
+      "signal": 0,
+      "from": "Compare_1",
+      "to": "Amplify_2",
+      "color": "green",
+      "width": 2.422202,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 5,
+      "signal": -0,
+      "from": "GetSignal_0",
+      "to": "Amplify_8",
+      "color": "red",
+      "width": 1.1362936,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 6,
+      "signal": -0,
+      "from": "GetSignal_0",
+      "to": "Jitter_5",
+      "color": "red",
+      "width": 1.5927215,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 7,
+      "signal": 0,
+      "from": "Blockage_9",
+      "to": "Compare_1",
+      "color": "green",
+      "width": 1.6494851,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 8,
+      "signal": 0,
+      "from": "GetSignal_6",
+      "to": "MoveX_7",
+      "color": "green",
+      "width": 2.7729154,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 9,
+      "signal": 0,
+      "from": "Compare_1",
+      "to": "MoveX_7",
+      "color": "green",
+      "width": 4.8708477,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 10,
+      "signal": 0,
+      "from": "Gradient_10",
+      "to": "EmitSignal_3",
+      "color": "green",
+      "width": 4.095567,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 11,
+      "signal": -0,
+      "from": "Memory_11",
+      "to": "Compare_1",
+      "color": "red",
+      "width": 3.4974136,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 12,
+      "signal": -0,
+      "from": "Memory_11",
+      "to": "EmitSignal_3",
+      "color": "red",
+      "width": 3.496193,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 13,
+      "signal": -0,
+      "from": "Blockage_9",
+      "to": "Amplify_2",
+      "color": "red",
+      "width": 2.7820706,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 14,
+      "signal": -0,
+      "from": "Compare_12",
+      "to": "Memory_11",
+      "color": "red",
+      "width": 4.62414,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 15,
+      "signal": 0,
+      "from": "Memory_13",
+      "to": "Memory_11",
+      "color": "green",
+      "width": 3.608377,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 16,
+      "signal": 0,
+      "from": "Density_14",
+      "to": "Pulse_15",
+      "color": "green",
+      "width": 4.9924316,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 17,
+      "signal": 0,
+      "from": "MoveDelta_16",
+      "to": "MoveX_7",
+      "color": "green",
+      "width": 4.5718927,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 18,
+      "signal": 0,
+      "from": "Compare_1",
+      "to": "Memory_13",
+      "color": "green",
+      "width": 3.3812008,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 19,
+      "signal": -0.050632313,
+      "from": "GetRandom_17",
+      "to": "Compare_18",
+      "color": "green",
+      "width": 4.1495233,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 20,
+      "signal": -0,
+      "from": "Multiply_19",
+      "to": "EmitSignal_20",
+      "color": "red",
+      "width": 4.7711143,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 21,
+      "signal": -0.060676154,
+      "from": "GetRandom_17",
+      "to": "Amplify_2",
+      "color": "green",
+      "width": 4.7742887,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 22,
+      "signal": 0,
+      "from": "Pulse_21",
+      "to": "MoveX_22",
+      "color": "green",
+      "width": 2.7821927,
+      "dashes": true,
+      "arrows": "to",
+      "smooth": true
+    },
+    {
+      "id": 23,
+      "signal": 0,
+      "from": "MoveDelta_16",
+      "to": "Amplify_23",
+      "color": "green",
+      "width": 4.3588767,
+      "dashes": false,
+      "arrows": "to",
+      "smooth": true
+    }
+  ]
+}
