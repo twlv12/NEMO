@@ -114,6 +114,46 @@
         let selectedEdge = null;
         let selectedGraph = null;
         let selectedNode = null;
+		
+        const socket = new WebSocket("ws://127.0.0.1:8181");
+
+        socket.onopen = () => {
+            console.log("Connected to NEMO");
+
+            socket.send(JSON.stringify({
+                action: "updateConfig",
+                key: "currentView",
+                value: 0
+            }));
+        };
+        socket.onmessage = (event) => {
+            // DEBUG LOG: Prove the browser is hearing the C# pipeline
+            console.log("WebSocket Received:", event.data.substring(0, 100) + "...");
+
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.graph && data.nodes && data.edges) {
+                    const graphObj = networks.find(n => n.name === data.graph);
+                    if (graphObj) {
+                        const nodeIDs = new Set(data.nodes.map(n => n.id));
+                        const edgeIDs = new Set(data.edges.map(e => e.id));
+
+                        graphObj.data.nodes.forEach(node => {
+                            if (!nodeIDs.has(node.id)) graphObj.data.nodes.remove(node.id);
+                        });
+                        graphObj.data.edges.forEach(edge => {
+                            if (!edgeIDs.has(edge.id)) graphObj.data.edges.remove(edge.id);
+                        });
+
+                        graphObj.data.nodes.update(data.nodes);
+                        graphObj.data.edges.update(data.edges);
+                    }
+                }
+            } catch (err) {
+                console.error("JSON Parse Error on incoming frame:", err);
+            }
+        };
 
         const controls = document.getElementById("controls");
         //#region resetButton
@@ -125,19 +165,8 @@
         resetButton.style.background = "#333";
         resetButton.style.color = "white";
         resetButton.style.border = "1px solid #555";
-        resetButton.onclick = async () => {
-            const response = await fetch("Config.json");
-            runtimeConfig = await response.json();
-            await fetch("/config",
-                {
-                    method: "POST",
-                    headers:
-                    {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify(runtimeConfig)
-                });
+        resetButton.onclick = () => {
+            socket.send(JSON.stringify({ action: "reloadConfig" }));
             location.reload();
         };
         controls.appendChild(resetButton);
@@ -151,17 +180,8 @@
         switchToBrain.style.background = "#333";
         switchToBrain.style.color = "white";
         switchToBrain.style.border = "1px solid #555";
-        switchToBrain.onclick = async () => {
-            runtimeConfig.currentView = 1;
-            await fetch("/config",
-                {
-                    method: "POST",
-                    headers:
-                    {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(runtimeConfig)
-                });
+        switchToBrain.onclick = () => {
+            socket.send(JSON.stringify({ action: "updateConfig", key: "currentView", value: 1 }));
             window.location.href = "brain.html";
         };
         controls.appendChild(switchToBrain);
@@ -184,20 +204,16 @@
             slider.value = runtimeConfig[def.key];;
             slider.style.width = "100%";
 
-            slider.oninput = async () => {
+            slider.oninput = () => {
                 const value = parseFloat(slider.value);
-                runtimeConfig[def.key] = value;;
+                runtimeConfig[def.key] = value;
                 label.innerText = `${def.key}: ${value.toFixed(4)}`;
 
-                await fetch("/config",
-                    {
-                        method: "POST",
-                        headers:
-                        {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(runtimeConfig)
-                    });
+                socket.send(JSON.stringify({
+                    action: "updateConfig",
+                    key: def.key,
+                    value: value
+                }));
             };
 
             wrapper.appendChild(label);
@@ -336,21 +352,11 @@
 
                 const edgeID = network.getEdgeAt(params.pointer.DOM);
                 if (edgeID) {
-                    await fetch(
-                        "http://localhost:8000/editor",
-                        {
-                            method: "POST",
-                            headers:
-                            {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(
-                                {
-                                    action: "toggleSlot",
-                                    graph: graphObj.name,
-                                    edgeID: edgeID
-                                })
-                        });
+                    socket.send(JSON.stringify({
+                        action: "toggleSlot",
+                        graph: graphObj.name,
+                        edgeID: edgeID,
+                    }));
 
                     return;
                 }
@@ -388,22 +394,12 @@
                             : -0.2;
                     console.log("SCROLL");
 
-                    await fetch(
-                        "http://localhost:8000/editor",
-                        {
-                            method: "POST",
-                            headers:
-                            {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(
-                                {
-                                    action: "changeWeight",
-                                    graph: selectedGraph.name,
-                                    edgeID: selectedEdge,
-                                    delta: delta
-                                })
-                        });
+                    socket.send(JSON.stringify({
+                        action: "changeWeight",
+                        graph: selectedGraph.name,
+                        edgeID: selectedEdge,
+                        delta: delta
+                    }));
                 },
                 {
                     passive: false,
@@ -415,22 +411,11 @@
                     if (e.key.toLowerCase() !== "x")
                         return;
                     if (selectedEdge) {
-                        await fetch(
-                            "http://localhost:8000/editor",
-                            {
-                                method: "POST",
-                                headers:
-                                {
-                                    "Content-Type":"application/json"
-                                },
-
-                                body: JSON.stringify(
-                                    {
-                                        action: "deleteEdge",
-                                        graph: selectedGraph.name,
-                                        edgeID:selectedEdge
-                                    })
-                            });
+                        socket.send(JSON.stringify({
+                            action: "deleteEdge",
+                            graph: selectedGraph.name,
+                            edgeID: selectedEdge,
+                        }));
 
                         selectedEdge = null;
                     }
@@ -475,25 +460,15 @@
             createButton.style.border = "1px solid #555";
             createButton.onclick = async () => {
                 const selectedFunc = select.value;
-                await fetch(
-                    "http://localhost:8000/editor",
-                    {
-                        method: "POST",
-                        headers:
-                        {
-                            "Content-Type": "application/json"
-                        },
+                socket.send(JSON.stringify({
+                    action: "addNeuron",
+                    graph: graphObj.name,
+                    src: connectionStartNode,
+                    func: selectedFunc,
+                    x: localX,
+                    y: localY
+                }));
 
-                        body: JSON.stringify(
-                            {
-                                action: "addNeuron",
-                                graph: graphObj.name,
-                                src:connectionStartNode,
-                                func:selectedFunc,
-                                x: localX,
-                                y: localY
-                            })
-                    });
                 connectionStartNode = null;
                 connectionGraph = null;
                 menu.remove();
@@ -572,23 +547,12 @@
                     console.log(nodeID);
                     console.log(node.fields);
                     const response =
-                        await fetch(
-                            "http://localhost:8000/editor",
-                            {
-                                method: "POST",
-                                headers:
-                                {
-                                    "Content-Type":"application/json"
-                                },
-
-                                body: JSON.stringify(
-                                    {
-                                        action: "editNeuron",
-                                        graph: graphObj.name,
-                                        nodeID: nodeID,
-                                        fields: node.fields
-                                    })
-                            });
+                    socket.send(JSON.stringify({
+                        action: "editNeuron",
+                        graph: selectedGraph.name,
+                        nodeID: nodeID,
+                        fields: node.fields
+                    }));
 
                     console.log(response);
                     console.log(window.location.href);
@@ -722,52 +686,12 @@
         }
 
         async function createConnection(graphObj, srcNode, tgtNode) {
-            await fetch(
-                "http://localhost:8000/editor",
-                {
-                    method: "POST",
-                    headers:
-                    {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify(
-                        {
-                            action: "addConnection",
-                            graph: graphObj.name,
-                            src: srcNode,
-                            tgt: tgtNode
-                        })
-                });
-        }
-
-        async function updateGraph(graphObj) {
-            const response = await fetch(
-                graphObj.name + ".json?t=" + Date.now()
-            );
-
-            const graph = await response.json();
-            const nodeIDs = new Set(graph.nodes.map(n => n.id));
-            const edgeIDs = new Set(graph.edges.map(e => e.id));
-
-            graphObj.data.nodes.forEach(node => {
-                if (!nodeIDs.has(node.id)) {
-                    graphObj.data.nodes.remove(node.id);
-                }
-            });
-            graphObj.data.edges.forEach(edge => {
-                if (!edgeIDs.has(edge.id)) {
-                    graphObj.data.edges.remove(edge.id);
-                }
-            });
-
-            graphObj.data.nodes.update(graph.nodes);
-            graphObj.data.edges.update(graph.edges);
-        }
-        function updateAll() {
-            for (const graph of networks) {
-                updateGraph(graph);
-            }
+            socket.send(JSON.stringify({
+                action: "addConnection",
+                graph: selectedGraph.name,
+                src: srcNode,
+                tgt: tgtNode
+            }));
         }
 
         async function loadConfig()  {
@@ -790,9 +714,6 @@
             for (const name of graphNames) {
                 createGraphContainer(name);
             }
-
-            updateAll();
-            setInterval(updateAll, 250);
         }
 
         start();

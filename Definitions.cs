@@ -1,7 +1,4 @@
-﻿
-using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.FileIO;
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace NEMO
 {
@@ -116,110 +113,105 @@ namespace NEMO
         Compare,
         Amplify,
         Pulse,
-        Sign,
 
-        MoveX,
-        MoveY,
+        Move,
+        Rotate,
         Jitter,
         EmitSignal,
-    } //1. ADD NEURON TYPE ENTRY
+        Consume,
+        Attack,
+    }
 
     public static class NeuronDicts
     {
         public static Dictionary<NFunc, List<DataField>> DataDefinitions = new()
         {
-            {NFunc.Constant, new()
-        {
-            new(){name="value", startBit=0, bitLength=8, fieldType=FType.SignedFloat},
-        }},
-            {NFunc.Gradient, new()
-        {
-            new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Int},
-        }},
-            {NFunc.MoveDelta, new()
-        {
-            new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Bool},
-        }},
-            {NFunc.Blockage, new()
-        {
-            new(){name="direction", startBit=0, bitLength=3},
-            new(){name="distance", startBit=3, bitLength=4},
-        }},
-            {NFunc.Density, new()
-        {
-            new(){name="radius", startBit=0, bitLength=2, maxValue=3},
-        }},
-            {NFunc.GetSignal, new()
-        {
-            new(){name="channel", startBit=0, bitLength=3},
-            new(){name="detectMode", startBit=3, bitLength=3, maxValue=1}, //maxValue here is temp for more modes later
-            new(){name="filterSpecies", startBit=6, bitLength=1, fieldType=FType.Bool},
-        }},
-            {NFunc.GeneSimilarity, new()
-        {
-            new(){name="direction", startBit=0, bitLength=2},
-            new(){name="distance", startBit=2, bitLength=3, maxValue=4},
-            new(){name="exact", startBit=5, bitLength=1, fieldType=FType.Bool},
-        }},
-            {NFunc.GetRandom, new()
-        {
-            new(){name="averageCount", startBit=0, bitLength=4, fieldType=FType.Int},
-        }},
+            {NFunc.Constant, new() {
+                new(){name="value", startBit=0, bitLength=8, fieldType=FType.SignedFloat},
+            }},
+            {NFunc.GetRandom, new() {
+                new(){name="averageCount", startBit=0, bitLength=4, fieldType=FType.Int},
+            }},
+            {NFunc.Blockage, new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                // 0-3 = Closest (All, Food, Creature, Block). 4-7 = Mass (All, Food, Creature, Block)
+                new(){name="targetMode", startBit=10, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="steepness", startBit=13, bitLength=3, maxValue=7, fieldType=FType.Int},
+            }},
+            {NFunc.GetSignal, new() {
+                new(){name="channel", startBit=0, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="radius", startBit=4, bitLength=3, maxValue=7, fieldType=FType.Int},
+            }},
+            {NFunc.GeneSimilarity, new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int}, 
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int}, 
+                new(){name="exactMatch", startBit=10, bitLength=1, fieldType=FType.Bool},
+                new(){name="massMode", startBit=11, bitLength=1, fieldType=FType.Bool}, 
+                new(){name="steepness", startBit=12, bitLength=3, maxValue=7, fieldType=FType.Int}, 
+            }},
+            {NFunc.MoveDelta, new() {
+                new(){name="checkRotation", startBit=0, bitLength=1, fieldType=FType.Bool},
+            }},
+            {NFunc.Density, new() {
+                //0 all, 1 food, 2, creature, 3 block
+                new(){name="targetType", startBit=0, bitLength=3, maxValue=3, fieldType=FType.Int},
+                new(){name="radius", startBit=3, bitLength=3, maxValue=7, fieldType=FType.Int},
+            }},
+            {NFunc.Gradient, new() {
+                new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Int},
+            }},
 
-            {NFunc.Relay, new()
-        {
-            new(){name="bias", startBit=0, bitLength=8, fieldType=FType.SignedFloat, mutateSensitivity=0.33f},
-        }},
-            {NFunc.Threshold, new()
-        {
-            new(){name="threshold", startBit=0, bitLength=7, fieldType=FType.SignedFloat},
-            new(){name="invert", startBit=8, bitLength=1, fieldType=FType.Bool},
-            new(){name="sharpness", startBit=9, bitLength=7, fieldType=FType.Float},
-        }},
-            {NFunc.Multiply, new()
-        {
-            new(){name="grouped", startBit=0, bitLength=1, fieldType=FType.Bool},
-        }},
-            {NFunc.Memory, new()
-        {
-            new(){name="decayRate", startBit=0, bitLength=8, fieldType=FType.Float, mutateSensitivity = 0.33f},
-        }},
-            {NFunc.Compare, new()
-        {
-            new(){name="direction", startBit=0, bitLength=1, fieldType=FType.Bool},
-            new(){name="sharpness", startBit=1, bitLength=8, fieldType=FType.Float},
-        }},
-            {NFunc.Amplify, new()
-        {
-            new(){name="gain", startBit=0, bitLength=8, fieldType=FType.Float},
-        }},
-            {NFunc.Pulse, new()
-        {
-            new(){name="deltaRequired", startBit=0, bitLength=8, fieldType=FType.Float},
-            new(){name="strength", startBit=8, bitLength=8, fieldType=FType.Float},
-        }},
+            {NFunc.Relay, new() {
+                new(){name="bias", startBit=0, bitLength=8, fieldType=FType.SignedFloat, mutateSensitivity=0.33f},
+            }},
+            {NFunc.Threshold, new() {
+                new(){name="threshold", startBit=0, bitLength=7, fieldType=FType.SignedFloat},
+                new(){name="invert", startBit=7, bitLength=1, fieldType=FType.Bool},
+                new(){name="sharpness", startBit=8, bitLength=7, fieldType=FType.Float},
+            }},
+            {NFunc.Multiply, new() {
+                new(){name="grouped", startBit=0, bitLength=1, fieldType=FType.Bool},
+            }},
+            {NFunc.Memory, new() {
+                new(){name="decayRate", startBit=0, bitLength=8, fieldType=FType.Float, mutateSensitivity = 0.33f},
+            }},
+            {NFunc.Compare, new() {
+                new(){name="direction", startBit=0, bitLength=1, fieldType=FType.Bool},
+                new(){name="sharpness", startBit=1, bitLength=8, fieldType=FType.Float},
+            }},
+            {NFunc.Amplify, new() {
+                new(){name="gain", startBit=0, bitLength=8, fieldType=FType.Float},
+            }},
+            {NFunc.Pulse, new() {
+                new(){name="deltaReq", startBit=0, bitLength=8, fieldType=FType.Float},
+                new(){name="strength", startBit=8, bitLength=8, fieldType=FType.Float},
+            }},
 
-            {NFunc.MoveX, new()
-        {
-            new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float },
-        }},
-            {NFunc.MoveY, new()
-        {
-            new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
-        }},
-            {NFunc.Jitter, new()
-        {
-            new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
-        }},
-            {NFunc.EmitSignal, new()
-        {
-            new(){name="channel", startBit=0, bitLength=2, fieldType=FType.Int},
-            new(){name="decayRate", startBit=2, bitLength=6, fieldType=FType.Float, mutateSensitivity=0.25f},
-            new(){name="species", startBit=8, bitLength=1, fieldType=FType.Bool},
-            new(){name="deltaVector", startBit=9, bitLength=1, fieldType=FType.Bool},
-        }},
+            {NFunc.Move, new() {
+                new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
+                new(){name="absolute", startBit=8, bitLength=1, fieldType=FType.Bool},
+                new(){name="absoluteXAxis", startBit=9, bitLength=1, fieldType=FType.Bool},
+            }},
+            {NFunc.Rotate, new() {
+                new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
+            }},
+            {NFunc.Jitter, new() {
+                new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
+                new(){name="absolute", startBit=8, bitLength=1, fieldType=FType.Bool},
+            }},
+            {NFunc.EmitSignal, new() {
+                new(){name="channel", startBit=0, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="decayRate", startBit=4, bitLength=6, fieldType=FType.Float, mutateSensitivity=0.25f},
+            }},
+            {NFunc.Consume, new() {
+            }},
+            {NFunc.Attack, new() {
+            }},
         };
-
+        
         public static Dictionary<NType, List<NFunc>> FuncsOfType = new()
         {
             {NType.Sensor,
@@ -245,10 +237,12 @@ namespace NEMO
             }},
             {NType.Action,
                 new(){
-                    NFunc.MoveX,
-                    NFunc.MoveY,
+                    NFunc.Move,
+                    NFunc.Rotate,
                     NFunc.Jitter,
                     NFunc.EmitSignal,
+                    NFunc.Consume,
+                    NFunc.Attack,
             }},
         };
         public static Dictionary<NFunc, NType> TypesOfFuncs = new()
@@ -270,10 +264,12 @@ namespace NEMO
             { NFunc.Amplify,NType.Math },
             { NFunc.Pulse,NType.Math },
         
-            { NFunc.MoveX,NType.Action },
-            { NFunc.MoveY,NType.Action },
+            { NFunc.Move,NType.Action },
+            { NFunc.Rotate,NType.Action },
             { NFunc.Jitter,NType.Action },
-            { NFunc.EmitSignal,NType.Action }
+            { NFunc.EmitSignal,NType.Action },
+            { NFunc.Consume,NType.Action },
+            { NFunc.Attack,NType.Action }
         };
 
         public static void ExportNeuronDefs()

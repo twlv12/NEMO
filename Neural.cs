@@ -28,6 +28,8 @@ namespace NEMO
         public NFunc func;
         public uint ID;
 
+        public Creature host;
+
         public float value = 0f; //current committed output
         public float slotASum = 0f; //new values for input
         public float slotBSum = 0f;
@@ -37,11 +39,13 @@ namespace NEMO
         public List<Connection> outgoingConnections;
         public List<Connection> incomingConnections;
 
-        public List<float> lastValues = new() {0}; //Used for random
-        public float lastValue = 0f; //Used for pulse
+        public List<float> lastValues = new() {0}; //used for random
+        public float lastValue = 0f; //used for pulse
+        public (List<(int dx, int dy, float weight)> offsets, float maxWeight)[] visionLUT; //used for blockage and gensim
 
         public void RunFunction()
         {
+            float combinedInput = slotASum + slotBSum;
             switch (func)
             {
                 case NFunc.Constant:
@@ -49,88 +53,251 @@ namespace NEMO
                     break;
                 case NFunc.GetRandom:
                     lastValues.Add(NeuralTools.rand.NextSingle() * 2f - 1f);
-                    if (lastValues.Count > dataFields[0].intVal+1)
+                    if (lastValues.Count > dataFields[0].intVal + 1)
                         lastValues.RemoveAt(0);
                     value = lastValues.Average();
                     break;
-                case NFunc.Blockage:
-                    //TODO
-                    break;
                 case NFunc.Gradient:
-                    //TODO
+                    int axis = dataFields[0].intVal;
+                    value = axis == 0 ? (float)host.x / host.world.width : (float)host.y / host.world.height;
+                    value = (value * 2f) - 1f;
                     break;
                 case NFunc.MoveDelta:
-                    //TODO
+                    bool checkRot = dataFields[0].boolVal;
+                    if (checkRot)
+                        value = host.facingDirection == host.lastFacing ? 0f : 1f;
+                    else
+                        value = (host.x != host.lastX || host.y != host.lastY) ? 1f : 0f;
                     break;
                 case NFunc.Density:
-                    //TODO
+                    int targetType = dataFields[0].intVal; // 0=All, 1=Food, 2=Creature, 3=Block
+                    int r = dataFields[1].intVal;
+                    int hits = 0;
+                    int totalCells = 0;
+
+                    for (int dx = -r; dx <= r; dx++)
+                    {
+                        for (int dy = -r; dy <= r; dy++)
+                        {
+                            int cx = host.x + dx;
+                            int cy = host.y + dy;
+                            if (cx >= 0 && cx < host.world.width && cy >= 0 && cy < host.world.height)
+                            {
+                                totalCells++;
+                                Cell cell = host.world.grid[cx, cy];
+                                if (targetType == 0 && (cell.occupant != null || cell.foodItem != null || cell.isBlock)) hits++;
+                                else if (targetType == 1 && cell.foodItem != null) hits++;
+                                else if (targetType == 2 && cell.occupant != null && cell.occupant != host) hits++;
+                                else if (targetType == 3 && cell.isBlock) hits++;
+                            }
+                        }
+                    }
+                    value = totalCells > 0 ? (float)hits / totalCells : 0f;
                     break;
                 case NFunc.GetSignal:
-                    //TODO
+                    int channel = dataFields[0].intVal;
+                    int radius = dataFields[1].intVal;
+                    float maxSignal = 0f;
+
+                    for (int dx = -radius; dx <= radius; dx++)
+                    {
+                        for (int dy = -radius; dy <= radius; dy++)
+                        {
+                            int cx = host.x + dx;
+                            int cy = host.y + dy;
+                            if (cx >= 0 && cx < host.world.width && cy >= 0 && cy < host.world.height)
+                            {
+                                maxSignal = Math.Max(maxSignal, host.world.grid[cx, cy].signals[channel].intensity);
+                            }
+                        }
+                    }
+                    value = Math.Clamp(maxSignal, 0f, 1f);
+                    break;
+                case NFunc.Blockage:
+                    if (visionLUT == null) GenerateVisionLUT();
+
+                    int targetMode = dataFields[3].intVal;
+                    bool sumMode = targetMode > 3;
+                    int targetFilter = targetMode % 4; //0 all, 1 food, 2 creature, 3 block
+
+                    var lut = visionLUT[host.facingDirection];
+                    float accumulatedWeight = 0f;
+
+                    foreach (var offset in lut.offsets)
+                    {
+                        int cx = host.x + offset.dx;
+                        int cy = host.y + offset.dy;
+
+                        if (cx < 0 || cx >= host.world.width || cy < 0 || cy >= host.world.height)
+                        {
+                            if (targetFilter == 0 || targetFilter == 3) accumulatedWeight += offset.weight;
+                            if (!sumMode && accumulatedWeight > 0) break;
+                            continue;
+                        }
+
+                        Cell cell = host.world.grid[cx, cy];
+                        bool hit = false;
+
+                        if (targetFilter == 0 && (cell.occupant != null || cell.foodItem != null || cell.isBlock)) hit = true;
+                        else if (targetFilter == 1 && cell.foodItem != null) hit = true;
+                        else if (targetFilter == 2 && cell.occupant != null && cell.occupant != host) hit = true;
+                        else if (targetFilter == 3 && cell.isBlock) hit = true;
+
+                        if (hit)
+                        {
+                            accumulatedWeight += offset.weight;
+                            if (!sumMode) break;
+                        }
+                    }
+
+                    value = sumMode ? (lut.maxWeight > 0 ? accumulatedWeight / lut.maxWeight : 0f) : accumulatedWeight;
                     break;
                 case NFunc.GeneSimilarity:
-                    //TODO
+                    if (visionLUT == null) GenerateVisionLUT();
+
+                    bool exactMatch = dataFields[3].boolVal; 
+                    bool massMode = dataFields[4].boolVal; 
+                    var simLut = visionLUT[host.facingDirection];
+
+                    float totalSimScore = 0f;
+                    value = 0f;
+
+                    foreach (var offset in simLut.offsets)
+                    {
+                        int cx = host.x + offset.dx;
+                        int cy = host.y + offset.dy;
+
+                        if (cx >= 0 && cx < host.world.width && cy >= 0 && cy < host.world.height)
+                        {
+                            Creature target = host.world.grid[cx, cy].occupant;
+                            if (target != null && target != host)
+                            {
+                                float currentSim = 0f;
+                                if (exactMatch)
+                                {
+                                    currentSim = (host.genomeHash == target.genomeHash) ? 1f : -1f;
+                                }
+                                else
+                                {
+                                    float rDiff = MathF.Abs(host.colorR - target.colorR);
+                                    float gDiff = MathF.Abs(host.colorG - target.colorG);
+                                    float bDiff = MathF.Abs(host.colorB - target.colorB);
+
+                                    float totalDiff = rDiff + gDiff + bDiff;
+                                    currentSim = 1f - ((totalDiff / 765f) * 2f);
+                                }
+
+                                totalSimScore += currentSim * offset.weight;
+                                if (!massMode) break;
+                            }
+                        }
+                    }
+
+                    value = massMode ? (simLut.maxWeight > 0 ? totalSimScore / simLut.maxWeight : 0f) : totalSimScore;
                     break;
 
                 case NFunc.Relay:
-                    value = NeuralTools.FastTanh
-                        (slotASum + slotBSum + dataFields[0].floatVal);
+                    value = NeuralTools.FastTanh(combinedInput + dataFields[0].floatVal);
                     break;
                 case NFunc.Threshold:
-                    value = NeuralTools.FastTanh
-                        (0.5f + dataFields[2].floatVal * 10f *
-                        ((slotASum + slotBSum) - dataFields[0].floatVal))
-                        * (dataFields[1].boolVal == false ?1 :-1);
+                    value = NeuralTools.FastTanh(0.5f + dataFields[2].floatVal * 10f * ((slotASum + slotBSum) - dataFields[0].floatVal)) * (dataFields[1].boolVal == false ? 1 : -1);
                     break;
                 case NFunc.Multiply:
-                    if (dataFields[0].boolVal)//if using grouped mode
-                        value = NeuralTools.FastTanh(slotASum*slotBSum);
-                    else{
+                    if (dataFields[0].boolVal)
+                        value = NeuralTools.FastTanh(slotASum * slotBSum);
+                    else
+                    {
                         value = 1f;
-                        foreach(var inconn in incomingConnections){
+                        foreach (var inconn in incomingConnections)
+                        {
                             value = NeuralTools.FastTanh(value * inconn.src.value);
                         }
                     }
                     break;
                 case NFunc.Memory:
-                    value = Math.Clamp
-                        ((value * dataFields[0].floatVal)
-                        +(slotASum+slotBSum)*(1-dataFields[0].floatVal), -1, 1);
+                    value = Math.Clamp((value * dataFields[0].floatVal) + combinedInput * (1 - dataFields[0].floatVal), -1, 1);
                     break;
                 case NFunc.Compare:
                     if (dataFields[0].boolVal)
-                        value = NeuralTools.FastTanh
-                            ((slotASum - slotBSum) * (0.5f+dataFields[1].floatVal*7f));
+                        value = NeuralTools.FastTanh((slotASum - slotBSum) * (0.5f + dataFields[1].floatVal * 7f));
                     else
-                        value = NeuralTools.FastTanh
-                            ((slotBSum - slotASum) * (0.5f+dataFields[1].floatVal*7f));
+                        value = NeuralTools.FastTanh((slotBSum - slotASum) * (0.5f + dataFields[1].floatVal * 7f));
                     break;
                 case NFunc.Amplify:
-                    value = NeuralTools.FastTanh((slotASum+slotBSum) * (1f+ dataFields[0].floatVal *4f));
+                    value = NeuralTools.FastTanh(combinedInput * (1f + dataFields[0].floatVal * 4f));
                     break;
                 case NFunc.Pulse:
-                    if (Math.Abs((slotASum+slotBSum) - lastValue) > dataFields[0].floatVal)
+                    if (Math.Abs(combinedInput - lastValue) > dataFields[0].floatVal)
                         value = dataFields[1].floatVal;
                     else
                         value = 0f;
-                    lastValue = (slotASum+slotBSum);
+                    lastValue = combinedInput;
                     break;
 
-                case NFunc.MoveX:
-                    value = slotASum + slotBSum;
+                case NFunc.Move:
+                    bool absolute = dataFields[1].boolVal;
+                    float moveStrength = combinedInput * (0.1f + dataFields[0].floatVal);
+
+                    if (absolute)
+                    {
+                        bool isXAxis = dataFields[2].boolVal;
+                        if (isXAxis) host.intentMoveX += moveStrength;
+                        else host.intentMoveY += moveStrength;
+                    }
+                    else
+                    {
+                        host.intentMove += moveStrength;
+                    }
+                    value = combinedInput;
                     break;
-                case NFunc.MoveY:
-                    value = slotASum + slotBSum;
+                case NFunc.Rotate:
+                    host.intentRotate += combinedInput * (0.1f + dataFields[0].floatVal);
+                    value = combinedInput;
                     break;
                 case NFunc.Jitter:
-                    value = slotASum + slotBSum;
+                    float strength = MathF.Abs(combinedInput) * dataFields[0].floatVal;
+                    bool isAbsolute = dataFields[1].boolVal;
+
+                    if (isAbsolute)
+                    {
+                        if (NeuralTools.rand.NextDouble() > 0.5)
+                            host.intentMoveX += (NeuralTools.rand.NextDouble() > 0.5 ? strength : -strength);
+                        else
+                            host.intentMoveY += (NeuralTools.rand.NextDouble() > 0.5 ? strength : -strength);
+                    }
+                    else
+                    {
+                        if (NeuralTools.rand.NextDouble() > 0.5)
+                            host.intentMove += (NeuralTools.rand.NextDouble() > 0.5 ? strength : -strength);
+                        else
+                            host.intentRotate += (NeuralTools.rand.NextDouble() > 0.5 ? strength : -strength);
+                    }
+                    value = combinedInput;
                     break;
                 case NFunc.EmitSignal:
-                    value = slotASum + slotBSum;
+                    int emitChannel = dataFields[0].intVal;
+                    float customDecay = dataFields[1].floatVal;
+
+                    if (combinedInput > 0)
+                    {
+                        host.world.grid[host.x, host.y].signals[emitChannel].intensity += combinedInput;
+                        float mappedDecay = 0.2f + 0.797f * (1f - MathF.Pow(1f - customDecay, 3));
+                        host.world.grid[host.x, host.y].signals[emitChannel].decayRate = mappedDecay;
+                    }
+                    value = combinedInput;
+                    break;
+                case NFunc.Consume:
+                    host.intentConsume += combinedInput;
+                    value = combinedInput;
+                    break;
+                case NFunc.Attack:
+                    host.intentAttack += combinedInput;
+                    value = combinedInput;
                     break;
             }
             value = Math.Clamp(value, -1f, 1f);
         }
+        
         public void AccumulateConnections()
         {
             foreach (Connection conn in incomingConnections){
@@ -143,6 +310,66 @@ namespace NEMO
                         slotBSum += (conn.src.value * conn.weight);
                         break;
                 }
+            }
+        }
+
+        public void GenerateVisionLUT()
+        {
+            visionLUT = new (List<(int dx, int dy, float weight)> offsets, float maxWeight)[8];
+
+            float requestedAngleOffset = dataFields[0].intVal * 45f;
+            int fovMode = dataFields[1].intVal;
+            int maxDist = dataFields[2].intVal;
+
+            int steepnessIndex = (this.func == NFunc.GeneSimilarity) ? 5 : 4;
+            float steepness = 0.5f + (dataFields[steepnessIndex].intVal * 0.5f);
+
+            float fovDegrees = fovMode switch
+            {
+                0 => 5f,
+                1 => 45f,
+                2 => 90f,
+                3 => 180f,
+                4 => 270f,
+                _ => 45f
+            };
+
+            for (int facing = 0; facing < 8; facing++)
+            {
+                var offsets = new List<(int dx, int dy, float weight)>();
+
+                float globalFacingAngle = facing * 45f;
+                float targetAngle = (globalFacingAngle + requestedAngleOffset) % 360f;
+
+                for (int dx = -maxDist; dx <= maxDist; dx++)
+                {
+                    for (int dy = -maxDist; dy <= maxDist; dy++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+
+                        float dist = MathF.Sqrt(dx * dx + dy * dy);
+                        if (dist > maxDist) continue;
+
+                        float cellAngle = MathF.Atan2(dy, dx) * (180f / MathF.PI);
+                        if (cellAngle < 0) cellAngle += 360f;
+
+                        float diff = MathF.Abs(targetAngle - cellAngle);
+                        if (diff > 180f) diff = 360f - diff;
+
+                        if (diff <= fovDegrees / 2f)
+                        {
+                            float distWeight = 1f - (dist / maxDist);
+                            float angleWeight = 1f - (diff / (fovDegrees / 2f));
+                            float finalWeight = MathF.Pow(distWeight * angleWeight, steepness);
+
+                            offsets.Add((dx, dy, finalWeight));
+                        }
+                    }
+                }
+
+                offsets = offsets.OrderByDescending(v => v.weight).ToList();
+                float maxWeight = offsets.Sum(o => o.weight);
+                visionLUT[facing] = (offsets, maxWeight);
             }
         }
 
@@ -178,10 +405,6 @@ namespace NEMO
             }
             foreach (Neuron n in neurons){
                 n.RunFunction();
-                //if (n.value != 0)
-                //{
-                //    Console.WriteLine($"{n.func}_{n.ID} has value {n.value}");
-                //}
             }
         }
     }
@@ -344,16 +567,25 @@ namespace NEMO
                 });
             }
 
-            var graph = new { nodes = nodes, edges = edges };
-            string json = JsonSerializer.Serialize(graph,
-                    new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    });
+            var payload = new
+            {
+                graph = graphID,
+                nodes = nodes,
+                edges = edges
+            };
 
-            string path = $"{Config.GraphOutputFolder}{graphID}_Brain.json";
+            string json = JsonSerializer.Serialize(payload,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    IncludeFields = true
+                }
+            );
 
-            File.WriteAllText(path, json);
+            foreach (var client in NEMO.clients.ToList())
+            {
+                client.Send(json);
+            }
         }
     }
 }

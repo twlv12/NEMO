@@ -1,6 +1,4 @@
-﻿using Microsoft.VisualBasic.FileIO;
-using System.Diagnostics;
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace NEMO
 {
@@ -8,6 +6,8 @@ namespace NEMO
     {
         public List<Gene> genes;
         public int nextGeneID = 0;
+
+        
 
         public Genome(List<Gene> genes)
         {
@@ -45,6 +45,44 @@ namespace NEMO
             }
 
             return max + 1;
+        }
+
+        public int GenerateExactHash()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (Gene gene in genes)
+                {
+                    if (gene.disabled) continue;
+                    hash = hash * 31 + (int)gene.src.func;
+                    hash = hash * 31 + (int)gene.tgt.func;
+                    hash = hash * 31 + gene.weight;
+                    hash = hash * 31 + gene.slot;
+                }
+                return hash;
+            }
+        }
+
+        public (byte r, byte g, byte b) GenerateColor()
+        {
+            float rSum = 0f, gSum = 0f, bSum = 0f;
+
+            foreach (Gene gene in genes)
+            {
+                if (gene.disabled) continue;
+
+                float w = (gene.weight / 65535f) * 2f - 1f;
+                rSum += (float)gene.src.func * w;
+                gSum += (float)gene.tgt.func * w;
+                bSum += (float)gene.src.type * (float)gene.tgt.type * w;
+            }
+
+            byte finalR = (byte)((MathF.Cos(rSum) * 0.5f + 0.5f) * 255f);
+            byte finalG = (byte)((MathF.Cos(gSum) * 0.5f + 0.5f) * 255f);
+            byte finalB = (byte)((MathF.Cos(bSum) * 0.5f + 0.5f) * 255f);
+
+            return (finalR, finalG, finalB);
         }
     }
 
@@ -800,17 +838,25 @@ namespace NEMO
                 });
             }
 
-            var graph = new{nodes = nodes, edges = edges};
-            string json =JsonSerializer.Serialize(graph,
-                    new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    });
+            var payload = new
+            {
+                graph = graphID,
+                nodes = nodes,
+                edges = edges
+            };
 
-            string path = $"{Config.GraphOutputFolder}{graphID}.json";
+            string json = JsonSerializer.Serialize(payload,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    IncludeFields = true
+                }
+            );
 
-            File.WriteAllText(path, json);
-            //Console.WriteLine($"{id}:::Wrote graph to {path}");
+            foreach (var client in NEMO.clients.ToList())
+            {
+                client.Send(json);
+            }
         }
 
         public static float Gaussian(float sharpness = 1f)

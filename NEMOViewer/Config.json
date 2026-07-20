@@ -1,14 +1,27 @@
 {
+  "worldHeight": 1024,
+  "worldWidth": 1024,
+  "creatureCount": 100,
+
   "minGenes": 8,
   "baseGenes": 24,
   "maxGenes": 64,
   "neuronReuse": 0.6,
-    
+
+  "baseStartingEnergy": 1000.0,
+  "costOfLiving": 1,
+  "movementCost": 2,
+  "attackCost": 50,
+
+  "baseNutrition": 500.0,
+  "meatNutritionMultiplier": 3.0,
 
 
+
+  "printMutations": false,
   "globalMutationRate": 0,
   "topologyMutationRate": 1,
-  
+
   "mathSuppressionExponent": 0.25,
   "mathWeightMultiplier": 1.4,
   "baseActionWeight": 0.55,
@@ -37,12 +50,6 @@
   "geneDuplicationChance": 0.001,
   "geneInsertionChance": 0.003,
   "geneRemovalChance": 0.005,
-
-
-
-  "screenHeight": 1024,
-  "screenWidth": 1024,
-  "printMutations": false,
 
 
 

@@ -34,23 +34,30 @@ namespace NEMO
         public float geneDuplicationChance { get; set; }
         public float geneInsertionChance { get; set; }
         public float geneRemovalChance { get; set; }
-        public int screenHeight { get; set; }
-        public int screenWidth { get; set; }
         public bool printMutations { get; set; }
         public int currentView { get; set; }
+        public int worldWidth { get; set; }
+        public int worldHeight { get; set; }
+        public int creatureCount { get; set; }
+        public float baseNutrition { get; set; }
+        public float meatNutritionMultiplier { get; set; }
+        public float movementCost { get; set; }
+        public float costOfLiving { get; set; }
+        public float baseStartingEnergy { get; set; }
+        public float attackCost { get; set; }
         #endregion
 
     }
     public static class Config
     {
         //SET THESE!!
-        public static string MainConfigFile = @"C:\Users\ethan\source\repos\NEMO\NemoViewer\Config.json"; //FILE
-        public static string RuntimeConfigFile = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\runtimeConfig.json"; //FILE
-        public static string StimuliFile = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\stimuli.json"; //FILE
-        public static string EditorActionFile = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\editorAction.json"; //FILE
-        public static string GraphOutputFolder = @"C:\Users\ethan\source\repos\NEMO\NEMOViewer\"; //FOLDER
+        public static string MainConfigFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NemoViewer\Config.json"; //FILE
+        public static string RuntimeConfigFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\runtimeConfig.json"; //FILE
+        public static string StimuliFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\stimuli.json"; //FILE
+        public static string EditorActionFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\editorAction.json"; //FILE
+        public static string GraphOutputFolder = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\"; //FOLDER
 
-        #region Set1
+        #region Set2
         public static int minGenes;
         public static int baseGenes;
         public static int maxGenes;
@@ -79,10 +86,17 @@ namespace NEMO
         public static float geneDuplicationChance;
         public static float geneInsertionChance;
         public static float geneRemovalChance;
-        public static int screenHeight;
-        public static int screenWidth;
         public static bool printMutations;
         public static int currentView;
+        public static int worldWidth;
+        public static int worldHeight;
+        public static int creatureCount;
+        public static float baseNutrition;
+        public static float meatNutritionMultiplier;
+        public static float movementCost;
+        public static float costOfLiving;
+        public static float baseStartingEnergy;
+        public static float attackCost;
         #endregion
 
         public static ConfigData configData = new();

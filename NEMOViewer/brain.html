@@ -30,76 +30,6 @@
     </div>
 
     <script>
-        //const sliderDefs =
-        //    [
-        //        {
-        //            key: "globalMutationRate",
-        //            min: 0,
-        //            max: 5,
-        //            step: 0.25,
-        //        },
-        //        {
-        //            key: "topologyMutationRate",
-        //            min: 0,
-        //            max: 5,
-        //            step: 0.25,
-        //        },
-        //        {
-        //            key: "globalNewGeneRate",
-        //            min: 0,
-        //            max: 5,
-        //            step: 0.25,
-        //        },
-        //        {
-        //            key: "mathSuppressionExponent",
-        //            min: -1,
-        //            max: 3,
-        //            step: 0.25,
-        //        },
-        //        {
-        //            key: "mathWeightMultiplier",
-        //            min: 0,
-        //            max: 2,
-        //            step: 0.1,
-        //        },
-        //        {
-        //            key: "baseActionWeight",
-        //            min: 0,
-        //            max: 2,
-        //            step: 0.1,
-        //        },
-        //        {
-        //            key: "baseSensorWeight",
-        //            min: 0,
-        //            max: 2,
-        //            step: 0.1,
-        //        },
-        //        {
-        //            key: "weightFlux",
-        //            min: 0,
-        //            max: 2,
-        //            step: 0.01,
-        //        },
-        //        {
-        //            key: "rewireOneChance",
-        //            min: 0,
-        //            max: 0.1,
-        //            step: 0.001,
-        //        },
-        //        {
-        //            key: "neuronReplaceChance",
-        //            min: 0,
-        //            max: 0.1,
-        //            step: 0.001,
-        //        },
-        //        {
-        //            key: "sameTypeChance",
-        //            min: 0,
-        //            max: 1,
-        //            step: 0.05,
-        //        },
-        //
-        //    ];
         const graphNames = [
             "alpha",
             "beta",
@@ -108,6 +38,84 @@
         ];
         let runtimeConfig = {};
         const networks = [];
+
+        const socket = new WebSocket("ws://127.0.0.1:8181");
+        socket.onopen = () => {
+            console.log("Connected to NEMO (Brain View)");
+            socket.send(JSON.stringify({
+                action: "updateConfig",
+                key: "currentView",
+                value: 1
+            }));
+        };
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.graph && data.nodes && data.edges) {
+                    const graphObj = networks.find(n => n.name === data.graph);
+                    if (graphObj) {
+                        const nodeIDs = new Set(data.nodes.map(n => n.id));
+                        const edgeIDs = new Set(data.edges.map(e => e.id));
+
+                        graphObj.data.nodes.forEach(node => {
+                            if (!nodeIDs.has(node.id)) graphObj.data.nodes.remove(node.id);
+                        });
+                        graphObj.data.edges.forEach(edge => {
+                            if (!edgeIDs.has(edge.id)) graphObj.data.edges.remove(edge.id);
+                        });
+
+                        // --- APPLY BRAIN VISUAL LOGIC ---
+                        for (const node of data.nodes) {
+                            const v = Math.abs(node.activation);
+
+                            let bg;
+                            switch (node.neuronType) {
+                                case "Sensor": bg = "rgb(40,120,255)"; break;
+                                case "Math": bg = "rgb(255, 255, 255)"; break;
+                                case "Action": bg = "rgb(151, 63, 209)"; break;
+                                default: bg = "rgb(180,180,180)";
+                            }
+
+                            let border = node.activation >= 0 ? "rgb(150,240,255)" : "rgb(255,90,90)";
+                            node.color = { background: bg, border: border };
+
+                            const alpha = Math.min(0.15 + v * 0.85, 1);
+                            node.shadow = {
+                                enabled: v > 0.04,
+                                color: node.activation >= 0 ? `rgba(100,220,255,${alpha})` : `rgba(255,70,0,${alpha})`,
+                                size: 30,
+                                x: 0,
+                                y: 0
+                            };
+
+                            node.borderWidth = v * 15;
+                            const degree = (node.incoming || 0) + (node.outgoing || 0);
+                            node.size = 7 + Math.sqrt(degree) * 10;
+                        }
+
+                        for (const edge of data.edges) {
+                            const s = Math.abs(edge.signal);
+                            edge.width = 0.5 + s * 10;
+                            const alpha = 0.25 + s * 1.5;
+                            const intensity = Math.floor(60 + s * 300);
+
+                            if (edge.signal >= 0) {
+                                edge.color = `rgb(0,${intensity},255)`;
+                            } else {
+                                edge.color = `rgb(${intensity},80,80)`;
+                            }
+                        }
+                        // --------------------------------
+
+                        graphObj.data.nodes.update(data.nodes);
+                        graphObj.data.edges.update(data.edges);
+                    }
+                }
+            } catch (err) {
+                console.error("JSON Parse Error:", err);
+            }
+        };
 
         const controls = document.getElementById("controls");
         //#region resetButton
@@ -119,19 +127,8 @@
         resetButton.style.background = "#333";
         resetButton.style.color = "white";
         resetButton.style.border = "1px solid #555";
-        resetButton.onclick = async () => {
-            const response = await fetch("Config.json");
-            runtimeConfig = await response.json();
-            await fetch("/config",
-                {
-                    method: "POST",
-                    headers:
-                    {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify(runtimeConfig)
-                });
+        resetButton.onclick = () => {
+            socket.send(JSON.stringify({ action: "reloadConfig" }));
             location.reload();
         };
         controls.appendChild(resetButton);
@@ -145,17 +142,8 @@
         switchToGenome.style.background = "#333";
         switchToGenome.style.color = "white";
         switchToGenome.style.border = "1px solid #555";
-        switchToGenome.onclick = async () => {
-            runtimeConfig.currentView = 0;
-            await fetch("/config",
-                {
-                    method: "POST",
-                    headers:
-                    {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(runtimeConfig)
-                });
+        switchToGenome.onclick = () => {
+            socket.send(JSON.stringify({ action: "updateConfig", key: "currentView", value: 0 }));
             window.location.href = "index.html";
         };
         controls.appendChild(switchToGenome);
@@ -274,147 +262,35 @@
             };
 
             const network = new vis.Network(graphDiv, data, options);
-            network.on("click", async function (params) {
+            network.on("click", function (params) {
                 if (params.nodes.length > 0) {
                     const nodeID = params.nodes[0];
-                    await fetch("/stimulate",
-                        {
-                            method: "POST",
-                            headers:
-                            {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(
-                                {
-                                    graph: name,
-                                    node: nodeID,
-                                    value: 1
-                                })
-                        });
+                    socket.send(JSON.stringify({
+                        graph: name,
+                        node: nodeID,
+                        value: 1
+                    }));
                 }
             });
-            network.on("oncontext", async function (params) {
+            network.on("oncontext", function (params) {
                 params.event.preventDefault();
                 const nodeID = network.getNodeAt(params.pointer.DOM);
                 if (nodeID) {
-                    await fetch("/stimulate",
-                        {
-                            method: "POST",
-                            headers:
-                            {
-                                "Content-Type": "application/json"
-                            },
-
-                            body: JSON.stringify(
-                                {
-                                    graph: name,
-                                    node: nodeID,
-                                    value: -1
-                                })
-                        });
+                    socket.send(JSON.stringify({
+                        graph: name,
+                        node: nodeID,
+                        value: -1
+                    }));
                 }
             });
             networks.push({ name, data, network });
-        }
-        async function updateGraph(graphObj) {
-            const response = await fetch(
-                graphObj.name + "_Brain.json?t=" + Date.now()
-            );
-
-            const graph = await response.json();
-            console.log(graph.nodes);
-            const nodeIDs = new Set(graph.nodes.map(n => n.id));
-            const edgeIDs = new Set(graph.edges.map(e => e.id));
-
-            graphObj.data.nodes.forEach(node => {
-                if (!nodeIDs.has(node.id)) {
-                    graphObj.data.nodes.remove(node.id);
-                }
-            });
-            graphObj.data.edges.forEach(edge => {
-                if (!edgeIDs.has(edge.id)) {
-                    graphObj.data.edges.remove(edge.id);
-                }
-            });
-
-            for (const node of graph.nodes) {
-                const v = Math.abs(node.activation);
-
-                let bg;
-                switch (node.neuronType) {
-                    case "Sensor":
-                        bg = "rgb(40,120,255)";
-                        break;
-                    case "Math":
-                        bg = "rgb(255, 255, 255)";
-                        break;
-                    case "Action":
-                        bg = "rgb(151, 63, 209)";
-                        break;
-                    default:
-                        bg = "rgb(180,180,180)";
-                }
-
-                let border;
-                if (node.activation >= 0) {
-                    border = "rgb(150,240,255)";
-                }
-                else {
-                    border = "rgb(255,90,90)";
-                }
-
-                node.color =
-                {
-                    background: bg,
-                    border: border
-                };
-
-                const alpha = Math.min(0.15 + v * 0.85, 1);
-                node.shadow =
-                {
-                    enabled: v > 0.04,
-                    color: node.activation >= 0
-                            ? `rgba(100,220,255,${alpha})`
-                            : `rgba(255,70,0,${alpha})`,
-                    size: 30,
-                    x: 0,
-                    y:0
-                };
-
-                node.borderWidth = v * 15
-
-                const degree =
-                    (node.incoming || 0)
-                    + (node.outgoing || 0);
-                node.size = 7 + Math.sqrt(degree) * 10 ;
-            }
-            for (const edge of graph.edges) {
-                const s = Math.abs(edge.signal);
-                edge.width = 0.5 + s * 10;
-                const alpha = 0.25 + s * 1.5;
-                const intensity = Math.floor(60 + s * 300);
-
-                if (edge.signal >= 0) {
-                    edge.color = `rgb(0,${intensity},255)`;
-                }
-                else {
-                    edge.color = `rgb(${intensity},80,80)`;
-                }
-            }
-
-            graphObj.data.nodes.update(graph.nodes);
-            graphObj.data.edges.update(graph.edges);
-        }
-        function updateAll() {
-            for (const graph of networks) {
-                updateGraph(graph);
-            }
         }
         async function loadConfig()  {
             const response = await fetch("Config.json");
             runtimeConfig = await response.json();
             console.log(runtimeConfig);
         }
+
         async function start() {
             await loadConfig();
 
@@ -425,9 +301,6 @@
             for (const name of graphNames) {
                 createGraphContainer(name);
             }
-
-            updateAll();
-            setInterval(updateAll, 50);
         }
 
         start();
