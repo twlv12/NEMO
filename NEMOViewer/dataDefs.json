@@ -5,68 +5,93 @@
       "type": "SignedFloat"
     }
   ],
-  "Gradient": [
-    {
-      "name": "axis",
-      "type": "Int"
-    }
-  ],
-  "MoveDelta": [
-    {
-      "name": "axis",
-      "type": "Bool"
-    }
-  ],
-  "Blockage": [
-    {
-      "name": "direction",
-      "type": "Float"
-    },
-    {
-      "name": "distance",
-      "type": "Float"
-    }
-  ],
-  "Density": [
-    {
-      "name": "radius",
-      "type": "Float"
-    }
-  ],
-  "GetSignal": [
-    {
-      "name": "channel",
-      "type": "Float"
-    },
-    {
-      "name": "detectMode",
-      "type": "Float"
-    },
-    {
-      "name": "filterSpecies",
-      "type": "Bool"
-    }
-  ],
-  "GeneSimilarity": [
-    {
-      "name": "direction",
-      "type": "Float"
-    },
-    {
-      "name": "distance",
-      "type": "Float"
-    },
-    {
-      "name": "exact",
-      "type": "Bool"
-    }
-  ],
   "GetRandom": [
     {
       "name": "averageCount",
       "type": "Int"
     }
   ],
+  "Blockage": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "targetMode",
+      "type": "Int"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "GetSignal": [
+    {
+      "name": "channel",
+      "type": "Int"
+    },
+    {
+      "name": "radius",
+      "type": "Int"
+    }
+  ],
+  "GeneSimilarity": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "exactMatch",
+      "type": "Bool"
+    },
+    {
+      "name": "massMode",
+      "type": "Bool"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "MoveDelta": [
+    {
+      "name": "checkRotation",
+      "type": "Bool"
+    }
+  ],
+  "Density": [
+    {
+      "name": "targetType",
+      "type": "Int"
+    },
+    {
+      "name": "radius",
+      "type": "Int"
+    }
+  ],
+  "Gradient": [
+    {
+      "name": "axis",
+      "type": "Int"
+    }
+  ],
+  "Age": [],
   "Relay": [
     {
       "name": "bias",
@@ -117,7 +142,7 @@
   ],
   "Pulse": [
     {
-      "name": "deltaRequired",
+      "name": "deltaReq",
       "type": "Float"
     },
     {
@@ -125,13 +150,21 @@
       "type": "Float"
     }
   ],
-  "MoveX": [
+  "Move": [
     {
       "name": "sensitivity",
       "type": "Float"
+    },
+    {
+      "name": "absolute",
+      "type": "Bool"
+    },
+    {
+      "name": "absoluteXAxis",
+      "type": "Bool"
     }
   ],
-  "MoveY": [
+  "Rotate": [
     {
       "name": "sensitivity",
       "type": "Float"
@@ -141,6 +174,10 @@
     {
       "name": "sensitivity",
       "type": "Float"
+    },
+    {
+      "name": "absolute",
+      "type": "Bool"
     }
   ],
   "EmitSignal": [
@@ -151,14 +188,8 @@
     {
       "name": "decayRate",
       "type": "Float"
-    },
-    {
-      "name": "species",
-      "type": "Bool"
-    },
-    {
-      "name": "deltaVector",
-      "type": "Bool"
     }
-  ]
+  ],
+  "Consume": [],
+  "Attack": []
 }

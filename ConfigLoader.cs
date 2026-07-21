@@ -45,6 +45,15 @@ namespace NEMO
         public float costOfLiving { get; set; }
         public float baseStartingEnergy { get; set; }
         public float attackCost { get; set; }
+        public float phenoMutationFlux { get; set; }
+        public float phenoMutationSharpness { get; set; }
+        public float baseAttackDmg { get; set; }
+        public int maturationTime { get; set; }
+        public int tickRate { get; set; }
+        public float foodWorldCoverage { get; set; }
+        public float plantGrowthRate { get; set; }
+        public bool maintainPopulation { get; set; }
+        public bool maxSpeed { get; set; }
         #endregion
 
     }
@@ -97,6 +106,15 @@ namespace NEMO
         public static float costOfLiving;
         public static float baseStartingEnergy;
         public static float attackCost;
+        public static float phenoMutationFlux;
+        public static float phenoMutationSharpness;
+        public static float baseAttackDmg;
+        public static int maturationTime;
+        public static int tickRate;
+        public static float foodWorldCoverage;
+        public static float plantGrowthRate;
+        public static bool maintainPopulation;
+        public static bool maxSpeed;
         #endregion
 
         public static ConfigData configData = new();

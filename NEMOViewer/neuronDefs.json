@@ -32,6 +32,10 @@
     "type": "Sensor"
   },
   {
+    "func": "Age",
+    "type": "Sensor"
+  },
+  {
     "func": "Relay",
     "type": "Math"
   },
@@ -60,11 +64,11 @@
     "type": "Math"
   },
   {
-    "func": "MoveX",
+    "func": "Move",
     "type": "Action"
   },
   {
-    "func": "MoveY",
+    "func": "Rotate",
     "type": "Action"
   },
   {
@@ -73,6 +77,14 @@
   },
   {
     "func": "EmitSignal",
+    "type": "Action"
+  },
+  {
+    "func": "Consume",
+    "type": "Action"
+  },
+  {
+    "func": "Attack",
     "type": "Action"
   }
 ]

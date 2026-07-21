@@ -105,6 +105,7 @@ namespace NEMO
         Density,
         GetSignal,
         GeneSimilarity,
+        Age,
 
         Relay,
         Threshold,
@@ -120,6 +121,46 @@ namespace NEMO
         EmitSignal,
         Consume,
         Attack,
+    }
+
+    public enum PType
+    {
+        //reproduction
+        ReproductionThreshold,
+        OffspringInvestment,
+        MutationVolatility,
+
+        //metabolism
+        CarnivoryBias,
+        MetabolicRate,
+        RestingEfficiency,
+        ScavengerTolerance,
+
+        //morphology
+        BodyMass,
+        ArmorDensity,
+        SpikeCoating,
+        Camouflage,
+        ToxicCorpse,
+
+        //movement
+        FastTwitchMuscle,
+        RotationalAgility,
+        JitterEfficiency,
+
+        //senses
+        VisionAcuity,
+        FovSpecialization,
+        OlfactorySensitivity,
+        BrainSize,
+
+        //interaction
+        Vampirism,
+        Lethality,
+        SocialCohesion,
+        PheromoneVolume,
+        ChemicalVolatility,
+        Parasitism
     }
 
     public static class NeuronDicts
@@ -162,6 +203,8 @@ namespace NEMO
             }},
             {NFunc.Gradient, new() {
                 new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Int},
+            }},
+            {NFunc.Age, new() {
             }},
 
             {NFunc.Relay, new() {
@@ -224,6 +267,7 @@ namespace NEMO
                     NFunc.Density,
                     NFunc.GetSignal,
                     NFunc.GeneSimilarity,
+                    NFunc.Age,
             }},
             {NType.Math,
                 new(){
@@ -255,6 +299,7 @@ namespace NEMO
             { NFunc.GetSignal,NType.Sensor },
             { NFunc.GeneSimilarity,NType.Sensor },
             { NFunc.GetRandom,NType.Sensor },
+            { NFunc.Age,NType.Sensor },
         
             { NFunc.Relay,NType.Math },
             { NFunc.Threshold,NType.Math },

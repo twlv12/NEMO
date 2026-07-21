@@ -8,6 +8,7 @@ namespace NEMO
     public static class NEMO
     {
         public static List<IWebSocketConnection> clients = new List<IWebSocketConnection>();
+        public static World? activeWorld = null;
 
         public static void Main()
         {
@@ -18,20 +19,13 @@ namespace NEMO
             NeuronDicts.ExportNeuronDefs();
             NeuronDicts.ExportDataDefs();
             int previousView = Config.currentView;
-            DateTime lastReload = DateTime.Now;
 
             List<Simulation> sims = [
-                new("alpha", true),
+                new("alpha"),
                 new("beta"),
                 new("gamma"),
                 new("delta")
             ];
-
-            foreach (Simulation sim in sims)
-            {
-                Console.WriteLine($"Genome for [{sim.name}] graph:");
-                sim.genome.PrintGenes();
-            }
 
             #region Servers startup
             Process pythonServer = new Process();
@@ -83,26 +77,45 @@ namespace NEMO
             while (true)
             {
                 if (previousView != Config.currentView)
-                    {
-                        OnViewChanged(sims);
-                        previousView = Config.currentView;
-                    }
+                {
+                    OnViewChanged(sims);
+                    previousView = Config.currentView;
+                }
                 switch (Config.currentView)
                 {
-                    case 0:                        
+                    case 0:
+                        if (activeWorld != null)
+                        {
+                            UpdatePetriView(activeWorld);
+                        }
+                        if (!Config.maxSpeed)
+                            Thread.Sleep(1000 / Config.tickRate);
+                        
+                        break;
+
+                    case 1:
                         UpdateGenomeView(sims);
                         Thread.Sleep(genomeUpdateTime);
                         break;
 
-                    case 1:
+                    case 2:
                         UpdateBrainView(sims);
                         Thread.Sleep(brainUpdateTime);
                         break;
                 }
-                
             }
         }
 
+        public static void UpdatePetriView(World world)
+        {
+            world.Update();
+
+            string stateJson = world.GetStateJson();
+            foreach (var client in clients.ToList())
+            {
+                client.Send(stateJson);
+            }
+        }
         public static void UpdateBrainView(List<Simulation> sims)
         {
             foreach (var sim in sims)
@@ -115,18 +128,28 @@ namespace NEMO
         {
             foreach (var sim in sims)
             {
-                GeneTools.MutateGenome(sim.genome);
                 GeneTools.RenderGraph(sim.genome, sim.name);
             }
         }
+
         public static void OnViewChanged(List<Simulation> sims)
         {
-            if (Config.currentView == 1)
+            if (Config.currentView == 2)
             {
                 foreach (var sim in sims)
                 {
-                    sim.brain = NeuralTools.GenomeToBrain(sim.genome);
+                    RebuildLiveBrain(sim);
                 }
+            }
+        }
+
+        public static void RebuildLiveBrain(Simulation sim)
+        {
+            sim.brain = NeuralTools.GenomeToBrain(sim.genome);
+            if (sim.trackedCreature != null && !sim.trackedCreature.isDead)
+            {
+                sim.trackedCreature.brain = sim.brain;
+                foreach (var n in sim.brain.neurons) n.host = sim.trackedCreature;
             }
         }
 
@@ -143,10 +166,10 @@ namespace NEMO
                     string node = root.GetProperty("node").GetString()!;
                     float value = (float)valueElement.GetDecimal();
 
-                    Simulation? sim = sims.FirstOrDefault(s => s.name == graph);
-                    if (sim != null)
+                    Simulation? valueSim = sims.FirstOrDefault(s => s.name == graph);
+                    if (valueSim != null)
                     {
-                        Neuron? neuron = sim.brain.neurons.FirstOrDefault(n => $"{n.func}_{n.ID}" == node);
+                        Neuron? neuron = valueSim.brain.neurons.FirstOrDefault(n => $"{n.func}_{n.ID}" == node);
                         if (neuron != null)
                         {
                             neuron.slotASum = value;
@@ -155,17 +178,40 @@ namespace NEMO
                         }
                     }
                 }
-                
                 else if (root.TryGetProperty("action", out JsonElement actionElement))
                 {
                     string actionType = actionElement.GetString()!;
+                    if (actionType == "startWorld")
+                    {
+                        activeWorld = new World(Config.worldWidth, Config.worldHeight, new List<Genome>());
+                        return;
+                    }
+                    if (actionType == "loadGenome")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        string creatureId = root.GetProperty("creatureId").GetString()!;
 
+                        if (activeWorld != null)
+                        {
+                            var c = activeWorld.creatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
+                            if (c != null)
+                            {
+                                var loadSim = sims.FirstOrDefault(s => s.name == slot);
+                                if (loadSim != null)
+                                {
+                                    loadSim.trackedCreature = c;
+                                    loadSim.genome = c.genome;
+                                    loadSim.brain = c.brain;
+                                }
+                            }
+                        }
+                        return;
+                    }
                     if (actionType == "updateConfig")
                     {
                         string key = root.GetProperty("key").GetString()!;
                         float val = (float)root.GetProperty("value").GetDecimal();
 
-                        // Use reflection to instantly update the static Config field in RAM
                         var field = typeof(Config).GetField(key, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         if (field != null)
                         {
@@ -173,13 +219,12 @@ namespace NEMO
                             else if (field.FieldType == typeof(float)) field.SetValue(null, val);
                             else if (field.FieldType == typeof(bool)) field.SetValue(null, val > 0.5f);
                         }
-                        return; // Stop processing
+                        return;
                     }
-
                     if (actionType == "reloadConfig")
                     {
-                        Config.Load(); // Reset RAM to default Config.json
-                        return; // Stop processing
+                        Config.Load();
+                        return;
                     }
 
                     EditorAction? action = JsonSerializer.Deserialize<EditorAction>(
@@ -188,17 +233,16 @@ namespace NEMO
                             IncludeFields = true,
                             Converters = { new JsonStringEnumConverter() }
                         });
-
                     if (action == null) return;
 
-                    Simulation? sim = sims.FirstOrDefault(s => s.name == action.graph);
-                    if (sim == null) return;
+                    Simulation? actionSim = sims.FirstOrDefault(s => s.name == action.graph);
+                    if (actionSim == null) return;
 
                     switch (action.action)
                     {
                         case "editNeuron":
                             {
-                                Gene? gene = sim.genome.genes.FirstOrDefault(g =>
+                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g =>
                                     $"{g.src.func}_{g.src.ID}" == action.nodeID
                                     || $"{g.tgt.func}_{g.tgt.ID}" == action.nodeID);
                                 if (gene == null) break;
@@ -206,13 +250,25 @@ namespace NEMO
                                 NeuronGeneData neuron = $"{gene.src.func}_{gene.src.ID}" == action.nodeID
                                     ? gene.src : gene.tgt;
                                 neuron.data = GeneTools.EncodeFields(neuron.func, action.fields);
+
+                                // Hot-reload live neuron variables
+                                var liveNeuron = actionSim.brain.neurons.FirstOrDefault(n => n.ID == neuron.ID);
+                                if (liveNeuron != null)
+                                {
+                                    // FIXED: Now correctly calling NeuralTools
+                                    liveNeuron.dataFields = NeuralTools.NeuronDataToFields(neuron);
+
+                                    // FIXED: Regenerate immediately instead of assigning null to array
+                                    if (liveNeuron.func == NFunc.Blockage || liveNeuron.func == NFunc.GeneSimilarity)
+                                        liveNeuron.GenerateVisionLUT();
+                                }
                                 break;
                             }
                         case "addConnection":
                             {
                                 NeuronGeneData? src = null;
                                 NeuronGeneData? tgt = null;
-                                foreach (var gene in sim.genome.genes)
+                                foreach (var gene in actionSim.genome.genes)
                                 {
                                     if ($"{gene.src.func}_{gene.src.ID}" == action.src) src = gene.src;
                                     if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.src) src = gene.tgt;
@@ -225,14 +281,15 @@ namespace NEMO
 
                                 Gene newGene = GeneTools.CreateGene(src, tgt, 0,
                                     GeneTools.EncodeFloat(1f, 16, FType.SignedFloat));
-                                newGene.graphID = sim.genome.GetNextGeneID();
-                                sim.genome.genes.Add(newGene);
+                                newGene.graphID = actionSim.genome.GetNextGeneID();
+                                actionSim.genome.genes.Add(newGene);
+                                RebuildLiveBrain(actionSim);
                                 break;
                             }
                         case "addNeuron":
                             {
                                 NeuronGeneData? src = null;
-                                foreach (var gene in sim.genome.genes)
+                                foreach (var gene in actionSim.genome.genes)
                                 {
                                     if ($"{gene.src.func}_{gene.src.ID}" == action.src) src = gene.src;
                                     if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.src) src = gene.tgt;
@@ -244,40 +301,43 @@ namespace NEMO
                                 NeuronGeneData newNeuron = new();
                                 newNeuron.type = type;
                                 newNeuron.func = func;
-                                newNeuron.ID = sim.genome.GetNextNeuronID();
+                                newNeuron.ID = actionSim.genome.GetNextNeuronID();
                                 newNeuron.data = GeneTools.GenerateData(func);
 
                                 if (!NormalizeDirection(ref src, ref newNeuron)) break;
 
                                 Gene newGene = GeneTools.CreateGene(src, newNeuron, 0,
                                     GeneTools.EncodeFloat(1, 16, FType.SignedFloat));
-                                newGene.graphID = sim.genome.GetNextGeneID();
-                                sim.genome.genes.Add(newGene);
+                                newGene.graphID = actionSim.genome.GetNextGeneID();
+                                actionSim.genome.genes.Add(newGene);
+                                RebuildLiveBrain(actionSim);
                                 break;
                             }
                         case "toggleSlot":
                             {
-                                Gene? gene = sim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
+                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
                                 if (gene == null) break;
-
                                 gene.slot = (byte)(gene.slot == 0 ? 1 : 0);
+                                RebuildLiveBrain(actionSim);
                                 break;
                             }
                         case "changeWeight":
                             {
-                                Gene? gene = sim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
+                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
                                 if (gene == null) break;
 
                                 float w = (gene.weight / 65535f) * 2f - 1f;
                                 w += action.delta;
                                 w = Math.Clamp(w, -1f, 1f);
                                 gene.weight = (ushort)((w + 1f) * 0.5f * 65535f);
+                                RebuildLiveBrain(actionSim);
                                 break;
                             }
                         case "deleteEdge":
                             {
-                                Gene? gene = sim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
-                                if (gene != null) sim.genome.genes.Remove(gene);
+                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
+                                if (gene != null) actionSim.genome.genes.Remove(gene);
+                                RebuildLiveBrain(actionSim);
                                 break;
                             }
                     }
@@ -306,18 +366,17 @@ namespace NEMO
         public string name;
         public Genome genome;
         public Brain brain;
-        public bool isSimple;
+        public Creature? trackedCreature = null;
 
-        public Simulation(string name, bool isSimple=false)
+        public Simulation(string name)
         {
             this.name = name;
-            if (!isSimple)
-                genome = GeneTools.GenerateGenome();
-            else
-                genome = GeneTools.GenerateSimpleGenome();
-            brain = NeuralTools.GenomeToBrain(genome);
+            this.genome = new Genome(new List<Gene>());
+            this.genome.InitializeDefaultPhenotypes();
+            this.brain = new Brain(new List<Neuron>(), new List<Connection>());
         }
     }
+
     public class EditorAction
     {
         public string action { get; set; }

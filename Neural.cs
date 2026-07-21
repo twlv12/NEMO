@@ -111,6 +111,8 @@ namespace NEMO
                             }
                         }
                     }
+
+                    maxSignal *= host.GetPheno(PType.OlfactorySensitivity);
                     value = Math.Clamp(maxSignal, 0f, 1f);
                     break;
                 case NFunc.Blockage:
@@ -145,7 +147,13 @@ namespace NEMO
 
                         if (hit)
                         {
-                            accumulatedWeight += offset.weight;
+                            float visualWeight = offset.weight;
+                            if (cell.occupant != null && cell.occupant != host)
+                            {
+                                visualWeight *= (1f - cell.occupant.GetPheno(PType.Camouflage));
+                            }
+
+                            accumulatedWeight += visualWeight;
                             if (!sumMode) break;
                         }
                     }
@@ -187,13 +195,17 @@ namespace NEMO
                                     currentSim = 1f - ((totalDiff / 765f) * 2f);
                                 }
 
-                                totalSimScore += currentSim * offset.weight;
+                                float visualWeight = offset.weight * (1f - target.GetPheno(PType.Camouflage));
+                                totalSimScore += currentSim * visualWeight;
                                 if (!massMode) break;
                             }
                         }
                     }
 
                     value = massMode ? (simLut.maxWeight > 0 ? totalSimScore / simLut.maxWeight : 0f) : totalSimScore;
+                    break;
+                case NFunc.Age:
+                    value = Math.Clamp(((float)host.age / host.startingEnergy) * 3f, 0f, 1f);
                     break;
 
                 case NFunc.Relay:
@@ -236,7 +248,8 @@ namespace NEMO
 
                 case NFunc.Move:
                     bool absolute = dataFields[1].boolVal;
-                    float moveStrength = combinedInput * (0.1f + dataFields[0].floatVal);
+                    float moveStrength = combinedInput * (0.1f + dataFields[0].floatVal) * host.GetPheno(PType.MetabolicRate);
+                    moveStrength *= host.GetPheno(PType.FastTwitchMuscle);
 
                     if (absolute)
                     {
@@ -256,6 +269,7 @@ namespace NEMO
                     break;
                 case NFunc.Jitter:
                     float strength = MathF.Abs(combinedInput) * dataFields[0].floatVal;
+                    strength *= host.GetPheno(PType.JitterEfficiency);
                     bool isAbsolute = dataFields[1].boolVal;
 
                     if (isAbsolute)
@@ -272,6 +286,7 @@ namespace NEMO
                         else
                             host.intentRotate += (NeuralTools.rand.NextDouble() > 0.5 ? strength : -strength);
                     }
+
                     value = combinedInput;
                     break;
                 case NFunc.EmitSignal:
@@ -280,9 +295,16 @@ namespace NEMO
 
                     if (combinedInput > 0)
                     {
-                        host.world.grid[host.x, host.y].signals[emitChannel].intensity += combinedInput;
+                        float volume = host.GetPheno(PType.PheromoneVolume);
+                        host.world.grid[host.x, host.y].signals[emitChannel].intensity += combinedInput * volume;
+                        host.energy -= combinedInput * volume * 0.5f;
+
+                        host.world.activeSignalCells.Add(host.world.grid[host.x, host.y]);
+
                         float mappedDecay = 0.2f + 0.797f * (1f - MathF.Pow(1f - customDecay, 3));
-                        host.world.grid[host.x, host.y].signals[emitChannel].decayRate = mappedDecay;
+                        mappedDecay *= (1f / host.GetPheno(PType.ChemicalVolatility));
+
+                        host.world.grid[host.x, host.y].signals[emitChannel].decayRate = Math.Clamp(mappedDecay, 0.1f, 0.999f);
                     }
                     value = combinedInput;
                     break;
@@ -291,7 +313,7 @@ namespace NEMO
                     value = combinedInput;
                     break;
                 case NFunc.Attack:
-                    host.intentAttack += combinedInput;
+                    host.intentAttack += combinedInput * host.GetPheno(PType.MetabolicRate);
                     value = combinedInput;
                     break;
             }
@@ -319,10 +341,14 @@ namespace NEMO
 
             float requestedAngleOffset = dataFields[0].intVal * 45f;
             int fovMode = dataFields[1].intVal;
-            int maxDist = dataFields[2].intVal;
+
+            int maxDist = (int)(dataFields[2].intVal * 
+                host.GetPheno(PType.VisionAcuity) * (1 - host.GetPheno(PType.Camouflage)));
+            maxDist = Math.Clamp(maxDist, 1, 20);
 
             int steepnessIndex = (this.func == NFunc.GeneSimilarity) ? 5 : 4;
             float steepness = 0.5f + (dataFields[steepnessIndex].intVal * 0.5f);
+            steepness *= host.GetPheno(PType.FovSpecialization);
 
             float fovDegrees = fovMode switch
             {

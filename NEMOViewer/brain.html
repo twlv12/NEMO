@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>NEMO</title>
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 </head>
 <body style="
@@ -45,7 +46,7 @@
             socket.send(JSON.stringify({
                 action: "updateConfig",
                 key: "currentView",
-                value: 1
+                value: 2
             }));
         };
         socket.onmessage = (event) => {
@@ -65,7 +66,6 @@
                             if (!edgeIDs.has(edge.id)) graphObj.data.edges.remove(edge.id);
                         });
 
-                        // --- APPLY BRAIN VISUAL LOGIC ---
                         for (const node of data.nodes) {
                             const v = Math.abs(node.activation);
 
@@ -143,10 +143,25 @@
         switchToGenome.style.color = "white";
         switchToGenome.style.border = "1px solid #555";
         switchToGenome.onclick = () => {
+            socket.send(JSON.stringify({ action: "updateConfig", key: "currentView", value: 1 }));
+            window.location.href = "genome.html";
+        };
+        controls.appendChild(switchToGenome);
+        //#endregion
+        //#region buttonToPetri
+        const switchToPetri = document.createElement("button");
+        switchToPetri.innerText = "View Petri Dish";
+        switchToPetri.style.width = "100%";
+        switchToPetri.style.marginBottom = "12px";
+        switchToPetri.style.padding = "6px";
+        switchToPetri.style.background = "#333";
+        switchToPetri.style.color = "white";
+        switchToPetri.style.border = "1px solid #555";
+        switchToPetri.onclick = () => {
             socket.send(JSON.stringify({ action: "updateConfig", key: "currentView", value: 0 }));
             window.location.href = "index.html";
         };
-        controls.appendChild(switchToGenome);
+        controls.appendChild(switchToPetri);
         //#endregion
 
         function createSlider(def) {
