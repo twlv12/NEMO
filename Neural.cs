@@ -514,7 +514,7 @@ namespace NEMO
             return x / (1f + MathF.Abs(x));
         }
 
-        public static void RenderGraph(Brain brain, string graphID)
+        public static void RenderGraph(Brain brain, string graphID, bool isDead = false, bool isPaused = false)
         {
             HashSet<string> emittedNodes = new();
             List<object> nodes = new();
@@ -596,6 +596,8 @@ namespace NEMO
             var payload = new
             {
                 graph = graphID,
+                isDead = isDead,
+                isPaused = isPaused,
                 nodes = nodes,
                 edges = edges
             };

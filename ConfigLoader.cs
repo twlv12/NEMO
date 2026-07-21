@@ -54,17 +54,21 @@ namespace NEMO
         public float plantGrowthRate { get; set; }
         public bool maintainPopulation { get; set; }
         public bool maxSpeed { get; set; }
+        public float meatEntropyMulti { get; set; }
         #endregion
 
     }
     public static class Config
     {
+        public static string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+
         //SET THESE!!
-        public static string MainConfigFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NemoViewer\Config.json"; //FILE
-        public static string RuntimeConfigFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\runtimeConfig.json"; //FILE
-        public static string StimuliFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\stimuli.json"; //FILE
-        public static string EditorActionFile = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\editorAction.json"; //FILE
-        public static string GraphOutputFolder = @"C:\Users\ethan\source\repos\twlv12\NEMO\NEMOViewer\"; //FOLDER
+        public static string MainConfigFile = projectDirectory + @"\NemoViewer\Config.json"; //FILE
+        public static string RuntimeConfigFile = projectDirectory + @"\NEMOViewer\runtimeConfig.json"; //FILE
+        public static string StimuliFile = projectDirectory + @"\NEMOViewer\stimuli.json"; //FILE
+        public static string EditorActionFile = projectDirectory + @"\NEMOViewer\editorAction.json"; //FILE
+        public static string GraphOutputFolder = projectDirectory + @"\NEMOViewer\"; //FOLDER
+        public static string SavedGenomesFolder = projectDirectory + @"\SavedGenomes\"; //FOLDER
 
         #region Set2
         public static int minGenes;
@@ -115,11 +119,14 @@ namespace NEMO
         public static float plantGrowthRate;
         public static bool maintainPopulation;
         public static bool maxSpeed;
+        public static float meatEntropyMulti;
         #endregion
 
         public static ConfigData configData = new();
         public static void Load()
         {
+            Console.WriteLine($"Loading config from {MainConfigFile}");
+
             string json = File.ReadAllText(MainConfigFile);
             ConfigData data = JsonSerializer.Deserialize<ConfigData>(json)!;
             Apply(data);

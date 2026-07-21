@@ -1,19 +1,19 @@
 {
-  "worldHeight": 100,
-  "worldWidth": 100,
-  "creatureCount": 500,
-  "tickRate": 1000,
-  "maxSpeed": true,
+  "worldHeight": 30,
+  "worldWidth": 30,
+  "creatureCount": 10,
+  "tickRate": 200,
+  "maxSpeed": false,
 
-  "foodWorldCoverage": 0.025,
-  "plantGrowthRate": 5,
-  "baseNutrition": 250.0,
-  "meatNutritionMultiplier": 2,
+  "foodWorldCoverage": 0.04,
+  "plantGrowthRate": 2,
+  "baseNutrition": 500.0,
+  "meatEntropyMulti": 0.25,
 
-  "baseStartingEnergy": 1000,
-  "maturationTime": 25,
+  "baseStartingEnergy": 3000,
+  "maturationTime": 50,
   "costOfLiving": 1,
-  "movementCost": 2,
+  "movementCost": 1,
   "attackCost": 50,
   "baseAttackDmg": 500,
 
@@ -27,10 +27,10 @@
 
 
   "printMutations": false,
-  "globalMutationRate": 0.1,
+  "globalMutationRate": 0.5,
   "topologyMutationRate": 1,
 
-  "phenoMutationFlux": 0.25,
+  "phenoMutationFlux": 1,
   "phenoMutationSharpness": 7,
 
   "mathSuppressionExponent": 0.25,

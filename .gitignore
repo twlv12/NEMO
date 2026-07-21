@@ -10,6 +10,8 @@
 *.userosscache
 *.sln.docstates
 
+SavedGenomes/*.json
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

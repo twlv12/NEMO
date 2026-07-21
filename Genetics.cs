@@ -260,6 +260,8 @@ namespace NEMO
             value = Math.Clamp(value, min, max);
         }
 
+        public PhenoFlag() { }
+
         public PhenoFlag(float baseValue, float min, float max, float mutateSensitivity = 1f)
         {
             this.value = baseValue;

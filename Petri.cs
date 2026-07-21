@@ -11,6 +11,37 @@ namespace NEMO
         public int height = Config.worldHeight;
         public static Random rand = new Random();
 
+        #region Telemetry
+        public long totalTicks = 0;
+        public Genome? bestGenome = null;
+        public int highestGeneration = 0;
+
+        public float emaEnergyIn = 0f;
+        public float emaEnergyOut = 0f;
+        public float emaBirths = 0f;
+        public float emaDeaths = 0f;
+        public float emaLifespan = 0f;
+
+        public float tickEnergyIn = 0f;
+        public int tickBirths = 0;
+        public int tickDeaths = 0;
+
+        public float emaPlantsEaten = 0f;
+        public float emaMeatsEaten = 0f;
+        public float emaAttacks = 0f;
+        public int tickPlantsEaten = 0;
+        public int tickMeatsEaten = 0;
+        public int tickAttacks = 0;
+
+        public float CalculateTotalEnergy()
+        {
+            float total = 0;
+            foreach (var c in creatures) total += c.energy;
+            foreach (var f in activeFoods) total += f.nutrition;
+            return total;
+        }
+        #endregion
+
         #region Hashes & Caches
         public HashSet<Cell> activeSignalCells = new HashSet<Cell>();
         public List<FoodItem> activeFoods = new List<FoodItem>();
@@ -23,7 +54,39 @@ namespace NEMO
 
         public void Update()
         {
-            if (activeFoods.Count < Config.worldWidth * Config.worldHeight * Config.foodWorldCoverage)
+            #region Stat Resets
+            totalTicks++;
+            tickEnergyIn = 0f;
+            tickBirths = 0;
+            tickDeaths = 0;
+
+            emaPlantsEaten = 0f;
+            emaMeatsEaten = 0f;
+            emaAttacks = 0f;
+            tickPlantsEaten = 0;
+            tickMeatsEaten = 0;
+            tickAttacks = 0;
+            #endregion
+
+            float preUpdateEnergy = CalculateTotalEnergy();
+
+            List<FoodItem> rottedMeat = new List<FoodItem>();
+            foreach (var f in activeFoods)
+            {
+                if (f.isMeat)
+                {
+                    f.nutrition -= 0.5f;
+                    if (f.nutrition <= 0) rottedMeat.Add(f);
+                }
+            }
+            foreach (var r in rottedMeat)
+            {
+                grid[r.x, r.y].foodItem = null;
+                activeFoods.Remove(r);
+            }
+
+            int currentPlants = activeFoods.Count(f => !f.isMeat);
+            if (currentPlants < Config.worldWidth * Config.worldHeight * Config.foodWorldCoverage)
             {
                 for (int i = 0; i < Config.plantGrowthRate; i++)
                 {
@@ -34,6 +97,8 @@ namespace NEMO
                         var plant = new FoodItem(fx, fy, false);
                         grid[fx, fy].foodItem = plant;
                         activeFoods.Add(plant);
+
+                        tickEnergyIn += Config.baseNutrition;
                     }
                 }
             }
@@ -57,8 +122,24 @@ namespace NEMO
                     Creature c = new Creature(x, y, GeneTools.GenerateGenome(), this);
                     creatures.Add(c);
                     grid[x, y].occupant = c;
+
+                    tickEnergyIn += c.startingEnergy * 0.25f;
                 }
             }
+
+            float postUpdateEnergy = CalculateTotalEnergy();
+            float tickEnergyOut = (preUpdateEnergy + tickEnergyIn) - postUpdateEnergy;
+
+            #region Stat EMA Calculations
+            float alpha = 0.01f;
+            emaEnergyIn = (emaEnergyIn * (1f - alpha)) + (tickEnergyIn * alpha);
+            emaEnergyOut = (emaEnergyOut * (1f - alpha)) + (tickEnergyOut * alpha);
+            emaBirths = (emaBirths * (1f - alpha)) + (tickBirths * alpha);
+            emaDeaths = (emaDeaths * (1f - alpha)) + (tickDeaths * alpha);
+            emaPlantsEaten = (emaPlantsEaten * (1f - alpha)) + (tickPlantsEaten * alpha);
+            emaMeatsEaten = (emaMeatsEaten * (1f - alpha)) + (tickMeatsEaten * alpha);
+            emaAttacks = (emaAttacks * (1f - alpha)) + (tickAttacks * alpha);
+            #endregion
         }
 
         public void DecaySignals()
@@ -155,11 +236,12 @@ namespace NEMO
             {
                 if (c.isDead) continue;
 
-                // Scale physical presence by age (fully grown at 50 ticks)
                 float maturation = Math.Min(1f, c.age / 50f);
 
                 if (rand.NextDouble() < c.intentAttack)
                 {
+                    tickAttacks++;
+
                     c.energy -= Config.attackCost * c.GetPheno(PType.MetabolicRate) * c.GetPheno(PType.Lethality);
                     var vec = DirectionToVector[c.facingDirection];
                     int targetX = c.x + vec.dx;
@@ -177,11 +259,13 @@ namespace NEMO
 
                             if (rand.NextDouble() < (c.GetPheno(PType.SocialCohesion) * kinship)) continue;
 
-                            float rawDamage = 50f * c.GetPheno(PType.Lethality) * maturation;
+                            float rawDamage = Config.baseAttackDmg * c.GetPheno(PType.Lethality) * maturation;
                             rawDamage *= (1f - (c.GetPheno(PType.ScavengerTolerance) * 0.8f));
 
                             float targetArmor = target.GetPheno(PType.ArmorDensity);
                             float finalDamage = rawDamage * (1f - targetArmor);
+
+                            float actualDamage = Math.Min(finalDamage, Math.Max(0, target.energy));
 
                             target.energy -= finalDamage;
                             c.energy += finalDamage * c.GetPheno(PType.Vampirism);
@@ -189,12 +273,27 @@ namespace NEMO
 
                             if (target.energy <= 0)
                             {
+                                tickDeaths++;
+                                emaLifespan = (emaLifespan * 0.999f) + (target.age * 0.001f);
+
                                 target.isDead = true;
                                 grid[targetX, targetY].occupant = null;
-                                grid[targetX, targetY].foodItem = new FoodItem(targetX, targetY, true)
+
+                                FoodItem? existingItem = grid[targetX, targetY].foodItem;
+                                if (existingItem != null) activeFoods.Remove(existingItem);
+
+                                float targetMaturation = Math.Min(1f, target.age / 50f);
+                                float corpseCalories = (target.startingEnergy * Config.meatEntropyMulti) * targetMaturation;
+
+                                var meat = new FoodItem(targetX, targetY, true)
                                 {
-                                    toxicity = target.GetPheno(PType.ToxicCorpse)
+                                    toxicity = target.GetPheno(PType.ToxicCorpse),
+                                    nutrition = corpseCalories * (1f - target.GetPheno(PType.ToxicCorpse) * 0.5f)
                                 };
+
+                                grid[targetX, targetY].foodItem = meat;
+                                activeFoods.Add(meat);
+                                tickEnergyIn += meat.nutrition;
                             }
                         }
                     }
@@ -215,7 +314,9 @@ namespace NEMO
                             Creature victim = grid[cx, cy].occupant;
                             if (victim != null && victim != c && !victim.isDead)
                             {
-                                float drain = 2f * parasiteTrait;
+                                float drain = (Config.costOfLiving * 4f) * parasiteTrait;
+                                drain = Math.Min(drain, Math.Max(0, victim.energy));
+
                                 victim.energy -= drain;
                                 c.energy += drain;
                             }
@@ -243,23 +344,25 @@ namespace NEMO
                     FoodItem? meal = currentCell.foodItem;
                     if (meal != null)
                     {
-                        float rawNutrition = currentCell.foodItem.nutrition;
-                        bool isMeat = currentCell.foodItem.isMeat;
+                        float rawNutrition = meal.nutrition;
+                        bool isMeat = meal.isMeat;
                         float bias = c.GetPheno(PType.CarnivoryBias);
+
                         float efficiency = isMeat ? bias : (1f - bias);
-
                         if (isMeat) efficiency *= c.GetPheno(PType.ScavengerTolerance);
-
                         efficiency *= (1f - c.GetPheno(PType.Vampirism) * 0.8f);
+                        float digestionEff = Math.Clamp(c.intentConsume, 0f, 1f);
 
-                        float bonusMultiplier = 1f + Math.Max(0f, c.intentConsume);
-                        c.energy += rawNutrition * efficiency * bonusMultiplier;
+                        c.energy += rawNutrition * efficiency * digestionEff;
 
-                        float poisonTaken = currentCell.foodItem.toxicity * Config.baseNutrition;
+                        float poisonTaken = meal.toxicity * Config.baseNutrition;
                         poisonTaken *= (1f - c.GetPheno(PType.ScavengerTolerance));
                         c.energy -= Math.Max(0f, poisonTaken);
 
-                        activeFoods.Remove(currentCell.foodItem);
+                        if (meal.isMeat) tickMeatsEaten++;
+                        else tickPlantsEaten++;
+
+                        activeFoods.Remove(meal);
                         currentCell.foodItem = null;
                     }
                 }
@@ -268,22 +371,30 @@ namespace NEMO
 
                 if (c.energy <= 0)
                 {
+                    tickDeaths++;
+                    emaLifespan = (emaLifespan * 0.999f) + (c.age * 0.001f);
+
                     c.isDead = true;
                     grid[c.x, c.y].occupant = null;
 
                     FoodItem? existingItem = grid[c.x, c.y].foodItem;
                     if (existingItem != null)
                     {
-                        activeFoods.Remove(existingItem); // Warning gone!
+                        activeFoods.Remove(existingItem);
                     }
+
+                    float corpseCalories = c.startingEnergy * Config.meatEntropyMulti * maturation;
 
                     var meat = new FoodItem(c.x, c.y, true)
                     {
                         toxicity = c.GetPheno(PType.ToxicCorpse),
-                        nutrition = Config.baseNutrition * Config.meatNutritionMultiplier * (1f - c.GetPheno(PType.ToxicCorpse) * 0.5f)
+                        nutrition = corpseCalories * (1f - c.GetPheno(PType.ToxicCorpse) * 0.5f)
                     };
+
                     grid[c.x, c.y].foodItem = meat;
                     activeFoods.Add(meat);
+
+                    tickEnergyIn += meat.nutrition;
                     continue;
                 }
 
@@ -308,6 +419,14 @@ namespace NEMO
 
                     if (placed)
                     {
+                        tickBirths++;
+
+                        if (c.generation >= highestGeneration)
+                        {
+                            highestGeneration = c.generation;
+                            bestGenome = c.genome.Clone();
+                        }
+
                         float investment = c.GetPheno(PType.OffspringInvestment);
                         float childEnergy = c.energy * investment;
                         c.energy -= childEnergy;
@@ -315,6 +434,8 @@ namespace NEMO
                         Genome childGenome = GeneTools.MutateGenome(c.genome.Clone());
                         Creature child = new Creature(spawnX, spawnY, childGenome, this);
                         child.energy = childEnergy;
+
+                        child.generation = c.generation + 1;
 
                         grid[spawnX, spawnY].occupant = child;
                         newborns.Add(child); // FIX: Safe nursery insertion
@@ -335,11 +456,103 @@ namespace NEMO
 
         public string GetStateJson()
         {
+            float avgBurnPerCreature = emaEnergyOut / Math.Max(1, creatures.Count);
+            float mathLifespan = Config.baseStartingEnergy / Math.Max(0.001f, avgBurnPerCreature);
+
+            float avgAge = 0, avgGen = 0, avgEnergy = 0, avgMeatBias = 0, avgArmor = 0, avgLethality = 0, avgGenes = 0;
+            float plantEnergy = 0, meatEnergy = 0;
+            int herbivores = 0, hunters = 0, scavengers = 0, parasites = 0;
+            int maxGen = 0;
+
+            if (creatures.Count > 0)
+            {
+                foreach (var c in creatures)
+                {
+                    avgAge += c.age;
+                    avgGen += c.generation;
+                    if (c.generation > maxGen) maxGen = c.generation;
+
+                    avgEnergy += c.energy;
+                    avgMeatBias += c.GetPheno(PType.CarnivoryBias);
+                    avgArmor += c.GetPheno(PType.ArmorDensity);
+                    avgLethality += c.GetPheno(PType.Lethality);
+                    avgGenes += c.genome.genes.Count;
+
+                    if (c.GetPheno(PType.CarnivoryBias) > 0.5f)
+                    {
+                        if (c.GetPheno(PType.ScavengerTolerance) > 0.5f) scavengers++;
+                        else hunters++;
+                    }
+                    else herbivores++;
+
+                    if (c.GetPheno(PType.Parasitism) > 0.1f) parasites++;
+                }
+
+                float count = creatures.Count;
+                avgAge /= count;
+                avgGen /= count;
+                avgEnergy /= count;
+                avgMeatBias /= count;
+                avgArmor /= count;
+                avgLethality /= count;
+                avgGenes /= count;
+            }
+
+            foreach (var f in activeFoods)
+            {
+                if (f.isMeat) meatEnergy += f.nutrition;
+                else plantEnergy += f.nutrition;
+            }
+
             var payload = new
             {
                 type = "petri",
                 width = this.width,
                 height = this.height,
+
+                stats = new
+                {
+                    ticks = totalTicks,
+                    tps = NEMO.currentTPS,            
+                    pop = creatures.Count,
+                    extinctions = NEMO.extinctionCount,
+                    savedGenomesTotal = NEMO.savedGenomesTotal,
+                    savedGenomesSession = NEMO.savedGenomesSession,
+                    plants = activeFoods.Count(f => !f.isMeat),
+                    meat = activeFoods.Count(f => f.isMeat),
+
+                    eIn = emaEnergyIn,
+                    eOut = emaEnergyOut,
+                    totalCreatureE = avgEnergy * creatures.Count,
+                    totalPlantE = plantEnergy,
+                    totalMeatE = meatEnergy,
+
+                    births = emaBirths,
+                    deaths = emaDeaths,
+                    lifeMeas = emaLifespan,
+                    lifeMath = mathLifespan,
+
+                    plantsEaten = emaPlantsEaten,    
+                    meatsEaten = emaMeatsEaten,      
+                    attacks = emaAttacks,            
+
+                    avgAge = avgAge,
+                    avgGen = avgGen,
+                    maxGen = maxGen,
+
+                    simLoad = NEMO.emaSimTime,        
+                    uiLoad = NEMO.emaUiTime,
+
+                    herbivores = herbivores,
+                    hunters = hunters,
+                    scavengers = scavengers,
+                    parasites = parasites,
+                    avgCarnivory = avgMeatBias,
+                    avgArmor = avgArmor,
+                    avgLethality = avgLethality,
+                    avgGenes = avgGenes
+                },
+
                 blocks = this.staticBlocks,
                 foods = this.activeFoods.Select(f => new ExportFood { x = f.x, y = f.y, meat = f.isMeat }).ToList(),
                 creatures = this.creatures.Select(c => new ExportCreature
@@ -431,6 +644,7 @@ namespace NEMO
         public int lastFacing;
 
         public int age = 0;
+        public int generation = 0;
         public float energy = Config.baseStartingEnergy;
         public bool isDead = false;
 
@@ -525,10 +739,6 @@ namespace NEMO
             this.y = y;
             this.isMeat = isMeat;
             this.nutrition = Config.baseNutrition;
-            if (isMeat)
-            {
-                nutrition = (int)(Config.baseNutrition * Config.meatNutritionMultiplier);
-            }
         }
     }
 

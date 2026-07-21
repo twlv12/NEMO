@@ -4,17 +4,35 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace NEMO
-{
+{    
+    //TODO
+    //add feedback to genome edit buttons like instantiate.
+    //
+
     public static class NEMO
     {
+        #region Initializations
         public static List<IWebSocketConnection> clients = new List<IWebSocketConnection>();
         public static World? activeWorld = null;
+        public static bool isPaused = false;
+        public static int extinctionCount = 0;
+        public static int savedGenomesTotal = 0;
+        public static int savedGenomesSession= 0;
+
+        public static Stopwatch tpsTimer = Stopwatch.StartNew();
+        public static int ticksThisSecond = 0;
+        public static int currentTPS = 0;
+        public static bool autoRestart = false;
+
+        public static bool pauseOnExtinction = true;
+        public static bool worldWasEmpty = false;
+
+        public static double emaSimTime = 0;
+        public static double emaUiTime = 0;
+        #endregion
 
         public static void Main()
         {
-            int genomeUpdateTime = 250;
-            int brainUpdateTime = 100;
-
             Config.Load();
             NeuronDicts.ExportNeuronDefs();
             NeuronDicts.ExportDataDefs();
@@ -27,7 +45,10 @@ namespace NEMO
                 new("delta")
             ];
 
-            #region Servers startup
+            Directory.CreateDirectory(Config.SavedGenomesFolder);
+            savedGenomesTotal = Directory.GetFiles("SavedGenomes", "*.json").Length;
+
+            #region Servers Handler
             Process pythonServer = new Process();
             pythonServer.StartInfo.FileName = "python";
             pythonServer.StartInfo.Arguments = "-m http.server 8000";
@@ -57,6 +78,7 @@ namespace NEMO
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"Browser connected {socket.ConnectionInfo.ClientIpAddress}");
                     Console.ResetColor();
+                    BroadcastState();
                 };
 
                 socket.OnClose = () =>
@@ -72,44 +94,98 @@ namespace NEMO
                     ProcessSocketMessage(message, sims);
                 };
             });
+
+            Stopwatch tickTimer = Stopwatch.StartNew();
+            Stopwatch petriTimer = Stopwatch.StartNew();
+            Stopwatch brainTimer = Stopwatch.StartNew();
+            Stopwatch genomeTimer = Stopwatch.StartNew();
+            Stopwatch profiler = new Stopwatch();
             #endregion
 
             while (true)
             {
-                if (previousView != Config.currentView)
+                profiler.Restart();
+
+                if (activeWorld != null && !isPaused)
                 {
-                    OnViewChanged(sims);
-                    previousView = Config.currentView;
-                }
-                switch (Config.currentView)
-                {
-                    case 0:
-                        if (activeWorld != null)
+                    int delay = Config.maxSpeed ? 0 : 1000 / Config.tickRate;
+                    if (delay == 0 || tickTimer.ElapsedMilliseconds >= delay)
+                    {
+                        activeWorld.Update();
+                        if (delay > 0) tickTimer.Restart();
+
+                        ticksThisSecond++;
+                        if (tpsTimer.ElapsedMilliseconds >= 1000)
                         {
-                            UpdatePetriView(activeWorld);
+                            currentTPS = ticksThisSecond;
+                            ticksThisSecond = 0;
+                            tpsTimer.Restart();
                         }
-                        if (!Config.maxSpeed)
-                            Thread.Sleep(1000 / Config.tickRate);
-                        
-                        break;
 
-                    case 1:
-                        UpdateGenomeView(sims);
-                        Thread.Sleep(genomeUpdateTime);
-                        break;
+                        bool worldIsEmpty = activeWorld.creatures.Count == 0 && !Config.maintainPopulation;
 
-                    case 2:
-                        UpdateBrainView(sims);
-                        Thread.Sleep(brainUpdateTime);
-                        break;
+                        if (worldIsEmpty && !worldWasEmpty)
+                        {
+                            extinctionCount++;
+
+                            string logLine = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] extinction #{extinctionCount} | ticks: {activeWorld.totalTicks} | max Gen: {activeWorld.highestGeneration} | avg Ein: {activeWorld.emaEnergyIn:F1} | avg Eout: {activeWorld.emaEnergyOut:F1}";
+                            File.AppendAllText($"{Config.SavedGenomesFolder}ExtinctionLogs.txt", logLine + Environment.NewLine);
+
+                            if (activeWorld.bestGenome != null)
+                                SaveGenomeToDisk(activeWorld.bestGenome, $"Ext{extinctionCount}_Gen{activeWorld.highestGeneration}");
+
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine(logLine);
+                            Console.ResetColor();
+
+                            if (pauseOnExtinction)
+                            {
+                                isPaused = true;
+                                foreach (var client in clients.ToList())
+                                    client.Send(JsonSerializer.Serialize(new { @event = "simEnded" }));
+                            }
+
+                            BroadcastState();
+                        }
+
+                        worldWasEmpty = worldIsEmpty;
+                    }
                 }
+
+                emaSimTime = (emaSimTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
+                profiler.Restart();
+
+                if (petriTimer.ElapsedMilliseconds >= 33)
+                {
+                    if (activeWorld != null) UpdatePetriView(activeWorld);
+                    petriTimer.Restart();
+                }
+                if (brainTimer.ElapsedMilliseconds >= 100)
+                {
+                    UpdateBrainView(sims);
+                    brainTimer.Restart();
+                }
+                if (genomeTimer.ElapsedMilliseconds >= 100)
+                {
+                    UpdateGenomeView(sims);
+                    genomeTimer.Restart();
+                }
+
+                emaUiTime = (emaUiTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
+                if (!Config.maxSpeed || isPaused) Thread.Sleep(1);
             }
+        }
+
+        public static void BroadcastState()
+        {
+            var state = new { @event = "syncState", isPaused = isPaused, 
+                autoRestart = autoRestart, pauseOnExtinction = pauseOnExtinction };
+            string json = JsonSerializer.Serialize(state);
+            foreach (var client in clients.ToList()) client.Send(json);
         }
 
         public static void UpdatePetriView(World world)
         {
-            world.Update();
-
             string stateJson = world.GetStateJson();
             foreach (var client in clients.ToList())
             {
@@ -120,8 +196,17 @@ namespace NEMO
         {
             foreach (var sim in sims)
             {
-                sim.brain.UpdateAllNeurons();
-                NeuralTools.RenderGraph(sim.brain, sim.name);
+                bool isDeadOrEmpty = sim.trackedCreature == null || sim.trackedCreature.isDead;
+
+                if (isPaused || isDeadOrEmpty)
+                {
+                    if (sim.trackedCreature != null)
+                    {
+                        sim.brain.UpdateAllNeurons();
+                    }
+                }
+
+                NeuralTools.RenderGraph(sim.brain, sim.name, isDeadOrEmpty, isPaused);
             }
         }
         public static void UpdateGenomeView(List<Simulation> sims)
@@ -134,12 +219,9 @@ namespace NEMO
 
         public static void OnViewChanged(List<Simulation> sims)
         {
-            if (Config.currentView == 2)
+            foreach (var sim in sims)
             {
-                foreach (var sim in sims)
-                {
-                    RebuildLiveBrain(sim);
-                }
+                RebuildLiveBrain(sim);
             }
         }
 
@@ -150,6 +232,49 @@ namespace NEMO
             {
                 sim.trackedCreature.brain = sim.brain;
                 foreach (var n in sim.brain.neurons) n.host = sim.trackedCreature;
+            }
+        }
+
+        public static void SaveGenomeToDisk(Genome genome, string prefix)
+        {
+            Directory.CreateDirectory(Config.SavedGenomesFolder);
+            string safeHash = genome.GenerateExactHash().ToString("X");            
+
+            JsonSerializerOptions options = new JsonSerializerOptions 
+            { 
+                WriteIndented = true, 
+                IncludeFields = true 
+            };
+            string jsonGenome = JsonSerializer.Serialize(genome, options);
+
+            File.WriteAllText($"{Config.SavedGenomesFolder}{prefix}_{safeHash}.json", jsonGenome);
+
+            savedGenomesTotal++;
+            savedGenomesSession++;
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"[SAVED] {prefix}_{safeHash}.json");
+            Console.ResetColor();
+        }
+        public static Genome? LoadGenomeFromDisk(string jsonText)
+        {
+            try
+            {
+                JsonSerializerOptions options = new JsonSerializerOptions 
+                { 
+                    IncludeFields = true 
+                };
+                Genome? genome = JsonSerializer.Deserialize<Genome>(jsonText, options);
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine($"[LOAD] Loaded genome from disk.");
+
+                return genome;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[LOAD ERROR] Failed to deserialize genome: {ex.Message}");
+                Console.ResetColor();
+                return null;
             }
         }
 
@@ -184,12 +309,59 @@ namespace NEMO
                     if (actionType == "startWorld")
                     {
                         activeWorld = new World(Config.worldWidth, Config.worldHeight, new List<Genome>());
+                        isPaused = false;
+                        BroadcastState();
+                        return;
+                    }
+                    if (actionType == "togglePause")
+                    {
+                        isPaused = !isPaused;
+                        BroadcastState();
+                        return;
+                    }
+                    if (actionType == "forcePause")
+                    {
+                        isPaused = true;
+                        BroadcastState();
+                        return;
+                    }
+                    if (actionType == "toggleAutoRestart")
+                    {
+                        autoRestart = !autoRestart;
+                        BroadcastState();
+                        return;
+                    }
+                    if (actionType == "killCreature")
+                    {
+                        string creatureId = root.GetProperty("creatureId").GetString()!;
+                        var c = activeWorld?.creatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
+                        if (c != null) c.energy = 0;
+                        return;
+                    }
+                    if (actionType == "respawnCreature")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+
+                        if (targetSim != null && activeWorld != null)
+                        {
+                            int x = World.rand.Next(0, activeWorld.width);
+                            int y = World.rand.Next(0, activeWorld.height);
+
+                            Creature c = new Creature(x, y, targetSim.genome, activeWorld);
+                            activeWorld.creatures.Add(c);
+                            activeWorld.grid[x, y].occupant = c;
+
+                            targetSim.trackedCreature = c;
+                            targetSim.brain = c.brain;
+                        }
                         return;
                     }
                     if (actionType == "loadGenome")
                     {
                         string slot = root.GetProperty("slot").GetString()!;
                         string creatureId = root.GetProperty("creatureId").GetString()!;
+                        Console.WriteLine($"[LOAD] Slot: {slot} | Creature ID: {creatureId}");
 
                         if (activeWorld != null)
                         {
@@ -224,6 +396,77 @@ namespace NEMO
                     if (actionType == "reloadConfig")
                     {
                         Config.Load();
+                        return;
+                    }
+                    if (actionType == "saveChampion")
+                    {
+                        if (activeWorld != null && activeWorld.creatures.Count > 0)
+                        {
+                            var champ = activeWorld.creatures.OrderByDescending(c => c.generation).ThenByDescending(c => c.energy).First();
+                            SaveGenomeToDisk(champ.genome, $"ManualChamp_Gen{champ.generation}");
+                        }
+                        return;
+                    }
+                    if (actionType == "saveSpecific")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+                        if (targetSim != null && targetSim.genome.genes.Count > 0)
+                        {
+                            SaveGenomeToDisk(targetSim.genome, $"Slot_{slot.ToUpper()}");
+                        }
+                        return;
+                    }
+                    if (actionType == "loadSpecific")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        string fileData = root.GetProperty("fileData").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+
+                        Genome? gen = LoadGenomeFromDisk(fileData);
+                        if (gen != null)
+                        {
+                            targetSim.genome = gen;
+                            RebuildLiveBrain(targetSim);
+                        }
+                        return;
+                    }
+                    if (actionType == "randGenome")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+
+                        targetSim.trackedCreature = null;
+
+                        targetSim.genome = GeneTools.GenerateGenome();
+                        RebuildLiveBrain(targetSim);
+                    }
+                    if (actionType == "newCreature")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+
+                        Random rand = new Random();
+
+                        while (true)
+                        {
+                            int x = rand.Next(0, activeWorld.width);
+                            int y = rand.Next(0, activeWorld.height);
+
+                            if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                            {
+                                Creature c = new Creature(x, y, targetSim.genome, activeWorld);
+                                activeWorld.creatures.Add(c);
+                                activeWorld.grid[x, y].occupant = c;
+
+                                return;
+                            }
+                        }
+                    }
+                    if (actionType == "togglePauseOnExtinction")
+                    {
+                        pauseOnExtinction = !pauseOnExtinction;
+                        BroadcastState();
                         return;
                     }
 
