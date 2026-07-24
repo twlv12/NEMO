@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>NEMO</title>
-    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="vis-network.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -90,7 +90,8 @@
         let runtimeConfig = {};
         const networks = [];
 
-        const socket = new WebSocket("ws://127.0.0.1:8181");
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
 
         let autoRestart = false;
         let pauseOnExtinction = true;
@@ -383,7 +384,7 @@
             deadOverlay.style.color = "tomato";
             deadOverlay.style.fontFamily = "consolas, monospace";
             deadOverlay.style.pointerEvents = "none";
-            deadOverlay.innerHTML = "<h2 style='margin:0;'>CREATURE DEAD</h2><p style='color:#ccc; margin-top:5px;'>Slot Empty</p>";
+            deadOverlay.innerHTML = "<h2 style='margin:0;'>NO CREATURE</h2><p style='color:#ccc; margin-top:5px;'>Slot Empty</p>";
 
             const respawnBtn = document.createElement("button");
             respawnBtn.innerText = "Respawn Clone";
@@ -412,10 +413,6 @@
 
         async function start() {
             await loadConfig();
-
-            //for (const def of sliderDefs) {
-            //    createSlider(def);
-            //}
 
             for (const name of graphNames) {
                 createGraphContainer(name);

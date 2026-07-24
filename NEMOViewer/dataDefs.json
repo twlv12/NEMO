@@ -33,6 +33,32 @@
       "type": "Int"
     }
   ],
+  "Gradient": [
+    {
+      "name": "axis",
+      "type": "Int"
+    }
+  ],
+  "MoveDelta": [
+    {
+      "name": "checkRotation",
+      "type": "Bool"
+    }
+  ],
+  "Density": [
+    {
+      "name": "targetType",
+      "type": "Int"
+    },
+    {
+      "name": "radius",
+      "type": "Int"
+    },
+    {
+      "name": "amplifier",
+      "type": "Float"
+    }
+  ],
   "GetSignal": [
     {
       "name": "channel",
@@ -66,28 +92,6 @@
     },
     {
       "name": "steepness",
-      "type": "Int"
-    }
-  ],
-  "MoveDelta": [
-    {
-      "name": "checkRotation",
-      "type": "Bool"
-    }
-  ],
-  "Density": [
-    {
-      "name": "targetType",
-      "type": "Int"
-    },
-    {
-      "name": "radius",
-      "type": "Int"
-    }
-  ],
-  "Gradient": [
-    {
-      "name": "axis",
       "type": "Int"
     }
   ],

@@ -1,180 +1,151 @@
 ﻿using System.Reflection;
 using System.Text.Json;
+
 namespace NEMO
 {
-    public class ConfigData
-    {
-        //WHEN ADDING NEW, ADD BOTH UPPER AND LOWER ENTRY!!!
-        #region Set1
-        public int minGenes { get; set; }
-        public int baseGenes { get; set; }
-        public int maxGenes { get; set; }
-        public float neuronReuse { get; set; }
-        public float globalMutationRate { get; set; }
-        public float topologyMutationRate { get; set; }
-        public float mathSuppressionExponent { get; set; }
-        public float mathWeightMultiplier { get; set; }
-        public float baseActionWeight { get; set; }
-        public float baseSensorWeight { get; set; }
-        public float weightSharpness { get; set; }
-        public float weightFlux { get; set; }
-        public float wSignFlipChance { get; set; }
-        public float floatDataSharpness { get; set; }
-        public float floatDataFlux { get; set; }
-        public float boolFlipChance { get; set; }
-        public float intRandChance { get; set; }
-        public float slotFlipChance { get; set; }
-        public float rewireOneChance { get; set; }
-        public float regenOneChance { get; set; }
-        public float neuronReplaceChance { get; set; }
-        public float sameTypeChance { get; set; }
-        public float globalNewGeneRate { get; set; }
-        public float geneToggleChance { get; set; }
-        public float geneSplitChance { get; set; }
-        public float geneDuplicationChance { get; set; }
-        public float geneInsertionChance { get; set; }
-        public float geneRemovalChance { get; set; }
-        public bool printMutations { get; set; }
-        public int currentView { get; set; }
-        public int worldWidth { get; set; }
-        public int worldHeight { get; set; }
-        public int creatureCount { get; set; }
-        public float baseNutrition { get; set; }
-        public float meatNutritionMultiplier { get; set; }
-        public float movementCost { get; set; }
-        public float costOfLiving { get; set; }
-        public float baseStartingEnergy { get; set; }
-        public float attackCost { get; set; }
-        public float phenoMutationFlux { get; set; }
-        public float phenoMutationSharpness { get; set; }
-        public float baseAttackDmg { get; set; }
-        public int maturationTime { get; set; }
-        public int tickRate { get; set; }
-        public float foodWorldCoverage { get; set; }
-        public float plantGrowthRate { get; set; }
-        public bool maintainPopulation { get; set; }
-        public bool maxSpeed { get; set; }
-        public float meatEntropyMulti { get; set; }
-        #endregion
-
-    }
     public static class Config
     {
-        public static string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+        public static int worldWidth;
+        public static int worldHeight;
+        public static int tickRate;
+        public static bool maxSpeed;
+        public static int uiRate;
+        public static int currentView;
+        public static bool sandboxMode;
 
-        //SET THESE!!
-        public static string MainConfigFile = projectDirectory + @"\NemoViewer\Config.json"; //FILE
-        public static string RuntimeConfigFile = projectDirectory + @"\NEMOViewer\runtimeConfig.json"; //FILE
-        public static string StimuliFile = projectDirectory + @"\NEMOViewer\stimuli.json"; //FILE
-        public static string EditorActionFile = projectDirectory + @"\NEMOViewer\editorAction.json"; //FILE
-        public static string GraphOutputFolder = projectDirectory + @"\NEMOViewer\"; //FOLDER
-        public static string SavedGenomesFolder = projectDirectory + @"\SavedGenomes\"; //FOLDER
+        public static int creatureCount;
+        public static float globalEnergyMultiplier;
+        public static float wastePenaltyMultiplier;
+        public static float momentumInfluence;
 
-        #region Set2
+        public static float elevation;
+        public static float frequency;
+        public static float amplitude;
+        public static int numOctaves;
+        public static int maxGenAttempts;
+        public static float migrationSpeed;
+
+        public static float foodWorldCoverage;
+        public static float plantClustering;
+        public static float plantFrequency;
+        public static float plantCutoff;
+        public static float lingeringPlants;
+        public static float plantGrowthRate;
+
+        public static float baseNutrition;
+        public static float meatNutritionMultiplier;
+        public static float meatEntropyMulti;
+        public static float meatDecayRate;
+        public static float deathEnergy;
+
+        public static float baseStartingEnergy;
+        public static int maturationTime;
+        public static float birthEfficiency;
+        public static float costOfLiving;
+        public static float movementCost;
+        public static float attackCost;
+        public static float baseAttackDmg;
+        public static float wallCollisionDmg;
+
+        public static float paraEntropyMulti;
+        public static float paraSomaticTax;
+        public static float paraDrainPower;
+
+        public static float selectionThreshold;
+        public static float selectKinshipThreshold;
+        public static bool maintainPopulation;
+
         public static int minGenes;
         public static int baseGenes;
         public static int maxGenes;
         public static float neuronReuse;
+
+        public static bool printMutations;
         public static float globalMutationRate;
         public static float topologyMutationRate;
+
+        public static float phenoMutationFlux;
+        public static float phenoMutationSharpness;
+
         public static float mathSuppressionExponent;
         public static float mathWeightMultiplier;
         public static float baseActionWeight;
         public static float baseSensorWeight;
+
         public static float weightSharpness;
         public static float weightFlux;
         public static float wSignFlipChance;
+
         public static float floatDataSharpness;
         public static float floatDataFlux;
         public static float boolFlipChance;
         public static float intRandChance;
+
         public static float slotFlipChance;
         public static float rewireOneChance;
         public static float regenOneChance;
+
         public static float neuronReplaceChance;
         public static float sameTypeChance;
+
         public static float globalNewGeneRate;
+
         public static float geneToggleChance;
         public static float geneSplitChance;
         public static float geneDuplicationChance;
         public static float geneInsertionChance;
         public static float geneRemovalChance;
-        public static bool printMutations;
-        public static int currentView;
-        public static int worldWidth;
-        public static int worldHeight;
-        public static int creatureCount;
-        public static float baseNutrition;
-        public static float meatNutritionMultiplier;
-        public static float movementCost;
-        public static float costOfLiving;
-        public static float baseStartingEnergy;
-        public static float attackCost;
-        public static float phenoMutationFlux;
-        public static float phenoMutationSharpness;
-        public static float baseAttackDmg;
-        public static int maturationTime;
-        public static int tickRate;
-        public static float foodWorldCoverage;
-        public static float plantGrowthRate;
-        public static bool maintainPopulation;
-        public static bool maxSpeed;
-        public static float meatEntropyMulti;
-        #endregion
 
-        public static ConfigData configData = new();
+        public static int numBiomes;
+        public static float ridgeThickness;
+
+        public static string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+        public static string MainConfigFile = projectDirectory + @"\NemoViewer\Config.json";
+        public static string RuntimeConfigFile = projectDirectory + @"\NEMOViewer\runtimeConfig.json";
+        public static string StimuliFile = projectDirectory + @"\NEMOViewer\stimuli.json";
+        public static string EditorActionFile = projectDirectory + @"\NEMOViewer\editorAction.json";
+        public static string GraphOutputFolder = projectDirectory + @"\NEMOViewer\";
+        public static string SavedGenomesFolder = projectDirectory + @"\SavedGenomes\";
+
         public static void Load()
         {
             Console.WriteLine($"Loading config from {MainConfigFile}");
-
-            string json = File.ReadAllText(MainConfigFile);
-            ConfigData data = JsonSerializer.Deserialize<ConfigData>(json)!;
-            Apply(data);
+            if (!File.Exists(MainConfigFile))
+            {
+                Console.WriteLine("[CONFIG] Main config file not found!");
+                return;
+            }
+            ApplyJson(File.ReadAllText(MainConfigFile));
         }
         public static void ReloadRuntime()
         {
-            if (!File.Exists(RuntimeConfigFile))
-                return;
-            try{
-                string json;
-                using (FileStream stream =
-                    new FileStream(
-                        RuntimeConfigFile,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite))
-
-                using (StreamReader reader = new StreamReader(stream)){
-                    json = reader.ReadToEnd();
-                }
-
-                ConfigData runtime = JsonSerializer.Deserialize<ConfigData>(json)!;
-                if (runtime != null){
-                    Apply(runtime);
-                }
-            }
-            catch{
-                return;
-            }
-        }
-        private static void Apply(ConfigData data)
-        {
-            FieldInfo[] configFields = typeof(Config).GetFields(
-                     BindingFlags.Public 
-                   | BindingFlags.Static );
-
-            PropertyInfo[] dataProperties = typeof(ConfigData).GetProperties();
-
-            foreach (FieldInfo field in configFields)
+            if (!File.Exists(RuntimeConfigFile)) return;
+            try
             {
-                PropertyInfo? prop = dataProperties.FirstOrDefault(
-                        p => p.Name == field.Name );
-
-                if (prop == null)
-                    continue;
-
-                object? value = prop.GetValue(data);
-                field.SetValue(null, value);
+                ApplyJson(File.ReadAllText(RuntimeConfigFile));
+            }
+            catch { return; }
+        }
+        public static void ApplyJson(string json)
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(json);
+                foreach (var prop in doc.RootElement.EnumerateObject())
+                {
+                    var field = typeof(Config).GetField(prop.Name, BindingFlags.Public | BindingFlags.Static);
+                    if (field != null)
+                    {
+                        if (field.FieldType == typeof(int)) field.SetValue(null, prop.Value.GetInt32());
+                        else if (field.FieldType == typeof(float)) field.SetValue(null, (float)prop.Value.GetDecimal());
+                        else if (field.FieldType == typeof(bool)) field.SetValue(null, prop.Value.GetBoolean());
+                        else if (field.FieldType == typeof(string)) field.SetValue(null, prop.Value.GetString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CONFIG] Error applying JSON: {ex.Message}");
             }
         }
     }

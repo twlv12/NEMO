@@ -77,7 +77,9 @@ namespace NEMO
                 //changes signal decay rate
                 { PType.ChemicalVolatility, new PhenoFlag(1.0f, 0.1f, 3.0f) },
                 //siphons energy from neighbours, always consumes energy
-                { PType.Parasitism, new PhenoFlag(0.0f, 0.0f, 1.0f) }
+                { PType.Parasitism, new PhenoFlag(0.0f, 0.0f, 1.0f) },
+                //100% efficient energy transfer between kin
+                { PType.Symbiosis, new PhenoFlag(0.0f, 0.0f, 1.0f) },
             };
         }
 
@@ -152,7 +154,6 @@ namespace NEMO
 
                 float w = (gene.weight / 65535f) * 2f - 1f;
 
-                // Multiply by primes to spread the hash distribution
                 rSum += ((float)gene.src.func * 0.13f) * w;
                 gSum += ((float)gene.tgt.func * 0.17f) * w;
                 bSum += ((float)gene.src.type * 0.31f) * w;
@@ -160,10 +161,13 @@ namespace NEMO
 
             if (activeGenes == 0) return (128, 128, 128);
 
-            // Use MathF.Sin to create a continuous, looping color wheel based on the raw sums
             byte finalR = (byte)(((MathF.Sin(rSum) + 1f) * 0.5f) * 255f);
             byte finalG = (byte)(((MathF.Sin(gSum) + 1f) * 0.5f) * 255f);
             byte finalB = (byte)(((MathF.Sin(bSum) + 1f) * 0.5f) * 255f);
+
+            finalR = (byte)(int)NEMO.Remap(finalR, 0, 255, 50, 200);
+            finalG = (byte)(int)NEMO.Remap(finalG, 0, 255, 50, 200);
+            finalB = (byte)(int)NEMO.Remap(finalB, 0, 255, 50, 200);
 
             return (finalR, finalG, finalB);
         }
@@ -215,14 +219,14 @@ namespace NEMO
         public override string ToString()
         {
             string srcDatas = "";
-            foreach (DataField dataField in NeuronDicts.DataDefinitions[src.func])
+            foreach (DataField dataField in NeuronDicts.DataDefinitions[(int)src.func])
             {
                 srcDatas += $"{dataField.name.Substring(0, 4)}=";
                 srcDatas += Math.Round(GeneTools.DecodeField(src.data, dataField), 2);
                 srcDatas += "; ";
             }
             string tgtDatas = "";
-            foreach (DataField dataField in NeuronDicts.DataDefinitions[tgt.func])
+            foreach (DataField dataField in NeuronDicts.DataDefinitions[(int)tgt.func])
             {
                 tgtDatas += $"{dataField.name.Substring(0, 4)}=";
                 tgtDatas += Math.Round(GeneTools.DecodeField(tgt.data, dataField), 2);
@@ -282,6 +286,11 @@ namespace NEMO
 
         public static Genome MutateGenome(Genome genome)
         {
+            if (genome.genes == null || genome.genes.Count == 0)
+            {
+                return genome.Clone();
+            }
+
             PrintMut($"Mutating Genome...");
 
             List<Gene> genesToRemove = new();
@@ -415,7 +424,7 @@ namespace NEMO
                     NeuronGeneData newNeuron = new();
 
                     newNeuron.type = (NType)1;
-                    var funcs = NeuronDicts.FuncsOfType[newNeuron.type];
+                    var funcs = NeuronDicts.FuncsOfType[(int)newNeuron.type];
                     newNeuron.func = NFunc.Relay;
                     newNeuron.ID = nextID;
                     nextID++;
@@ -563,7 +572,7 @@ namespace NEMO
         }
         public static ushort MutateData(ushort data, NFunc func, float effectiveMutationRate)
         {
-            foreach (DataField field in NeuronDicts.DataDefinitions[func])
+            foreach (DataField field in NeuronDicts.DataDefinitions[(int)func])
             {
                 if (field.fieldType==FType.SignedFloat)
                 {
@@ -660,7 +669,7 @@ namespace NEMO
         public static NeuronGeneData RandNeuronOfType(NType type, ref uint nextID)
         {
             NeuronGeneData newNeuron = new NeuronGeneData();
-            var funcs = NeuronDicts.FuncsOfType[type];
+            var funcs = NeuronDicts.FuncsOfType[(int)type];
             newNeuron.type = type;
             newNeuron.func = funcs[rand.Next(0, funcs.Count)];
             newNeuron.data = GenerateData(newNeuron.func);
@@ -774,7 +783,7 @@ namespace NEMO
             else{
                 neuron.type = (NType)rand.Next(1, 3); }
 
-            var funcs = NeuronDicts.FuncsOfType[neuron.type];
+            var funcs = NeuronDicts.FuncsOfType[(int)neuron.type];
             neuron.func = funcs[rand.Next(0, funcs.Count)];
 
             neuron.ID = nextNeuronID;
@@ -789,7 +798,7 @@ namespace NEMO
         public static ushort GenerateData(NFunc func)
         {
             ushort fullDataField = 0;
-            foreach (DataField field in NeuronDicts.DataDefinitions[func])
+            foreach (DataField field in NeuronDicts.DataDefinitions[(int)func])
             {
                 ushort dataField;
 
@@ -867,7 +876,7 @@ namespace NEMO
         public static ushort EncodeFields(NFunc func, List<NeuronDataField> fields)
         {
             ushort data = 0;
-            List<DataField> defs = NeuronDicts.DataDefinitions[func];
+            List<DataField> defs = NeuronDicts.DataDefinitions[(int)func];
             for (int i = 0; i < defs.Count; i++)
             {
                 DataField def = defs[i];
@@ -896,7 +905,7 @@ namespace NEMO
             return data;
         }
 
-        public static void RenderGraph(Genome genome, string graphID)
+        public static void RenderGraph(Genome genome, string graphID, bool isTracking=false)
         {
             HashSet<string> emittedNodes = new();
             List<object> nodes = new();
@@ -905,7 +914,7 @@ namespace NEMO
             string BuildNodeLabel(string name, NeuronGeneData neuron)
             {
                 string label = name;
-                foreach (var field in NeuronDicts.DataDefinitions[neuron.func]){
+                foreach (var field in NeuronDicts.DataDefinitions[(int)neuron.func]){
                     string val = DecodeFieldToString(neuron.data, field);
                     label += $"\n{field.name}={val}";
                 }
@@ -947,7 +956,7 @@ namespace NEMO
             List<DataFieldLive> ExportFields(NeuronGeneData neuron)
             {
                 List<DataFieldLive> fields = new();
-                foreach (var fieldDef in NeuronDicts.DataDefinitions[neuron.func])
+                foreach (var fieldDef in NeuronDicts.DataDefinitions[(int)neuron.func])
                 {
                     DataFieldLive export = new();
                     export.name = fieldDef.name;
@@ -1004,7 +1013,9 @@ namespace NEMO
             {
                 graph = graphID,
                 nodes = nodes,
-                edges = edges
+                edges = edges,
+                isTracking = isTracking,
+                phenotypes = genome.phenotypes.ToDictionary(k => k.Key.ToString(), v => v.Value.value)
             };
 
             string json = JsonSerializer.Serialize(payload,

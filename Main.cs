@@ -1,23 +1,40 @@
 ﻿using Fleck;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace NEMO
 {    
-    //TODO
-    //add feedback to genome edit buttons like instantiate.
-    //
+    //TODO - NEVER IN ORDER
+    //add occasionaly auto-saving of selected champion mode
+    //biome migration doesnt remove old fertility, governor conflict.
+    //add fallback c# not running page, constantly running background service, repeats attempt loading
+    //reert popdensity back to nicer slow gaussian blur since it pauses automatically now
+    //add more sensory neurons to prioritize environment-reactive behaviour rather than random
+    //fix brain structure to be more sensor-based, less redunant math
+    //cull unsuable/useless neurons and connections from brain 
+    //fix graph to be relative to simspeed
+    //add hunting stats to telemetry
+    //add world recording system to start/stop recording a world, then play it back,
+    //and be able to restore to any point
+    //test carnivore and parasite thermodynamics
+    //add fertility, carnivory overlays
 
     public static class NEMO
     {
         #region Initializations
+        public static bool isBroadcasting = false;
         public static List<IWebSocketConnection> clients = new List<IWebSocketConnection>();
         public static World? activeWorld = null;
         public static bool isPaused = false;
+        public static string trackedCreatureId = "";
+
         public static int extinctionCount = 0;
         public static int savedGenomesTotal = 0;
         public static int savedGenomesSession= 0;
+
+        public static List<(byte r, byte g, byte b)> sessionSavedColors = new();
 
         public static Stopwatch tpsTimer = Stopwatch.StartNew();
         public static int ticksThisSecond = 0;
@@ -26,9 +43,16 @@ namespace NEMO
 
         public static bool pauseOnExtinction = true;
         public static bool worldWasEmpty = false;
+        public static bool safeEditMode = true;
+        public static bool disableGovernor = false;
+        public static bool disableEnergyDrain = false;
 
         public static double emaSimTime = 0;
         public static double emaUiTime = 0;
+
+        public static bool repopExtinct = false;
+        public static bool repopChamp = false;
+        public static bool repopEditor = false;
         #endregion
 
         public static void Main()
@@ -46,30 +70,80 @@ namespace NEMO
             ];
 
             Directory.CreateDirectory(Config.SavedGenomesFolder);
-            savedGenomesTotal = Directory.GetFiles("SavedGenomes", "*.json").Length;
+            savedGenomesTotal = Directory.GetFiles(Config.SavedGenomesFolder, "*.json").Length;
 
             #region Servers Handler
+            #region Startup
             Process pythonServer = new Process();
             pythonServer.StartInfo.FileName = "python";
             pythonServer.StartInfo.Arguments = "-m http.server 8000";
             pythonServer.StartInfo.UseShellExecute = false;
             pythonServer.StartInfo.RedirectStandardOutput = true;
             pythonServer.StartInfo.RedirectStandardError = true;
-
             pythonServer.StartInfo.WorkingDirectory = Config.GraphOutputFolder;
-
+            
             pythonServer.OutputDataReceived += (s, e) => { if (e.Data != null) Console.WriteLine($"[Python] {e.Data}"); };
             pythonServer.ErrorDataReceived += (s, e) => { if (e.Data != null) Console.WriteLine($"[Python] {e.Data}"); };
-
+            
             pythonServer.Start();
             pythonServer.BeginOutputReadLine();
             pythonServer.BeginErrorReadLine();
-
+            
+            Process caddyServer = new Process();
+            caddyServer.StartInfo.FileName = Path.Combine(Config.GraphOutputFolder, "caddy.exe");
+            caddyServer.StartInfo.Arguments = "run";
+            caddyServer.StartInfo.UseShellExecute = false;
+            caddyServer.StartInfo.CreateNoWindow = true;
+            caddyServer.StartInfo.WorkingDirectory = Config.GraphOutputFolder;
+            
+            caddyServer.StartInfo.RedirectStandardOutput = true;
+            caddyServer.StartInfo.RedirectStandardError = true;
+            caddyServer.OutputDataReceived += (s, e) => { if (e.Data != null) Console.WriteLine($"[Caddy] {e.Data}"); };
+            caddyServer.ErrorDataReceived += (s, e) => { if (e.Data != null) Console.WriteLine($"[Caddy] {e.Data}"); };
+            
+            try
+            {
+                caddyServer.Start();
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("[Caddy] Running on 8090");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[Caddy] Failed to startup: {ex.Message}");
+                Console.ResetColor();
+            }
+            
+            Process zrokServer = new Process();
+            zrokServer.StartInfo.FileName = Path.Combine(Config.GraphOutputFolder, "zrok2.exe");
+            zrokServer.StartInfo.Arguments = "share public http://localhost:8090 -n public:nemo --backend-mode proxy";
+            zrokServer.StartInfo.UseShellExecute = false;
+            zrokServer.StartInfo.CreateNoWindow = true;
+            zrokServer.StartInfo.WorkingDirectory = Config.GraphOutputFolder;
+            
+            try
+            {
+                zrokServer.Start();
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine("[Zrok] Tunnel running.");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[Zrok] Failed to startup: {ex.Message}");
+                Console.ResetColor();
+            }
+            
             AppDomain.CurrentDomain.ProcessExit += (s, e) => {
                 if (!pythonServer.HasExited) pythonServer.Kill();
+                if (!caddyServer.HasExited) caddyServer.Kill();
+                if (!zrokServer.HasExited) zrokServer.Kill();
             };
-
-            var server = new WebSocketServer("ws://127.0.0.1:8181");
+            #endregion
+            
+            var server = new WebSocketServer("ws://0.0.0.0:8181");
             server.Start(socket =>
             {
                 socket.OnOpen = () =>
@@ -80,7 +154,7 @@ namespace NEMO
                     Console.ResetColor();
                     BroadcastState();
                 };
-
+            
                 socket.OnClose = () =>
                 {
                     clients.Remove(socket);
@@ -88,13 +162,13 @@ namespace NEMO
                     Console.WriteLine("Browser disconnected");
                     Console.ResetColor();
                 };
-
+            
                 socket.OnMessage = message =>
                 {
-                    ProcessSocketMessage(message, sims);
+                    ProcessSocketMessage(message, sims, socket);
                 };
             });
-
+            
             Stopwatch tickTimer = Stopwatch.StartNew();
             Stopwatch petriTimer = Stopwatch.StartNew();
             Stopwatch brainTimer = Stopwatch.StartNew();
@@ -106,12 +180,17 @@ namespace NEMO
             {
                 profiler.Restart();
 
-                if (activeWorld != null && !isPaused)
+                World? currentWorld = activeWorld;
+
+                if (currentWorld != null && !isPaused)
                 {
-                    int delay = Config.maxSpeed ? 0 : 1000 / Config.tickRate;
+                    double delay = Config.maxSpeed ? 0 : 1000.0 / Config.tickRate;
                     if (delay == 0 || tickTimer.ElapsedMilliseconds >= delay)
                     {
-                        activeWorld.Update();
+                        profiler.Restart();
+                        currentWorld.Update();
+                        emaSimTime = (emaSimTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
+
                         if (delay > 0) tickTimer.Restart();
 
                         ticksThisSecond++;
@@ -122,17 +201,47 @@ namespace NEMO
                             tpsTimer.Restart();
                         }
 
-                        bool worldIsEmpty = activeWorld.creatures.Count == 0 && !Config.maintainPopulation;
+                        bool worldIsEmpty = currentWorld.creatures.Count == 0 && !Config.maintainPopulation;
 
                         if (worldIsEmpty && !worldWasEmpty)
                         {
                             extinctionCount++;
 
-                            string logLine = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] extinction #{extinctionCount} | ticks: {activeWorld.totalTicks} | max Gen: {activeWorld.highestGeneration} | avg Ein: {activeWorld.emaEnergyIn:F1} | avg Eout: {activeWorld.emaEnergyOut:F1}";
+                            string logLine = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] extinction #{extinctionCount} | ticks: {currentWorld.totalTicks} | max Gen: {currentWorld.highestGeneration} | avg Ein: {currentWorld.emaEnergyIn:F1} | avg Eout: {currentWorld.emaEnergyOut:F1}";
                             File.AppendAllText($"{Config.SavedGenomesFolder}ExtinctionLogs.txt", logLine + Environment.NewLine);
 
-                            if (activeWorld.bestGenome != null)
-                                SaveGenomeToDisk(activeWorld.bestGenome, $"Ext{extinctionCount}_Gen{activeWorld.highestGeneration}");
+                            if (currentWorld.bestGenome != null && currentWorld.highestSignificance >= Config.selectionThreshold)
+                            {
+                                var genColor = currentWorld.bestGenome.GenerateColor();
+                                bool isTooSimilar = false;
+
+                                foreach (var savedColor in sessionSavedColors)
+                                {
+                                    float rDiff = MathF.Abs(genColor.r - savedColor.r);
+                                    float gDiff = MathF.Abs(genColor.g - savedColor.g);
+                                    float bDiff = MathF.Abs(genColor.b - savedColor.b);
+
+                                    float kinship = 1f - ((rDiff + gDiff + bDiff) / 765f);
+
+                                    if (kinship > Config.selectKinshipThreshold)
+                                    {
+                                        isTooSimilar = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!isTooSimilar)
+                                {
+                                    sessionSavedColors.Add((genColor.r, genColor.g, genColor.b));
+                                    SaveGenomeToDisk(currentWorld.bestGenome, $"Ext{extinctionCount}_Gen{currentWorld.highestGeneration}_Sig{currentWorld.highestSignificance:F1}");
+                                }
+                                else
+                                {
+                                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                                    Console.WriteLine($"[Extinction] Genome discarded. Too similar to an already saved champion.");
+                                    Console.ResetColor();
+                                }
+                            }
 
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine(logLine);
@@ -155,7 +264,7 @@ namespace NEMO
                 emaSimTime = (emaSimTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
                 profiler.Restart();
 
-                if (petriTimer.ElapsedMilliseconds >= 33)
+                if (petriTimer.ElapsedMilliseconds >= Config.uiRate)
                 {
                     if (activeWorld != null) UpdatePetriView(activeWorld);
                     petriTimer.Restart();
@@ -172,48 +281,83 @@ namespace NEMO
                 }
 
                 emaUiTime = (emaUiTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
-                if (!Config.maxSpeed || isPaused) Thread.Sleep(1);
+                if (isPaused)
+                {
+                    Thread.Sleep(10);
+                }
             }
         }
 
         public static void BroadcastState()
         {
-            var state = new { @event = "syncState", isPaused = isPaused, 
-                autoRestart = autoRestart, pauseOnExtinction = pauseOnExtinction };
+            var state = new
+            {
+                @event = "syncState",
+                disableGovernor = disableGovernor,
+                disableEnergyDrain = disableEnergyDrain,
+                isPaused = isPaused,
+                autoRestart = autoRestart,
+                pauseOnExtinction = pauseOnExtinction,
+                safeEditMode = safeEditMode,
+                repopExtinct = repopExtinct,
+                repopChamp = repopChamp,
+                repopEditor = repopEditor,
+                maxSpeed = Config.maxSpeed,
+                tickRate = Config.tickRate,
+                uiRate = Config.uiRate,
+                gem = Config.globalEnergyMultiplier,
+                wastePenalty = Config.wastePenaltyMultiplier
+            };
             string json = JsonSerializer.Serialize(state);
             foreach (var client in clients.ToList()) client.Send(json);
         }
 
         public static void UpdatePetriView(World world)
         {
-            string stateJson = world.GetStateJson();
-            foreach (var client in clients.ToList())
+            if (isBroadcasting) return;
+            isBroadcasting = true;
+
+            Creature[] creaturesSnap = world.creatures.ToArray();
+            FoodItem[] foodsSnap = world.activeFoods.ToArray();
+            World.ExportBlock[] blocksSnap = world.staticBlocks.ToArray();
+            IWebSocketConnection[] clientsSnap = clients.ToArray();
+
+            Task.Run(() =>
             {
-                client.Send(stateJson);
-            }
+                Stopwatch uiProfiler = Stopwatch.StartNew(); 
+                try
+                {
+                    string stateJson = world.GetStateJson(creaturesSnap, foodsSnap, blocksSnap);
+                    foreach (var client in clientsSnap) client.Send(stateJson);
+                }
+                catch (Exception ex) { Console.WriteLine($"[UI] {ex.Message}"); }
+                finally
+                {
+                    isBroadcasting = false;
+                    NEMO.emaUiTime = (NEMO.emaUiTime * 0.95) + (uiProfiler.Elapsed.TotalMilliseconds * 0.05);
+                }
+            });
         }
         public static void UpdateBrainView(List<Simulation> sims)
         {
             foreach (var sim in sims)
             {
-                bool isDeadOrEmpty = sim.trackedCreature == null || sim.trackedCreature.isDead;
+                bool isDead = sim.trackedCreature != null && sim.trackedCreature.isDead;
 
-                if (isPaused || isDeadOrEmpty)
+                if (isPaused || isDead || sim.trackedCreature == null)
                 {
-                    if (sim.trackedCreature != null)
-                    {
-                        sim.brain.UpdateAllNeurons();
-                    }
+                    sim.brain.UpdateAllNeurons();
                 }
 
-                NeuralTools.RenderGraph(sim.brain, sim.name, isDeadOrEmpty, isPaused);
+                NeuralTools.RenderGraph(sim.brain, sim.name, isDead, isPaused, sim.trackedCreature != null && !isDead);
             }
         }
         public static void UpdateGenomeView(List<Simulation> sims)
         {
             foreach (var sim in sims)
             {
-                GeneTools.RenderGraph(sim.genome, sim.name);
+                bool isAlive = sim.trackedCreature != null && !sim.trackedCreature.isDead;
+                GeneTools.RenderGraph(sim.genome, sim.name, isAlive);
             }
         }
 
@@ -243,7 +387,8 @@ namespace NEMO
             JsonSerializerOptions options = new JsonSerializerOptions 
             { 
                 WriteIndented = true, 
-                IncludeFields = true 
+                IncludeFields = true,
+                Converters = { new JsonStringEnumConverter() }
             };
             string jsonGenome = JsonSerializer.Serialize(genome, options);
 
@@ -261,7 +406,8 @@ namespace NEMO
             {
                 JsonSerializerOptions options = new JsonSerializerOptions 
                 { 
-                    IncludeFields = true 
+                    IncludeFields = true,
+                    Converters = { new JsonStringEnumConverter() }
                 };
                 Genome? genome = JsonSerializer.Deserialize<Genome>(jsonText, options);
                 Console.ForegroundColor = ConsoleColor.Blue;
@@ -278,7 +424,7 @@ namespace NEMO
             }
         }
 
-        public static void ProcessSocketMessage(string jsonMessage, List<Simulation> sims)
+        public static void ProcessSocketMessage(string jsonMessage, List<Simulation> sims, IWebSocketConnection client)
         {
             try
             {
@@ -308,6 +454,18 @@ namespace NEMO
                     string actionType = actionElement.GetString()!;
                     if (actionType == "startWorld")
                     {
+                        foreach (var s in sims)
+                        {
+                            if (s.trackedCreature != null) s.trackedCreature.trackedSlot = null;
+                            s.trackedCreature = null;
+
+                            foreach (var n in s.brain.neurons) n.host = null;
+                        }
+                        activeWorld = null;
+
+                        var genMsg = JsonSerializer.Serialize(new { @event = "worldGenerating" });
+                        foreach (var x in clients.ToList()) x.Send(genMsg);
+
                         activeWorld = new World(Config.worldWidth, Config.worldHeight, new List<Genome>());
                         isPaused = false;
                         BroadcastState();
@@ -315,7 +473,19 @@ namespace NEMO
                     }
                     if (actionType == "togglePause")
                     {
+                        if (safeEditMode && sims.Any(s => s.trackedCreature != null))
+                        {
+                            Console.WriteLine("Cannot unpause - Graph is LIVE and Safe Edit is ON");
+                            return;
+                        }
+
                         isPaused = !isPaused;
+                        BroadcastState();
+                        return;
+                    }
+                    if (actionType == "toggleSafeEditMode")
+                    {
+                        safeEditMode = !safeEditMode;
                         BroadcastState();
                         return;
                     }
@@ -349,8 +519,10 @@ namespace NEMO
                             int y = World.rand.Next(0, activeWorld.height);
 
                             Creature c = new Creature(x, y, targetSim.genome, activeWorld);
-                            activeWorld.creatures.Add(c);
+                            c.energy = c.startingEnergy;
+
                             activeWorld.grid[x, y].occupant = c;
+                            activeWorld.pendingNewborns.Enqueue(c);
 
                             targetSim.trackedCreature = c;
                             targetSim.brain = c.brain;
@@ -374,6 +546,11 @@ namespace NEMO
                                     loadSim.trackedCreature = c;
                                     loadSim.genome = c.genome;
                                     loadSim.brain = c.brain;
+                                    loadSim.trackedCreature.trackedSlot = slot;
+
+                                    if (safeEditMode)
+                                        isPaused = true;
+                                    BroadcastState();
                                 }
                             }
                         }
@@ -391,6 +568,7 @@ namespace NEMO
                             else if (field.FieldType == typeof(float)) field.SetValue(null, val);
                             else if (field.FieldType == typeof(bool)) field.SetValue(null, val > 0.5f);
                         }
+                        BroadcastState();
                         return;
                     }
                     if (actionType == "reloadConfig")
@@ -398,70 +576,75 @@ namespace NEMO
                         Config.Load();
                         return;
                     }
-                    if (actionType == "saveChampion")
-                    {
-                        if (activeWorld != null && activeWorld.creatures.Count > 0)
-                        {
-                            var champ = activeWorld.creatures.OrderByDescending(c => c.generation).ThenByDescending(c => c.energy).First();
-                            SaveGenomeToDisk(champ.genome, $"ManualChamp_Gen{champ.generation}");
-                        }
-                        return;
-                    }
-                    if (actionType == "saveSpecific")
-                    {
-                        string slot = root.GetProperty("slot").GetString()!;
-                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
-                        if (targetSim != null && targetSim.genome.genes.Count > 0)
-                        {
-                            SaveGenomeToDisk(targetSim.genome, $"Slot_{slot.ToUpper()}");
-                        }
-                        return;
-                    }
-                    if (actionType == "loadSpecific")
-                    {
-                        string slot = root.GetProperty("slot").GetString()!;
-                        string fileData = root.GetProperty("fileData").GetString()!;
-                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
-
-                        Genome? gen = LoadGenomeFromDisk(fileData);
-                        if (gen != null)
-                        {
-                            targetSim.genome = gen;
-                            RebuildLiveBrain(targetSim);
-                        }
-                        return;
-                    }
                     if (actionType == "randGenome")
                     {
                         string slot = root.GetProperty("slot").GetString()!;
                         var targetSim = sims.FirstOrDefault(s => s.name == slot);
 
-                        targetSim.trackedCreature = null;
+                        if (targetSim != null)
+                        {
+                            targetSim.genome = GeneTools.GenerateGenome();
+                            if (targetSim.trackedCreature != null)
+                                targetSim.trackedCreature.genome = targetSim.genome;
+                            RebuildLiveBrain(targetSim);
+                        }
+                        return;
+                    }
+                    if (actionType == "simpleGenome")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
 
-                        targetSim.genome = GeneTools.GenerateGenome();
-                        RebuildLiveBrain(targetSim);
+                        if (targetSim != null)
+                        {
+                            targetSim.genome = GeneTools.GenerateSimpleGenome();
+                            if (targetSim.trackedCreature != null)
+                                targetSim.trackedCreature.genome = targetSim.genome;
+                            RebuildLiveBrain(targetSim);
+                        }
+                        return;
+                    }
+                    if (actionType == "clearGenome")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+
+                        if (targetSim != null)
+                        {
+                            targetSim.genome = new Genome(new List<Gene>());
+                            targetSim.genome.InitializeDefaultPhenotypes();
+
+                            if (targetSim.trackedCreature != null)
+                                targetSim.trackedCreature.genome = targetSim.genome;
+                            RebuildLiveBrain(targetSim);
+                        }
+                        return;
                     }
                     if (actionType == "newCreature")
                     {
                         string slot = root.GetProperty("slot").GetString()!;
                         var targetSim = sims.FirstOrDefault(s => s.name == slot);
 
-                        Random rand = new Random();
-
-                        while (true)
+                        if (targetSim != null && activeWorld != null)
                         {
-                            int x = rand.Next(0, activeWorld.width);
-                            int y = rand.Next(0, activeWorld.height);
-
-                            if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                            Random rand = new Random();
+                            while (true)
                             {
-                                Creature c = new Creature(x, y, targetSim.genome, activeWorld);
-                                activeWorld.creatures.Add(c);
-                                activeWorld.grid[x, y].occupant = c;
+                                int x = rand.Next(0, activeWorld.width);
+                                int y = rand.Next(0, activeWorld.height);
 
-                                return;
+                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                {
+                                    Creature c = new Creature(x, y, targetSim.genome, activeWorld);
+                                    c.energy = c.startingEnergy;
+
+                                    activeWorld.grid[x, y].occupant = c;
+                                    activeWorld.pendingNewborns.Enqueue(c); 
+                                    return;
+                                }
                             }
                         }
+                        return;
                     }
                     if (actionType == "togglePauseOnExtinction")
                     {
@@ -469,121 +652,534 @@ namespace NEMO
                         BroadcastState();
                         return;
                     }
+                    if (actionType == "unlinkSlot")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+                        if (targetSim != null)
+                        {
+                            if (targetSim.trackedCreature != null) targetSim.trackedCreature.trackedSlot = null;
+                            targetSim.trackedCreature = null;
 
-                    EditorAction? action = JsonSerializer.Deserialize<EditorAction>(
+                            targetSim.genome = targetSim.genome.Clone();
+                            RebuildLiveBrain(targetSim);
+
+                            foreach (var n in targetSim.brain.neurons) n.host = null;
+                        }
+                        return;
+                    }
+                    if (actionType == "killAll")
+                    {
+                        if (activeWorld != null)
+                            foreach (Creature c in activeWorld.creatures)
+                                c.energy = 0;
+                        return;
+                    }
+                    if (actionType == "editPhenotype")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        string traitKey = root.GetProperty("trait").GetString()!;
+                        float val = (float)root.GetProperty("value").GetDecimal();
+
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+                        if (targetSim != null)
+                        {
+                            if (Enum.TryParse<PType>(traitKey, out PType parsedTrait))
+                            {
+                                if (targetSim.genome.phenotypes.ContainsKey(parsedTrait))
+                                {
+                                    targetSim.genome.phenotypes[parsedTrait].value = val;
+
+                                    if (targetSim.trackedCreature != null)
+                                    {
+                                        targetSim.trackedCreature.genome.phenotypes[parsedTrait].value = val;
+                                        targetSim.trackedCreature.phenoCache[(int)parsedTrait] = val;
+                                    }
+                                }
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "trackCreature")
+                    {
+                        trackedCreatureId = root.GetProperty("id").GetString()!;
+                        return;
+                    }
+                    if (actionType == "draw")
+                    {
+                        if (activeWorld == null) return;
+                        string type = root.GetProperty("type").GetString()!;
+                        int x = root.GetProperty("x").GetInt32();
+                        int y = root.GetProperty("y").GetInt32();
+
+                        if (x < 0 || x >= activeWorld.width || y < 0 || y >= activeWorld.height) return;
+
+                        if (type == "erase")
+                        {
+                            activeWorld.grid[x, y].isBlock = false;
+                            activeWorld.staticBlocks.RemoveAll(b => b.x == x && b.y == y);
+
+                            if (activeWorld.grid[x, y].foodItem != null)
+                            {
+                                lock (activeWorld.activeFoods)
+                                {
+                                    activeWorld.activeFoods.Remove(activeWorld.grid[x, y].foodItem!);
+                                }
+                                activeWorld.grid[x, y].foodItem = null;
+                            }
+                            if (activeWorld.grid[x, y].occupant != null)
+                            {
+                                activeWorld.grid[x, y].occupant.energy = -1;
+                            }
+                        }
+                        else if (type == "wall")
+                        {
+                            if (activeWorld.grid[x, y].occupant == null && activeWorld.grid[x, y].foodItem == null)
+                            {
+                                activeWorld.grid[x, y].isBlock = true;
+                                if (!activeWorld.staticBlocks.Any(b => b.x == x && b.y == y))
+                                    activeWorld.staticBlocks.Add(new World.ExportBlock { x = x, y = y });
+                            }
+                        }
+                        else if (type == "plant" || type == "meat")
+                        {
+                            if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].foodItem == null && activeWorld.grid[x, y].occupant == null)
+                            {
+                                var f = new FoodItem(x, y, type == "meat");
+                                if (type == "meat") f.nutrition = 1000f;
+                                activeWorld.grid[x, y].foodItem = f;
+
+                                lock (activeWorld.activeFoods)
+                                {
+                                    activeWorld.activeFoods.Add(f);
+                                }
+                            }
+                        }
+                        else if (type == "dummy")
+                        {
+                            if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                            {
+                                Genome dummyGen = new Genome(new List<Gene>());
+                                dummyGen.InitializeDefaultPhenotypes();
+
+                                Creature dummy = new Creature(x, y, dummyGen, activeWorld);
+                                dummy.startingEnergy = Config.baseStartingEnergy;
+                                dummy.energy = Config.baseStartingEnergy;
+
+                                activeWorld.grid[x, y].occupant = dummy;
+                                activeWorld.pendingNewborns.Enqueue(dummy);
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "moveCreature")
+                    {
+                        if (activeWorld == null) return;
+                        string creatureId = root.GetProperty("creatureId").GetString()!;
+                        int targetX = root.GetProperty("x").GetInt32();
+                        int targetY = root.GetProperty("y").GetInt32();
+                        int dir = root.GetProperty("dir").GetInt32();
+
+                        var c = activeWorld.creatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
+                        if (c != null && targetX >= 0 && targetX < activeWorld.width && targetY >= 0 && targetY < activeWorld.height)
+                        {
+                            if (activeWorld.grid[c.x, c.y].occupant == c)
+                            {
+                                activeWorld.grid[c.x, c.y].occupant = null;
+                            }
+
+                            if (!activeWorld.grid[targetX, targetY].isBlock)
+                            {
+                                c.x = targetX;
+                                c.y = targetY;
+                                c.lastX = targetX;
+                                c.lastY = targetY;
+                                c.facingDirection = Math.Clamp(dir, 0, 7);
+                                c.lastFacing = c.facingDirection;
+
+                                activeWorld.grid[targetX, targetY].occupant = c;
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "getGenomeBank")
+                    {
+                        DirectoryInfo d = new DirectoryInfo(Config.SavedGenomesFolder);
+                        if (!d.Exists) d.Create();
+
+                        var allFiles = d.GetFiles("*.json");
+                        var extinct = new List<string>();
+                        var champ = new List<string>();
+                        var editor = new List<string>();
+
+                        foreach (var f in allFiles)
+                        {
+                            if (f.Name.StartsWith("Ext")) extinct.Add(f.Name);
+                            else if (f.Name.StartsWith("Champ") || f.Name.StartsWith("ManualChamp")) champ.Add(f.Name);
+                            else editor.Add(f.Name);
+                        }
+
+                        var msg = JsonSerializer.Serialize(new
+                        {
+                            @event = "genomeBank",
+                            extinct = extinct,
+                            champ = champ,
+                            editor = editor
+                        });
+                        client.Send(msg);
+                        return;
+                    }
+                    if (actionType == "repopulateBank")
+                    {
+                        var filesArray = root.GetProperty("files").EnumerateArray().Select(x => x.GetString()!).ToList();
+                        if (filesArray.Count == 0) return;
+
+                        List<Genome> pool = new();
+                        foreach (var f in filesArray)
+                        {
+                            string path = Path.Combine(Config.SavedGenomesFolder, f);
+                            if (File.Exists(path))
+                            {
+                                Genome? g = LoadGenomeFromDisk(File.ReadAllText(path));
+                                if (g != null) pool.Add(g);
+                            }
+                        }
+
+                        if (pool.Count > 0 && activeWorld != null)
+                        {
+                            int currentTotal = activeWorld.creatures.Count + activeWorld.pendingNewborns.Count;
+                            while (currentTotal < Config.creatureCount)
+                            {
+                                int x = World.rand.Next(0, activeWorld.width);
+                                int y = World.rand.Next(0, activeWorld.height);
+                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                {
+                                    Genome gen = pool[World.rand.Next(pool.Count)].Clone();
+                                    Creature c = new Creature(x, y, gen, activeWorld);
+                                    activeWorld.grid[x, y].occupant = c;
+                                    activeWorld.pendingNewborns.Enqueue(c);
+                                    currentTotal++;
+                                }
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "loadServerGenome")
+                    {
+                        string slot = root.GetProperty("slot").GetString()!;
+                        string filename = root.GetProperty("filename").GetString()!;
+                        var targetSim = sims.FirstOrDefault(s => s.name == slot);
+
+                        string path = Path.Combine(Config.SavedGenomesFolder, filename);
+                        if (File.Exists(path) && targetSim != null)
+                        {
+                            Genome? gen = LoadGenomeFromDisk(File.ReadAllText(path));
+                            if (gen != null)
+                            {
+                                targetSim.genome = gen;
+                                if (targetSim.trackedCreature != null)
+                                {
+                                    targetSim.trackedCreature.genome = targetSim.genome;
+                                    foreach (var kvp in targetSim.genome.phenotypes)
+                                        targetSim.trackedCreature.phenoCache[(int)kvp.Key] = kvp.Value.value;
+                                }
+                                RebuildLiveBrain(targetSim);
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "saveNamedGenome")
+                    {
+                        string type = root.GetProperty("type").GetString()!;
+                        string name = root.GetProperty("name").GetString()!;
+                        string prefix = $"{type}_{name}";
+
+                        if (type == "Champ")
+                        {
+                            if (activeWorld != null && activeWorld.creatures.Count > 0)
+                            {
+                                float avgBurn = activeWorld.emaEnergyOut / Math.Max(1f, Config.creatureCount);
+                                float mathLife = Config.baseStartingEnergy / Math.Max(0.001f, avgBurn);
+
+                                var champ = activeWorld.creatures
+                                    .OrderByDescending(c => ((c.age * 0.5f) + (c.lineageLifespan * 0.5f)) / Math.Max(1f, mathLife))
+                                    .ThenByDescending(c => c.generation)
+                                    .First();
+
+                                SaveGenomeToDisk(champ.genome, prefix);
+                            }
+                        }
+                        else if (type == "Editor")
+                        {
+                            string slot = root.GetProperty("slot").GetString()!;
+                            var targetSim = sims.FirstOrDefault(s => s.name == slot);
+                            if (targetSim != null && targetSim.genome.genes.Count > 0)
+                            {
+                                SaveGenomeToDisk(targetSim.genome, prefix);
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "toggleSimFlag")
+                    {
+                        string flag = root.GetProperty("flag").GetString()!;
+                        if (flag == "disableGovernor") disableGovernor = !disableGovernor;
+                        if (flag == "disableEnergyDrain") disableEnergyDrain = !disableEnergyDrain;
+                        BroadcastState();
+                        return;
+                    }
+                    if (actionType == "scatterFood")
+                    {
+                        string type = root.GetProperty("type").GetString()!;
+                        int amount = root.GetProperty("amount").GetInt32();
+                        if (activeWorld != null)
+                        {
+                            for (int i = 0; i < amount; i++)
+                            {
+                                int x = World.rand.Next(activeWorld.width);
+                                int y = World.rand.Next(activeWorld.height);
+                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null && activeWorld.grid[x, y].foodItem == null)
+                                {
+                                    var f = new FoodItem(x, y, type == "meat");
+                                    if (type == "meat") f.nutrition = 1000f;
+                                    activeWorld.grid[x, y].foodItem = f;
+                                    lock (activeWorld.activeFoods) activeWorld.activeFoods.Add(f);
+                                }
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "scatterBait")
+                    {
+                        int amount = root.GetProperty("amount").GetInt32();
+                        if (activeWorld != null)
+                        {
+                            Genome dummyGen = new Genome(new List<Gene>());
+                            dummyGen.InitializeDefaultPhenotypes();
+
+                            for (int i = 0; i < amount; i++)
+                            {
+                                int x = World.rand.Next(activeWorld.width);
+                                int y = World.rand.Next(activeWorld.height);
+                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                {
+                                    Creature dummy = new Creature(x, y, dummyGen, activeWorld);
+                                    dummy.startingEnergy = Config.baseStartingEnergy;
+                                    dummy.energy = Config.baseStartingEnergy;
+
+                                    activeWorld.grid[x, y].occupant = dummy;
+                                    activeWorld.pendingNewborns.Enqueue(dummy);
+                                }
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "cullSpecific")
+                    {
+                        string type = root.GetProperty("type").GetString()!;
+                        if (activeWorld != null)
+                        {
+                            foreach (var c in activeWorld.creatures)
+                            {
+                                if (type == "herbivores" && c.GetPheno(PType.CarnivoryBias) < 0.5f) c.energy = 0;
+                                if (type == "starving" && c.energy < (c.startingEnergy * Config.deathEnergy * 1.15f)) c.energy = 0;
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "findChampion")
+                    {
+                        string criteria = root.GetProperty("criteria").GetString()!;
+                        if (activeWorld != null && activeWorld.creatures.Count > 0)
+                        {
+                            Creature? champ = null;
+                            if (criteria == "kills") champ = activeWorld.creatures.OrderByDescending(c => c.kills).ThenByDescending(c => c.damageDealt).First();
+                            else if (criteria == "meat") champ = activeWorld.creatures.OrderByDescending(c => c.meatsEaten).First();
+                            else if (criteria == "plants") champ = activeWorld.creatures.OrderByDescending(c => c.plantsEaten).First();
+                            else if (criteria == "age") champ = activeWorld.creatures.OrderByDescending(c => c.age).First();
+                            else
+                            {
+                                champ = activeWorld.creatures
+                                    .OrderByDescending(c => ((c.age * 0.5f) + (c.lineageLifespan * 0.5f)) / Math.Max(1f, c.startingEnergy / Math.Max(0.001f, c.GetBaseTickCost())))
+                                    .ThenByDescending(c => c.generation).First();
+                            }
+
+                            trackedCreatureId = champ.ID.ToString();
+                            isPaused = true;
+                            BroadcastState();
+                        }
+                        return;
+                    }
+                    if (actionType == "getRawConfig")
+                    {
+                        string defaultJson = File.Exists(Config.MainConfigFile) ? File.ReadAllText(Config.MainConfigFile) : "{}";
+
+                        var runtimeDict = new Dictionary<string, object>();
+                        var fields = typeof(Config).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+                        foreach (var field in fields)
+                        {
+                            if (field.Name.EndsWith("File") || field.Name.EndsWith("Folder") || field.Name == "projectDirectory")
+                                continue;
+
+                            object? val = field.GetValue(null);
+                            if (val != null)
+                            {
+                                runtimeDict[field.Name] = val;
+                            }
+                        }
+
+                        string runtimeJson = JsonSerializer.Serialize(runtimeDict, new JsonSerializerOptions { WriteIndented = true });
+
+                        var msg = JsonSerializer.Serialize(new
+                        {
+                            @event = "rawConfigData",
+                            defaultJson = defaultJson,
+                            runtimeJson = runtimeJson
+                        });
+                        client.Send(msg);
+                        return;
+                    }
+                    if (actionType == "saveRawConfig")
+                    {
+                        string mode = root.GetProperty("mode").GetString()!;
+                        string jsonText = root.GetProperty("json").GetString()!;
+
+                        if (mode == "default")
+                        {
+                            File.WriteAllText(Config.MainConfigFile, jsonText);
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("[CONFIG] DANGER: Config.json overwritten remotely.");
+                            Console.ResetColor();
+                        }
+                        else if (mode == "runtime")
+                        {
+                            Config.ApplyJson(jsonText);
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine("[CONFIG] Runtime configuration updated remotely.");
+                            Console.ResetColor();
+                            BroadcastState();
+                        }
+                        return;
+                    }
+                }
+
+                EditorAction? action = JsonSerializer.Deserialize<EditorAction>(
                         jsonMessage, new JsonSerializerOptions
                         {
                             IncludeFields = true,
                             Converters = { new JsonStringEnumConverter() }
                         });
-                    if (action == null) return;
+                if (action == null) return;
 
-                    Simulation? actionSim = sims.FirstOrDefault(s => s.name == action.graph);
-                    if (actionSim == null) return;
+                Simulation? actionSim = sims.FirstOrDefault(s => s.name == action.graph);
+                if (actionSim == null) return;
 
-                    switch (action.action)
-                    {
-                        case "editNeuron":
+                switch (action.action)
+                {
+                    case "editNeuron":
+                        {
+                            bool updated = false;
+
+                            foreach (var g in actionSim.genome.genes)
                             {
-                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g =>
-                                    $"{g.src.func}_{g.src.ID}" == action.nodeID
-                                    || $"{g.tgt.func}_{g.tgt.ID}" == action.nodeID);
-                                if (gene == null) break;
-
-                                NeuronGeneData neuron = $"{gene.src.func}_{gene.src.ID}" == action.nodeID
-                                    ? gene.src : gene.tgt;
-                                neuron.data = GeneTools.EncodeFields(neuron.func, action.fields);
-
-                                // Hot-reload live neuron variables
-                                var liveNeuron = actionSim.brain.neurons.FirstOrDefault(n => n.ID == neuron.ID);
-                                if (liveNeuron != null)
+                                if ($"{g.src.func}_{g.src.ID}" == action.nodeID)
                                 {
-                                    // FIXED: Now correctly calling NeuralTools
-                                    liveNeuron.dataFields = NeuralTools.NeuronDataToFields(neuron);
-
-                                    // FIXED: Regenerate immediately instead of assigning null to array
-                                    if (liveNeuron.func == NFunc.Blockage || liveNeuron.func == NFunc.GeneSimilarity)
-                                        liveNeuron.GenerateVisionLUT();
+                                    g.src.data = GeneTools.EncodeFields(g.src.func, action.fields);
+                                    updated = true;
                                 }
-                                break;
-                            }
-                        case "addConnection":
-                            {
-                                NeuronGeneData? src = null;
-                                NeuronGeneData? tgt = null;
-                                foreach (var gene in actionSim.genome.genes)
+                                if ($"{g.tgt.func}_{g.tgt.ID}" == action.nodeID)
                                 {
-                                    if ($"{gene.src.func}_{gene.src.ID}" == action.src) src = gene.src;
-                                    if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.src) src = gene.tgt;
-                                    if ($"{gene.src.func}_{gene.src.ID}" == action.tgt) tgt = gene.src;
-                                    if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.tgt) tgt = gene.tgt;
+                                    g.tgt.data = GeneTools.EncodeFields(g.tgt.func, action.fields);
+                                    updated = true;
                                 }
-                                if (src == null || tgt == null) break;
-
-                                if (!NormalizeDirection(ref src, ref tgt)) break;
-
-                                Gene newGene = GeneTools.CreateGene(src, tgt, 0,
-                                    GeneTools.EncodeFloat(1f, 16, FType.SignedFloat));
-                                newGene.graphID = actionSim.genome.GetNextGeneID();
-                                actionSim.genome.genes.Add(newGene);
-                                RebuildLiveBrain(actionSim);
-                                break;
                             }
-                        case "addNeuron":
+
+                            if (updated)
                             {
-                                NeuronGeneData? src = null;
-                                foreach (var gene in actionSim.genome.genes)
-                                {
-                                    if ($"{gene.src.func}_{gene.src.ID}" == action.src) src = gene.src;
-                                    if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.src) src = gene.tgt;
-                                }
-                                if (src == null) break;
-
-                                NFunc func = Enum.Parse<NFunc>(action.func);
-                                NType type = NeuronDicts.TypesOfFuncs[func];
-                                NeuronGeneData newNeuron = new();
-                                newNeuron.type = type;
-                                newNeuron.func = func;
-                                newNeuron.ID = actionSim.genome.GetNextNeuronID();
-                                newNeuron.data = GeneTools.GenerateData(func);
-
-                                if (!NormalizeDirection(ref src, ref newNeuron)) break;
-
-                                Gene newGene = GeneTools.CreateGene(src, newNeuron, 0,
-                                    GeneTools.EncodeFloat(1, 16, FType.SignedFloat));
-                                newGene.graphID = actionSim.genome.GetNextGeneID();
-                                actionSim.genome.genes.Add(newGene);
                                 RebuildLiveBrain(actionSim);
-                                break;
+                                foreach (Neuron n in actionSim.trackedCreature.brain.neurons)
+                                    if (n.func == NFunc.Blockage || n.func == NFunc.GeneSimilarity)
+                                        n.GenerateVisionLUT();
                             }
-                        case "toggleSlot":
+                            break;
+                        }
+                    case "addConnection":
+                        {
+                            NeuronGeneData? src = null;
+                            NeuronGeneData? tgt = null;
+                            foreach (var gene in actionSim.genome.genes)
                             {
-                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
-                                if (gene == null) break;
-                                gene.slot = (byte)(gene.slot == 0 ? 1 : 0);
-                                RebuildLiveBrain(actionSim);
-                                break;
+                                if ($"{gene.src.func}_{gene.src.ID}" == action.src) src = gene.src;
+                                if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.src) src = gene.tgt;
+                                if ($"{gene.src.func}_{gene.src.ID}" == action.tgt) tgt = gene.src;
+                                if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.tgt) tgt = gene.tgt;
                             }
-                        case "changeWeight":
-                            {
-                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
-                                if (gene == null) break;
+                            if (src == null || tgt == null) break;
 
-                                float w = (gene.weight / 65535f) * 2f - 1f;
-                                w += action.delta;
-                                w = Math.Clamp(w, -1f, 1f);
-                                gene.weight = (ushort)((w + 1f) * 0.5f * 65535f);
-                                RebuildLiveBrain(actionSim);
-                                break;
-                            }
-                        case "deleteEdge":
+                            if (!NormalizeDirection(ref src, ref tgt)) break;
+
+                            Gene newGene = GeneTools.CreateGene(src, tgt, 0,
+                                GeneTools.EncodeFloat(1f, 16, FType.SignedFloat));
+                            newGene.graphID = actionSim.genome.GetNextGeneID();
+                            actionSim.genome.genes.Add(newGene);
+                            RebuildLiveBrain(actionSim);
+                            break;
+                        }
+                    case "addNeuron":
+                        {
+                            NeuronGeneData? src = null;
+                            foreach (var gene in actionSim.genome.genes)
                             {
-                                Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
-                                if (gene != null) actionSim.genome.genes.Remove(gene);
-                                RebuildLiveBrain(actionSim);
-                                break;
+                                if ($"{gene.src.func}_{gene.src.ID}" == action.src) src = gene.src;
+                                if ($"{gene.tgt.func}_{gene.tgt.ID}" == action.src) src = gene.tgt;
                             }
-                    }
+                            if (src == null) break;
+
+                            NFunc func = Enum.Parse<NFunc>(action.func);
+                            NType type = NeuronDicts.TypesOfFuncs[(int)func];
+                            NeuronGeneData newNeuron = new();
+                            newNeuron.type = type;
+                            newNeuron.func = func;
+                            newNeuron.ID = actionSim.genome.GetNextNeuronID();
+                            newNeuron.data = GeneTools.GenerateData(func);
+
+                            if (!NormalizeDirection(ref src, ref newNeuron)) break;
+
+                            Gene newGene = GeneTools.CreateGene(src, newNeuron, 0,
+                                GeneTools.EncodeFloat(1, 16, FType.SignedFloat));
+                            newGene.graphID = actionSim.genome.GetNextGeneID();
+                            actionSim.genome.genes.Add(newGene);
+                            RebuildLiveBrain(actionSim);
+                            break;
+                        }
+                    case "toggleSlot":
+                        {
+                            Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
+                            if (gene == null) break;
+                            gene.slot = (byte)(gene.slot == 0 ? 1 : 0);
+                            RebuildLiveBrain(actionSim);
+                            break;
+                        }
+                    case "changeWeight":
+                        {
+                            Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
+                            if (gene == null) break;
+
+                            float w = (gene.weight / 65535f) * 2f - 1f;
+                            w += action.delta;
+                            w = Math.Clamp(w, -1f, 1f);
+                            gene.weight = (ushort)((w + 1f) * 0.5f * 65535f);
+                            RebuildLiveBrain(actionSim);
+                            break;
+                        }
+                    case "deleteEdge":
+                        {
+                            Gene? gene = actionSim.genome.genes.FirstOrDefault(g => g.graphID == action.edgeID);
+                            if (gene != null) actionSim.genome.genes.Remove(gene);
+                            RebuildLiveBrain(actionSim);
+                            break;
+                        }
                 }
             }
             catch { return; }
@@ -601,6 +1197,11 @@ namespace NEMO
             if (tgt.type == NType.Sensor) return false;
 
             return true;
+        }
+
+        public static float Remap(float value, float from1, float to1, float from2, float to2)
+        {
+            return (value - from1) / (to1 - from1) * (to2 - from2) + from2;
         }
     }
 

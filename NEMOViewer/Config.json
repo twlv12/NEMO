@@ -1,23 +1,50 @@
 {
-  "worldHeight": 30,
-  "worldWidth": 30,
-  "creatureCount": 10,
-  "tickRate": 200,
+  "worldHeight": 200,
+  "worldWidth": 200,
+  "tickRate": 30,
   "maxSpeed": false,
 
+  "creatureCount": 500,
+  "globalEnergyMultiplier": 2,
+  "wastePenaltyMultiplier": 0.8,
+  "momentumInfluence": 0.35,
+
+  "elevation": 0.55,
+  "frequency": 1.0,
+  "amplitude": 1.0,
+  "numOctaves": 3,
+  "maxGenAttempts": 30,
+  "migrationSpeed":  1,
+
   "foodWorldCoverage": 0.04,
-  "plantGrowthRate": 2,
-  "baseNutrition": 500.0,
-  "meatEntropyMulti": 0.25,
+  "plantClustering": 0.85,
+  "plantFrequency": 1.0,
+  "plantCutoff": 0.68,
+  "lingeringPlants": 0.02,
+
+  "baseNutrition": 250.0,
+  "meatEntropyMulti": 0.9,
+  "meatDecayRate": 0.5,
+  "deathEnergy": 0.25,
 
   "baseStartingEnergy": 3000,
-  "maturationTime": 50,
+  "maturationTime": 25,
+  "birthEfficiency": 0.8,
   "costOfLiving": 1,
   "movementCost": 1,
-  "attackCost": 50,
-  "baseAttackDmg": 500,
+  "attackCost": 10,
+  "baseAttackDmg": 1000,
+  "wallCollisionDmg": 500,
 
+  "paraEntropyMulti": 0.95,
+  "paraSomaticTax": 10,
+  "paraDrainPower": 15,
+
+  "selectionThreshold": 1000,
+  "selectKinshipThreshold": 0.8,
   "maintainPopulation": false,
+
+
 
   "minGenes": 8,
   "baseGenes": 24,
@@ -27,10 +54,10 @@
 
 
   "printMutations": false,
-  "globalMutationRate": 0.5,
+  "globalMutationRate": 0.25,
   "topologyMutationRate": 1,
 
-  "phenoMutationFlux": 1,
+  "phenoMutationFlux": 0.75,
   "phenoMutationSharpness": 7,
 
   "mathSuppressionExponent": 0.25,
@@ -63,6 +90,7 @@
   "geneRemovalChance": 0.005,
 
 
-
-  "currentView": 0
+  "sandboxMode":  false,
+  "currentView": 0,
+  "uiRate": 33
 }

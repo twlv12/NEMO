@@ -29,7 +29,7 @@ namespace NEMO
         public int intVal { get; set; }
         public bool boolVal { get; set; }
     }
-    public class NeuronDataField
+    public struct NeuronDataField
     {
         public string name;
         public FType type;
@@ -38,11 +38,11 @@ namespace NEMO
         public int intVal;
         public bool boolVal;
 
-        public NeuronDataField() { }
         public NeuronDataField(FType type,
             float floatVal=0f, int intVal=0, bool boolVal=false)
         {
             this.type = type;
+            this.name = "";
 
             switch (type)
             {
@@ -160,170 +160,167 @@ namespace NEMO
         SocialCohesion,
         PheromoneVolume,
         ChemicalVolatility,
-        Parasitism
+        Parasitism,
+        Symbiosis,
     }
 
     public static class NeuronDicts
     {
-        public static Dictionary<NFunc, List<DataField>> DataDefinitions = new()
+        public static readonly List<DataField>[] DataDefinitions = new List<DataField>[22];
+        public static readonly List<NFunc>[] FuncsOfType = new List<NFunc>[3];
+        public static readonly NType[] TypesOfFuncs = new NType[22];
+
+        static NeuronDicts()
         {
-            {NFunc.Constant, new() {
+            DataDefinitions[(int)NFunc.Constant] = new() {
                 new(){name="value", startBit=0, bitLength=8, fieldType=FType.SignedFloat},
-            }},
-            {NFunc.GetRandom, new() {
+            };
+            DataDefinitions[(int)NFunc.GetRandom] = new() {
                 new(){name="averageCount", startBit=0, bitLength=4, fieldType=FType.Int},
-            }},
-            {NFunc.Blockage, new() {
+            };
+            DataDefinitions[(int)NFunc.Blockage] = new() {
                 new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
                 new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
                 new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
-                // 0-3 = Closest (All, Food, Creature, Block). 4-7 = Mass (All, Food, Creature, Block)
                 new(){name="targetMode", startBit=10, bitLength=3, maxValue=7, fieldType=FType.Int},
                 new(){name="steepness", startBit=13, bitLength=3, maxValue=7, fieldType=FType.Int},
-            }},
-            {NFunc.GetSignal, new() {
+            };
+            DataDefinitions[(int)NFunc.GetSignal] = new() {
                 new(){name="channel", startBit=0, bitLength=4, maxValue=15, fieldType=FType.Int},
                 new(){name="radius", startBit=4, bitLength=3, maxValue=7, fieldType=FType.Int},
-            }},
-            {NFunc.GeneSimilarity, new() {
+            };
+            DataDefinitions[(int)NFunc.GeneSimilarity] = new() {
                 new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
-                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int}, 
-                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int}, 
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
                 new(){name="exactMatch", startBit=10, bitLength=1, fieldType=FType.Bool},
-                new(){name="massMode", startBit=11, bitLength=1, fieldType=FType.Bool}, 
-                new(){name="steepness", startBit=12, bitLength=3, maxValue=7, fieldType=FType.Int}, 
-            }},
-            {NFunc.MoveDelta, new() {
+                new(){name="massMode", startBit=11, bitLength=1, fieldType=FType.Bool},
+                new(){name="steepness", startBit=12, bitLength=3, maxValue=7, fieldType=FType.Int},
+            };
+            DataDefinitions[(int)NFunc.MoveDelta] = new() {
                 new(){name="checkRotation", startBit=0, bitLength=1, fieldType=FType.Bool},
-            }},
-            {NFunc.Density, new() {
-                //0 all, 1 food, 2, creature, 3 block
+            };
+            DataDefinitions[(int)NFunc.Density] = new() {
                 new(){name="targetType", startBit=0, bitLength=3, maxValue=3, fieldType=FType.Int},
                 new(){name="radius", startBit=3, bitLength=3, maxValue=7, fieldType=FType.Int},
-            }},
-            {NFunc.Gradient, new() {
+                new(){name="amplifier", startBit=6, bitLength=8, fieldType=FType.Float},
+            };
+            DataDefinitions[(int)NFunc.Gradient] = new() {
                 new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Int},
-            }},
-            {NFunc.Age, new() {
-            }},
+            };
+            DataDefinitions[(int)NFunc.Age] = new();
 
-            {NFunc.Relay, new() {
+            DataDefinitions[(int)NFunc.Relay] = new() {
                 new(){name="bias", startBit=0, bitLength=8, fieldType=FType.SignedFloat, mutateSensitivity=0.33f},
-            }},
-            {NFunc.Threshold, new() {
+            };
+            DataDefinitions[(int)NFunc.Threshold] = new() {
                 new(){name="threshold", startBit=0, bitLength=7, fieldType=FType.SignedFloat},
                 new(){name="invert", startBit=7, bitLength=1, fieldType=FType.Bool},
                 new(){name="sharpness", startBit=8, bitLength=7, fieldType=FType.Float},
-            }},
-            {NFunc.Multiply, new() {
+            };
+            DataDefinitions[(int)NFunc.Multiply] = new() {
                 new(){name="grouped", startBit=0, bitLength=1, fieldType=FType.Bool},
-            }},
-            {NFunc.Memory, new() {
+            };
+            DataDefinitions[(int)NFunc.Memory] = new() {
                 new(){name="decayRate", startBit=0, bitLength=8, fieldType=FType.Float, mutateSensitivity = 0.33f},
-            }},
-            {NFunc.Compare, new() {
+            };
+            DataDefinitions[(int)NFunc.Compare] = new() {
                 new(){name="direction", startBit=0, bitLength=1, fieldType=FType.Bool},
                 new(){name="sharpness", startBit=1, bitLength=8, fieldType=FType.Float},
-            }},
-            {NFunc.Amplify, new() {
+            };
+            DataDefinitions[(int)NFunc.Amplify] = new() {
                 new(){name="gain", startBit=0, bitLength=8, fieldType=FType.Float},
-            }},
-            {NFunc.Pulse, new() {
+            };
+            DataDefinitions[(int)NFunc.Pulse] = new() {
                 new(){name="deltaReq", startBit=0, bitLength=8, fieldType=FType.Float},
                 new(){name="strength", startBit=8, bitLength=8, fieldType=FType.Float},
-            }},
+            };
 
-            {NFunc.Move, new() {
+            DataDefinitions[(int)NFunc.Move] = new() {
                 new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
                 new(){name="absolute", startBit=8, bitLength=1, fieldType=FType.Bool},
                 new(){name="absoluteXAxis", startBit=9, bitLength=1, fieldType=FType.Bool},
-            }},
-            {NFunc.Rotate, new() {
+            };
+            DataDefinitions[(int)NFunc.Rotate] = new() {
                 new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
-            }},
-            {NFunc.Jitter, new() {
+            };
+            DataDefinitions[(int)NFunc.Jitter] = new() {
                 new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
                 new(){name="absolute", startBit=8, bitLength=1, fieldType=FType.Bool},
-            }},
-            {NFunc.EmitSignal, new() {
+            };
+            DataDefinitions[(int)NFunc.EmitSignal] = new() {
                 new(){name="channel", startBit=0, bitLength=4, maxValue=15, fieldType=FType.Int},
                 new(){name="decayRate", startBit=4, bitLength=6, fieldType=FType.Float, mutateSensitivity=0.25f},
-            }},
-            {NFunc.Consume, new() {
-            }},
-            {NFunc.Attack, new() {
-            }},
-        };
-        
-        public static Dictionary<NType, List<NFunc>> FuncsOfType = new()
-        {
-            {NType.Sensor,
-                new(){
-                    NFunc.Constant,
-                    NFunc.GetRandom,
-                    NFunc.Blockage,
-                    NFunc.Gradient,
-                    NFunc.MoveDelta,
-                    NFunc.Density,
-                    NFunc.GetSignal,
-                    NFunc.GeneSimilarity,
-                    NFunc.Age,
-            }},
-            {NType.Math,
-                new(){
-                    NFunc.Relay,
-                    NFunc.Threshold,
-                    NFunc.Multiply,
-                    NFunc.Memory,
-                    NFunc.Compare,
-                    NFunc.Amplify,
-                    NFunc.Pulse,
-            }},
-            {NType.Action,
-                new(){
-                    NFunc.Move,
-                    NFunc.Rotate,
-                    NFunc.Jitter,
-                    NFunc.EmitSignal,
-                    NFunc.Consume,
-                    NFunc.Attack,
-            }},
-        };
-        public static Dictionary<NFunc, NType> TypesOfFuncs = new()
-        {
-            { NFunc.Constant,NType.Sensor },
-            { NFunc.Gradient,NType.Sensor },
-            { NFunc.MoveDelta,NType.Sensor },
-            { NFunc.Blockage,NType.Sensor },
-            { NFunc.Density,NType.Sensor },
-            { NFunc.GetSignal,NType.Sensor },
-            { NFunc.GeneSimilarity,NType.Sensor },
-            { NFunc.GetRandom,NType.Sensor },
-            { NFunc.Age,NType.Sensor },
-        
-            { NFunc.Relay,NType.Math },
-            { NFunc.Threshold,NType.Math },
-            { NFunc.Multiply,NType.Math },
-            { NFunc.Memory,NType.Math },
-            { NFunc.Compare,NType.Math },
-            { NFunc.Amplify,NType.Math },
-            { NFunc.Pulse,NType.Math },
-        
-            { NFunc.Move,NType.Action },
-            { NFunc.Rotate,NType.Action },
-            { NFunc.Jitter,NType.Action },
-            { NFunc.EmitSignal,NType.Action },
-            { NFunc.Consume,NType.Action },
-            { NFunc.Attack,NType.Action }
-        };
+            };
+            DataDefinitions[(int)NFunc.Consume] = new();
+            DataDefinitions[(int)NFunc.Attack] = new();
+
+
+
+            FuncsOfType[(int)NType.Sensor] = new() {
+                NFunc.Constant,
+                NFunc.GetRandom,
+                NFunc.Blockage,
+                NFunc.Gradient,
+                NFunc.MoveDelta,
+                NFunc.Density,
+                NFunc.GetSignal,
+                NFunc.GeneSimilarity,
+                NFunc.Age
+            };
+            FuncsOfType[(int)NType.Math] = new() {
+                NFunc.Relay,
+                NFunc.Threshold,
+                NFunc.Multiply,
+                NFunc.Memory,
+                NFunc.Compare,
+                NFunc.Amplify,
+                NFunc.Pulse
+            };
+            FuncsOfType[(int)NType.Action] = new() {
+                NFunc.Move,
+                NFunc.Rotate,
+                NFunc.Jitter,
+                NFunc.EmitSignal,
+                NFunc.Consume,
+                NFunc.Attack
+            };
+
+
+
+            TypesOfFuncs[(int)NFunc.Constant] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Gradient] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.MoveDelta] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Blockage] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Density] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.GetSignal] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.GeneSimilarity] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.GetRandom] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Age] = NType.Sensor;
+
+            TypesOfFuncs[(int)NFunc.Relay] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Threshold] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Multiply] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Memory] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Compare] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Amplify] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Pulse] = NType.Math;
+
+            TypesOfFuncs[(int)NFunc.Move] = NType.Action;
+            TypesOfFuncs[(int)NFunc.Rotate] = NType.Action;
+            TypesOfFuncs[(int)NFunc.Jitter] = NType.Action;
+            TypesOfFuncs[(int)NFunc.EmitSignal] = NType.Action;
+            TypesOfFuncs[(int)NFunc.Consume] = NType.Action;
+            TypesOfFuncs[(int)NFunc.Attack] = NType.Action;
+        }
 
         public static void ExportNeuronDefs()
         {
             List<NeuronDef> defs = new();
-            foreach (var pair in NeuronDicts.FuncsOfType)
+            for (int t = 0; t < FuncsOfType.Length; t++)
             {
-                NType type = pair.Key;
-                foreach (NFunc func in pair.Value)
+                NType type = (NType)t;
+                foreach (NFunc func in FuncsOfType[t])
                 {
                     defs.Add(new NeuronDef
                     {
@@ -333,23 +330,24 @@ namespace NEMO
                 }
             }
 
-            string json =JsonSerializer.Serialize(defs,
-            new JsonSerializerOptions{
+            string json = JsonSerializer.Serialize(defs,
+            new JsonSerializerOptions
+            {
                 WriteIndented = true
             });
 
-            File.WriteAllText($"{Config.GraphOutputFolder}neuronDefs.json",json
-            );
+            File.WriteAllText($"{Config.GraphOutputFolder}neuronDefs.json", json);
         }
+
         public static void ExportDataDefs()
         {
             Dictionary<string, List<DataFieldLite>> export = new();
-            foreach (var pair in DataDefinitions)
+            for (int f = 0; f < DataDefinitions.Length; f++)
             {
-                NFunc func = pair.Key;
-                List<DataFieldLite> defs =new();
+                NFunc func = (NFunc)f;
+                List<DataFieldLite> defs = new();
 
-                foreach (DataField field in pair.Value)
+                foreach (DataField field in DataDefinitions[f])
                 {
                     DataFieldLite lite = new();
                     lite.name = field.name;
@@ -359,13 +357,13 @@ namespace NEMO
                 export.Add(func.ToString(), defs);
             }
 
-            string json =JsonSerializer.Serialize(export,
-            new JsonSerializerOptions{
+            string json = JsonSerializer.Serialize(export,
+            new JsonSerializerOptions
+            {
                 WriteIndented = true
             });
 
-            File.WriteAllText($"{Config.GraphOutputFolder}dataDefs.json",json
-            );
+            File.WriteAllText($"{Config.GraphOutputFolder}dataDefs.json", json);
         }
     }
 }
