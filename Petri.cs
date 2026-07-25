@@ -9,6 +9,8 @@ namespace NEMO
         public float[,] fertilityMap;
         public List<Creature> creatures;
         public ConcurrentQueue<Creature> pendingNewborns = new();
+        public readonly string runID = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        public static bool isRecording = false;
 
         public int width = Config.worldWidth;
         public int height = Config.worldHeight;
@@ -38,9 +40,11 @@ namespace NEMO
         public float emaPlantsEaten = 0f;
         public float emaMeatsEaten = 0f;
         public float emaAttacks = 0f;
+        public float emaKills = 0f;
         public int tickPlantsEaten = 0;
         public int tickMeatsEaten = 0;
         public int tickAttacks = 0;
+        public int tickKills = 0;
 
         public float govDynamicCapacity = 0f;
         public float govCurrentEnergy = 0f;
@@ -77,7 +81,7 @@ namespace NEMO
 
         public struct ExportFood { public int x { get; set; } public int y { get; set; } public bool meat { get; set; } }
         public struct ExportBlock { public int x { get; set; } public int y { get; set; } }
-        public struct ExportCone { public float range { get; set; } public float fov { get; set; } public float offset { get; set; } }
+        public struct ExportCone { public float range { get; set; } public float fov { get; set; } public float offset { get; set; } public int steepness { get; set; } }
         public struct ExportCreature
         {
             public string id { get; set; }
@@ -108,13 +112,10 @@ namespace NEMO
             tickEnergyIn = 0f;
             tickBirths = 0;
             tickDeaths = 0;
-
-            emaPlantsEaten = 0f;
-            emaMeatsEaten = 0f;
-            emaAttacks = 0f;
             tickPlantsEaten = 0;
             tickMeatsEaten = 0;
             tickAttacks = 0;
+            tickKills = 0;
             #endregion
 
             while (pendingNewborns.TryDequeue(out var pending))
@@ -130,6 +131,14 @@ namespace NEMO
                     f.nutrition -= NEMO.disableEnergyDrain ? 0f : Config.meatDecayRate;
                     if (f.nutrition <= 0) rottedMeatBuf.Add(f);
                 }
+                else
+                {
+                    if (fertilityMap[f.x, f.y] < Config.plantCutoff)
+                    {
+                        f.nutrition -= NEMO.disableEnergyDrain ? 0f : (Config.meatDecayRate * 0.15f);
+                        if (f.nutrition <= 0) rottedMeatBuf.Add(f);
+                    }
+                }
             }
             foreach (var r in rottedMeatBuf)
             {
@@ -139,9 +148,11 @@ namespace NEMO
 
             int currentPlants = activeFoods.Count(f => !f.isMeat);
 
-            fertOffsetX += 0.005f * Config.migrationSpeed;
-            fertOffsetY += 0.005f * Config.migrationSpeed;
-
+            if (fertUpdateCol == 0)
+            {
+                fertOffsetX += 0.05f * Config.migrationSpeed;
+                fertOffsetY += 0.05f * Config.migrationSpeed;
+            }
             for (int y = 0; y < height; y++)
             {
                 float fnx = (fertUpdateCol * Config.plantFrequency) / 60f + fertOffsetX;
@@ -221,12 +232,14 @@ namespace NEMO
 
             if (!NEMO.disableGovernor)
             {
+                int maxIntervention = Math.Max(1, (int)(Config.creatureCount * Config.governorStrength * 0.05));
+
                 if (currentSystemEnergy < dynamicCapacity)
                 {
                     float deficit = dynamicCapacity - currentSystemEnergy;
                     int plantsToSpawn = (int)(deficit / Config.baseNutrition);
 
-                    plantsToSpawn = Math.Min(plantsToSpawn, (int)(width * height * 0.02f));
+                    plantsToSpawn = Math.Min(plantsToSpawn, maxIntervention);
 
                     for (int i = 0; i < plantsToSpawn; i++)
                     {
@@ -252,7 +265,8 @@ namespace NEMO
                 {
                     float excess = currentSystemEnergy - dynamicCapacity;
                     int plantsToWilt = (int)(excess / Config.baseNutrition);
-                    plantsToWilt = Math.Min(plantsToWilt, (int)(width * height * 0.02f));
+
+                    plantsToWilt = Math.Min(plantsToWilt, maxIntervention);
 
                     int wilted = 0;
                     for (int i = activeFoods.Count - 1; i >= 0 && wilted < plantsToWilt; i--)
@@ -266,7 +280,7 @@ namespace NEMO
                     }
                 }
             }
-            
+
             #region Stat EMA Calculations
             float alpha = 0.01f;
             emaEnergyIn = (emaEnergyIn * (1f - alpha)) + (tickEnergyIn * alpha);
@@ -277,6 +291,7 @@ namespace NEMO
             emaPlantsEaten = (emaPlantsEaten * (1f - alpha)) + (tickPlantsEaten * alpha);
             emaMeatsEaten = (emaMeatsEaten * (1f - alpha)) + (tickMeatsEaten * alpha);
             emaAttacks = (emaAttacks * (1f - alpha)) + (tickAttacks * alpha);
+            emaKills = (emaKills * (1f - alpha)) + (tickKills * alpha);
             #endregion
         }
 
@@ -376,7 +391,7 @@ namespace NEMO
                         c.energy -= kineticDamage;
                         tickEnergyWasted += kineticDamage;
                     }
-                        
+
                     c.intentMoveX = 0;
                     c.intentMoveY = 0;
                     c.intentMove = 0;
@@ -399,7 +414,8 @@ namespace NEMO
                 {
                     tickAttacks++;
 
-                    c.energy -= Config.attackCost * c.GetPheno(PType.MetabolicRate) * c.GetPheno(PType.Lethality);
+                    c.energy -= NEMO.disableEnergyDrain ? 0f
+                        : Config.attackCost * c.GetPheno(PType.MetabolicRate) * c.GetPheno(PType.Lethality);
                     var vec = DirectionToVector[c.facingDirection];
                     int targetX = c.x + vec.dx;
                     int targetY = c.y + vec.dy;
@@ -438,6 +454,7 @@ namespace NEMO
                             if (target.energy <= target.startingEnergy * Config.deathEnergy)
                             {
                                 tickDeaths++;
+                                tickKills++;
                                 c.kills++;
                                 EvaluateSignificance(target);
                                 emaLifespan = (emaLifespan * 0.999f) + (target.age * 0.001f);
@@ -588,7 +605,7 @@ namespace NEMO
                 if (c.intentConsume > 0.1f)
                 {
                     float consumeCost = Config.costOfLiving * c.intentConsume;
-                    c.energy -= consumeCost;
+                    c.energy -= NEMO.disableEnergyDrain ? 0f : consumeCost;
                     bool ateSomething = false;
 
                     for (int dx = -1; dx <= 1; dx++)
@@ -635,7 +652,7 @@ namespace NEMO
                     if (!ateSomething) tickEnergyWasted += consumeCost;
                 }
 
-                c.energy = Math.Clamp(c.energy, 0f, 3f*c.startingEnergy);
+                c.energy = Math.Clamp(c.energy, 0f, 3f * c.startingEnergy);
 
                 if (c.energy <= c.startingEnergy * Config.deathEnergy)
                 {
@@ -683,7 +700,7 @@ namespace NEMO
                 }
 
                 float reqEnergy = c.startingEnergy * c.GetPheno(PType.ReproductionThreshold);
-                if (c.energy >= reqEnergy && c.genome.genes.Count > 0)
+                if (c.energy >= reqEnergy && c.genome.genes.Count > 0 && !NEMO.disableGovernor)
                 {
                     bool placed = false;
                     int spawnX = c.x, spawnY = c.y;
@@ -736,7 +753,7 @@ namespace NEMO
                 c.ResetIntents();
             }
 
-            creatures.AddRange(newbornsBuf); 
+            creatures.AddRange(newbornsBuf);
         }
 
         public void EvaluateSignificance(Creature c)
@@ -894,11 +911,25 @@ namespace NEMO
                 }
             }
 
+            int dw = this.width / 2;
+            int dh = this.height / 2;
+            byte[] fertBytes = new byte[dw * dh];
+            for (int y = 0; y < dh; y++)
+            {
+                for (int x = 0; x < dw; x++)
+                {
+                    float val = fertilityMap[x * 2, y * 2];
+                    fertBytes[y * dw + x] = (byte)(Math.Clamp(val, 0f, 1f) * 255);
+                }
+            }
+
             var payload = new
             {
                 type = "petri",
                 width = this.width,
                 height = this.height,
+
+                fertMap = Convert.ToBase64String(fertBytes),
 
                 stats = new
                 {
@@ -926,6 +957,7 @@ namespace NEMO
                     plantsEaten = emaPlantsEaten,
                     meatsEaten = emaMeatsEaten,
                     attacks = emaAttacks,
+                    killRate = emaKills,
 
                     avgAge = avgAge,
                     avgGen = avgGen,
@@ -962,15 +994,25 @@ namespace NEMO
                 {
                     List<ExportCone> creatureCones = new List<ExportCone>();
 
-                    var blockNeurons = c.brain.neurons.Where(n => n.func == NFunc.Blockage);
+                    var visionNeurons = c.brain.neurons.Where(n =>
+                        n.func == NFunc.Blockage ||
+                        n.func == NFunc.GeneSimilarity ||
+                        n.func.ToString() == "Proximity" ||
+                        n.func.ToString() == "TraitVision");
 
-                    foreach (var blockNeuron in blockNeurons)
+                    foreach (var vNeuron in visionNeurons)
                     {
-                        if (blockNeuron.dataFields != null && blockNeuron.dataFields.Length >= 3)
+                        if (vNeuron.dataFields != null && vNeuron.dataFields.Length >= 3)
                         {
-                            int angleOffset = blockNeuron.dataFields[0].intVal;
-                            int fovMode = blockNeuron.dataFields[1].intVal;
-                            int baseRange = blockNeuron.dataFields[2].intVal;
+                            int angleOffset = vNeuron.dataFields[0].intVal;
+                            int fovMode = vNeuron.dataFields[1].intVal;
+                            int baseRange = vNeuron.dataFields[2].intVal;
+
+                            int steepnessVal = 0;
+                            if (vNeuron.func == NFunc.GeneSimilarity && vNeuron.dataFields.Length > 5)
+                                steepnessVal = vNeuron.dataFields[5].intVal;
+                            else if (vNeuron.dataFields.Length > 4)
+                                steepnessVal = vNeuron.dataFields[4].intVal;
 
                             float cFov = fovMode switch
                             {
@@ -983,9 +1025,11 @@ namespace NEMO
                             };
 
                             float cRange = baseRange * (1f + c.GetPheno(PType.VisionAcuity));
-                            float cOffset = angleOffset * 45f;
 
-                            creatureCones.Add(new ExportCone { range = cRange, fov = cFov, offset = cOffset });
+                            float[] angleMap = new float[] { -90f, -45f, -20f, 0f, 20f, 45f, 90f, 180f };
+                            float cOffset = angleMap[Math.Clamp(angleOffset, 0, 7)];
+
+                            creatureCones.Add(new ExportCone { range = cRange, fov = cFov, offset = cOffset, steepness = steepnessVal });
                         }
                     }
 
@@ -1003,6 +1047,7 @@ namespace NEMO
                         cones = creatureCones,
                         parentId = c.parentID,
                     };
+
                 }).ToList()
             };
             return JsonSerializer.Serialize(payload);
@@ -1021,6 +1066,7 @@ namespace NEMO
 
         public World(int width, int height, List<Genome> genomePool)
         {
+            NEMO.Log("[WORLD] Starting procedural terrain generation...", "#aaa", ConsoleColor.DarkGray);
             this.width = width;
             this.height = height;
 
@@ -1110,12 +1156,13 @@ namespace NEMO
             }
 
             if (!terrainValid)
-                Console.WriteLine("[TERRAIN] Max terrain generation attempts reached.");
+                NEMO.Log($"[WORLD] Terrain max attempts ({attempt}) reached. Breaking.", "tomato", ConsoleColor.Red);
             else
-                Console.WriteLine($"[TERRAIN] Terrain generation completed in {attempt} attempts");
+                NEMO.Log($"[WORLD] Terrain generated after {attempt} attempts.", "palegreen", ConsoleColor.Green);
 
             creatures = new List<Creature>();
 
+            NEMO.Log($"[WORLD] Spawning {Config.creatureCount} initial creatures...", "#aaa", ConsoleColor.DarkGray);
             while (creatures.Count < Config.creatureCount)
             {
                 int x = rand.Next(0, width);
@@ -1125,6 +1172,8 @@ namespace NEMO
                 {
                     Genome gen = genomePool.Count > 0 ? genomePool[rand.Next(genomePool.Count)] : GeneTools.GenerateGenome();
                     Creature c = new Creature(x, y, gen, this);
+                    c.energy = c.startingEnergy * (c.GetPheno(PType.ReproductionThreshold) + Config.deathEnergy) / 2f;
+
                     creatures.Add(c);
                     grid[x, y].occupant = c;
                 }
@@ -1154,6 +1203,7 @@ namespace NEMO
                     }
                 }
             }
+            NEMO.Log($"[WORLD] Seeded {foodPlaced} food items.", "palegreen", ConsoleColor.Green);
         }
 
         private bool CheckConnectivity()
@@ -1248,7 +1298,7 @@ namespace NEMO
 
     public class Creature
     {
-        public readonly Guid ID = Guid.NewGuid();
+        public Guid ID = Guid.NewGuid();
 
         public Genome genome;
         public Brain brain;
@@ -1355,7 +1405,8 @@ namespace NEMO
             this.colorB = color.b;
 
             this.brain = NeuralTools.GenomeToBrain(genome);
-            foreach (Neuron n in brain.neurons){
+            foreach (Neuron n in brain.neurons)
+            {
                 n.host = this;
             }
 

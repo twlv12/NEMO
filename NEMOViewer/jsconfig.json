@@ -1,6 +1,0 @@
-{
-  "compilerOptions": {
-    "moduleDetection": "force",
-    "checkJs": false
-  }
-}

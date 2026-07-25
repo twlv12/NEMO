@@ -1,0 +1,613 @@
+{
+  "genes": [
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Gradient",
+        "ID": 13,
+        "data": 1
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Relay",
+        "ID": 1,
+        "data": 7
+      },
+      "slot": 0,
+      "weight": 24970,
+      "disabled": false,
+      "graphID": 0
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "GetRandom",
+        "ID": 2,
+        "data": 6
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 9,
+        "data": 17473
+      },
+      "slot": 0,
+      "weight": 40282,
+      "disabled": false,
+      "graphID": 1
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Relay",
+        "ID": 1,
+        "data": 7
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Memory",
+        "ID": 24,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 59629,
+      "disabled": false,
+      "graphID": 2
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 14,
+        "data": 130
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Relay",
+        "ID": 1,
+        "data": 7
+      },
+      "slot": 0,
+      "weight": 15282,
+      "disabled": false,
+      "graphID": 3
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Amplify",
+        "ID": 11,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Move",
+        "ID": 5,
+        "data": 61
+      },
+      "slot": 0,
+      "weight": 48878,
+      "disabled": false,
+      "graphID": 4
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "GetSignal",
+        "ID": 8,
+        "data": 66
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 7,
+        "data": 229
+      },
+      "slot": 0,
+      "weight": 33362,
+      "disabled": false,
+      "graphID": 5
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 9,
+        "data": 17473
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 25,
+        "data": 16923
+      },
+      "slot": 1,
+      "weight": 3530,
+      "disabled": false,
+      "graphID": 6
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 9,
+        "data": 17473
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Multiply",
+        "ID": 12,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 7841,
+      "disabled": false,
+      "graphID": 7
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 4,
+        "data": 4758
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Move",
+        "ID": 5,
+        "data": 61
+      },
+      "slot": 0,
+      "weight": 48583,
+      "disabled": false,
+      "graphID": 8
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "GetRandom",
+        "ID": 2,
+        "data": 6
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 26,
+        "data": 11434
+      },
+      "slot": 0,
+      "weight": 15574,
+      "disabled": false,
+      "graphID": 9
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 9,
+        "data": 17473
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 23,
+        "data": 179
+      },
+      "slot": 1,
+      "weight": 52390,
+      "disabled": false,
+      "graphID": 10
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Proximity",
+        "ID": 10,
+        "data": 10199
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Move",
+        "ID": 3,
+        "data": 736
+      },
+      "slot": 1,
+      "weight": 5320,
+      "disabled": false,
+      "graphID": 11
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Amplify",
+        "ID": 11,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Move",
+        "ID": 3,
+        "data": 736
+      },
+      "slot": 1,
+      "weight": 21858,
+      "disabled": true,
+      "graphID": 12
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Amplify",
+        "ID": 11,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Amplify",
+        "ID": 11,
+        "data": 0
+      },
+      "slot": 1,
+      "weight": 45183,
+      "disabled": false,
+      "graphID": 13
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Multiply",
+        "ID": 12,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 14,
+        "data": 130
+      },
+      "slot": 0,
+      "weight": 44529,
+      "disabled": false,
+      "graphID": 14
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Gradient",
+        "ID": 13,
+        "data": 1
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "EmitSignal",
+        "ID": 22,
+        "data": 1
+      },
+      "slot": 0,
+      "weight": 53488,
+      "disabled": true,
+      "graphID": 15
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "GetSignal",
+        "ID": 8,
+        "data": 66
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 14,
+        "data": 130
+      },
+      "slot": 1,
+      "weight": 30353,
+      "disabled": true,
+      "graphID": 16
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Proximity",
+        "ID": 10,
+        "data": 10199
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Consume",
+        "ID": 15,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 64459,
+      "disabled": false,
+      "graphID": 17
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Proximity",
+        "ID": 10,
+        "data": 10199
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Consume",
+        "ID": 15,
+        "data": 0
+      },
+      "slot": 1,
+      "weight": 62924,
+      "disabled": false,
+      "graphID": 19
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Proximity",
+        "ID": 21,
+        "data": 5731
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 7,
+        "data": 229
+      },
+      "slot": 1,
+      "weight": 6576,
+      "disabled": false,
+      "graphID": 20
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Multiply",
+        "ID": 12,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 25,
+        "data": 16923
+      },
+      "slot": 1,
+      "weight": 53519,
+      "disabled": false,
+      "graphID": 21
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Relay",
+        "ID": 1,
+        "data": 7
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 17,
+        "data": 59
+      },
+      "slot": 1,
+      "weight": 51056,
+      "disabled": false,
+      "graphID": 22
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Relay",
+        "ID": 1,
+        "data": 7
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 4,
+        "data": 4758
+      },
+      "slot": 1,
+      "weight": 29915,
+      "disabled": true,
+      "graphID": 23
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Relay",
+        "ID": 1,
+        "data": 7
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "EmitSignal",
+        "ID": 22,
+        "data": 1
+      },
+      "slot": 0,
+      "weight": 46279,
+      "disabled": false,
+      "graphID": 25
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 25,
+        "data": 16923
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 25,
+        "data": 16923
+      },
+      "slot": 0,
+      "weight": 45321,
+      "disabled": false,
+      "graphID": 27
+    }
+  ],
+  "phenotypes": {
+    "ReproductionThreshold": {
+      "value": 0.7797723,
+      "min": 0.3,
+      "max": 0.9,
+      "mutateSensitivity": 0.5
+    },
+    "OffspringInvestment": {
+      "value": 0.582388,
+      "min": 0.1,
+      "max": 0.9,
+      "mutateSensitivity": 1
+    },
+    "MutationVolatility": {
+      "value": 2.2895384,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 0.5
+    },
+    "CarnivoryBias": {
+      "value": 0.13776766,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "MetabolicRate": {
+      "value": 0.654776,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 0.5
+    },
+    "RestingEfficiency": {
+      "value": 1.5807273,
+      "min": 0.1,
+      "max": 2,
+      "mutateSensitivity": 1
+    },
+    "ScavengerTolerance": {
+      "value": 0.49519867,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "BodyMass": {
+      "value": 0.5531821,
+      "min": 0.5,
+      "max": 5,
+      "mutateSensitivity": 0.25
+    },
+    "ArmorDensity": {
+      "value": 0.07375323,
+      "min": 0,
+      "max": 0.9,
+      "mutateSensitivity": 0.5
+    },
+    "SpikeCoating": {
+      "value": 0,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "Camouflage": {
+      "value": 0.10031237,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "ToxicCorpse": {
+      "value": 0.12713236,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "FastTwitchMuscle": {
+      "value": 2.361645,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "RotationalAgility": {
+      "value": 1.8173194,
+      "min": 0.2,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "JitterEfficiency": {
+      "value": 1.2518743,
+      "min": 0.1,
+      "max": 2,
+      "mutateSensitivity": 1
+    },
+    "VisionAcuity": {
+      "value": 1.6183211,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 0.5
+    },
+    "FovSpecialization": {
+      "value": 2.114777,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "OlfactorySensitivity": {
+      "value": 0.22517139,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 1
+    },
+    "BrainSize": {
+      "value": 0.8958543,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 0.1
+    },
+    "Vampirism": {
+      "value": 0.035155658,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "Lethality": {
+      "value": 1.0504255,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 1
+    },
+    "SocialCohesion": {
+      "value": 0.82777286,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "PheromoneVolume": {
+      "value": 0.12244277,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 1
+    },
+    "ChemicalVolatility": {
+      "value": 0.4917921,
+      "min": 0.1,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "Parasitism": {
+      "value": 0,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "Symbiosis": {
+      "value": 0.07419069,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    }
+  },
+  "nextGeneID": 28
+}

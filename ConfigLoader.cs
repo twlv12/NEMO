@@ -9,11 +9,9 @@ namespace NEMO
         public static int worldHeight;
         public static int tickRate;
         public static bool maxSpeed;
-        public static int uiRate;
-        public static int currentView;
-        public static bool sandboxMode;
 
         public static int creatureCount;
+        public static float governorStrength;
         public static float globalEnergyMultiplier;
         public static float wastePenaltyMultiplier;
         public static float momentumInfluence;
@@ -53,6 +51,10 @@ namespace NEMO
 
         public static float selectionThreshold;
         public static float selectKinshipThreshold;
+        public static int autoChampTickDelay;
+        public static int recorderTickDelay;
+        public static int recorderMaxGB;
+
         public static bool maintainPopulation;
 
         public static int minGenes;
@@ -96,26 +98,34 @@ namespace NEMO
         public static float geneInsertionChance;
         public static float geneRemovalChance;
 
-        public static int numBiomes;
-        public static float ridgeThickness;
+        public static int uiRate;
+        public static bool hideConsole;
+        public static bool pauseWithoutUI;
+        public static bool compressRecordings;
 
-        public static string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
-        public static string MainConfigFile = projectDirectory + @"\NemoViewer\Config.json";
-        public static string RuntimeConfigFile = projectDirectory + @"\NEMOViewer\runtimeConfig.json";
-        public static string StimuliFile = projectDirectory + @"\NEMOViewer\stimuli.json";
-        public static string EditorActionFile = projectDirectory + @"\NEMOViewer\editorAction.json";
-        public static string GraphOutputFolder = projectDirectory + @"\NEMOViewer\";
-        public static string SavedGenomesFolder = projectDirectory + @"\SavedGenomes\";
+        public static string exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        public static bool IsDevMode => Directory.Exists(Path.GetFullPath(Path.Combine(exeDirectory, "..", "Web")));
+
+        public static string projectDirectory = IsDevMode
+            ? Path.GetFullPath(Path.Combine(exeDirectory, ".."))
+            : exeDirectory;
+
+        public static string MainConfigFile = Path.Combine(projectDirectory, "Config.json");
+        public static string RuntimeConfigFile = Path.Combine(projectDirectory, "runtimeConfig.json");
+
+        public static string WebFolder = Path.Combine(projectDirectory, "Web");
+        public static string SavedGenomesFolder = Path.Combine(projectDirectory, "SavedGenomes");
+        public static string RecordingsFolder = Path.Combine(projectDirectory, "Recordings");
 
         public static void Load()
         {
-            Console.WriteLine($"Loading config from {MainConfigFile}");
             if (!File.Exists(MainConfigFile))
             {
                 Console.WriteLine("[CONFIG] Main config file not found!");
                 return;
             }
             ApplyJson(File.ReadAllText(MainConfigFile));
+            Console.WriteLine($"[CONFIG] Loaded from {MainConfigFile}.");
         }
         public static void ReloadRuntime()
         {

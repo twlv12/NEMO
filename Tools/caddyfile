@@ -1,0 +1,9 @@
+:8090 {
+    handle /ws {
+        reverse_proxy localhost:8181
+    }
+    
+    handle {
+        reverse_proxy localhost:8000
+    }
+}

@@ -76,3 +76,6 @@
 [2026-07-24 10:26:29] extinction #22 | ticks: 449 | max Gen: 1 | avg Ein: 6305.5 | avg Eout: 17388.7
 [2026-07-24 10:26:31] extinction #23 | ticks: 722 | max Gen: 1 | avg Ein: 4037.2 | avg Eout: 7820.3
 [2026-07-24 10:26:34] extinction #24 | ticks: 3476 | max Gen: 7 | avg Ein: 252.1 | avg Eout: 125.7
+[EXTINCT ][2026-07-26 00:28:30] extinction #1 | ticks: 29755 | max Gen: 26 | avg Ein: 1671.5 | avg Eout: 45.3
+[EXTINCT ][2026-07-26 00:28:35] extinction #2 | ticks: 19796 | max Gen: 13 | avg Ein: 166.3 | avg Eout: 89.2
+[EXTINCT ][2026-07-26 00:43:30] extinction #1 | ticks: 89 | max Gen: 1 | avg Ein: 765.9 | avg Eout: 975.5

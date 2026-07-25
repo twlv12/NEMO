@@ -1,0 +1,2669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEMO</title>
+    <meta name="theme-color" content="#8fdfff">
+    <link rel="icon" type="image/x-icon" href="nemocon.ico">
+    <style>
+        body {
+            margin: 0;
+            padding-left: 300px;
+            padding-right: 460px;
+            background-color: #111;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: consolas, monospace;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: white;
+            width: 440px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            align-items: start;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .panel-section {
+            margin-bottom: 10px;
+            background: rgba(15, 15, 15, 0.6);
+            padding: 8px;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+
+        .panel-header {
+            margin-bottom: 8px;
+            color: #ccc;
+            font-size: 12px;
+            font-weight: bold;
+            border-bottom: 1px solid #444;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+            #controls::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            #controls::-webkit-scrollbar-track {
+                background: rgba(20, 20, 20, 0.6);
+                border-radius: 4px;
+            }
+
+            #controls::-webkit-scrollbar-thumb {
+                background: #333;
+                border: 1px solid #555;
+                border-radius: 4px;
+            }
+
+                #controls::-webkit-scrollbar-thumb:hover {
+                    background: #444;
+                    border-color: #8fdfff;
+                }
+
+        button {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 6px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: consolas, monospace;
+            font-size: 12px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+            button:hover {
+                background: #444;
+                border-color: #8fdfff;
+            }
+
+        #sim-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 2px solid #333;
+            background-color: #1a1a1a;
+            cursor: crosshair;
+            height: 95vh;
+            aspect-ratio: 1 / 1;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+
+        .graph-modal {
+            position: absolute;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #444;
+            border-radius: 6px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.2s;
+        }
+
+        .graph-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: rgba(40,40,40,0.8);
+            border-bottom: 1px solid #555;
+            cursor: grab;
+            border-radius: 6px 6px 0 0;
+        }
+
+            .graph-header:active {
+                cursor: grabbing;
+            }
+
+        .graph-cb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border: 1px solid #555;
+            border-radius: 2px;
+            margin: 0 4px 0 0;
+            cursor: pointer;
+            vertical-align: middle;
+            background: #222;
+        }
+
+            .graph-cb:checked {
+                background: #8fdfff;
+                border-color: #8fdfff;
+            }
+
+        #context-menu, #creatureInfo {
+            display: none;
+            position: absolute;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 15px;
+            z-index: 2200;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            font-family: consolas, monospace;
+            color: #ccc;
+            pointer-events: auto;
+        }
+
+        #context-menu {
+            width: 160px;
+        }
+
+            #context-menu .menu-title {
+                color: #8fdfff;
+                margin-bottom: 8px;
+                font-weight: bold;
+                font-size: 14px;
+                text-align: center;
+                border-bottom: 1px solid #444;
+                padding-bottom: 5px;
+            }
+
+            #context-menu button {
+                width: 100%;
+                margin-bottom: 8px;
+                padding: 6px;
+                background: #333;
+                color: white;
+                border: 1px solid #555;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: consolas, monospace;
+                font-size: 12px;
+                transition: background-color 0.2s, border-color 0.2s;
+                text-align: center;
+            }
+
+                #context-menu button:hover {
+                    background: #444;
+                    border-color: #8fdfff;
+                }
+
+        #creatureInfo {
+            width: 220px;
+            font-size: 12px;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(20, 20, 20, 0.6);
+            border-radius: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+
+            .custom-scroll::-webkit-scrollbar-thumb:hover {
+                background: #444;
+                border-color: palegreen;
+            }
+
+        .split-button {
+            display: flex;
+            width: 100%;
+            margin-bottom: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+            .split-button:hover {
+                border-color: #8fdfff;
+            }
+
+            .split-button button {
+                margin: 0;
+                border: none;
+                border-radius: 0;
+                background: #333;
+                color: white;
+                padding: 6px;
+                font-family: consolas, monospace;
+                font-size: 12px;
+            }
+
+                .split-button button:hover {
+                    background: #444;
+                }
+
+            .split-button .split-main {
+                flex: 3;
+            }
+
+            .split-button .split-side {
+                flex: 1;
+                border-left: 1px solid #555;
+            }
+    </style>
+</head>
+<body>
+
+    <div id="connectionOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10,10,10,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; backdrop-filter: blur(10px);">
+        <h1 style="color: #8fdfff; font-family: consolas; font-size: 64px; text-shadow: 0 0 20px rgba(143, 223, 255, 0.5); margin-bottom: 4px;">NEMO ENGINE</h1>
+        <h3 style="color: #8fdfff; font-family: consolas; font-size: 16px; font-weight: normal; opacity: 0.8; text-shadow: 0 0 10px rgba(143, 223, 255, 0.3); margin-top: 0; margin-bottom: 8px;">Version 1.0</h3>
+        <h2 style="color: #aaaaaa; font-family: consolas; font-size: 16px; font-weight: normal; letter-spacing: 1px; margin-top: 0; margin-bottom: 24px;">Neural Evolution through Mutation of Organisms</h2>
+        <p id="connStatus" style="color: #ffcc00; font-family: consolas; font-weight: bold; font-size: 20px; letter-spacing: 2px;">CONNECTING TO CORE...</p>
+    </div>
+
+    <div id="consoleWrapper" style="position: fixed; bottom: 0; left: 10px; z-index: 5000; width: 420px; display: flex; flex-direction: column; pointer-events: none;">
+        <div id="consoleTab" onclick="toggleConsole()" style="width: max-content; background: rgba(20,20,20,0.95); border: 1px solid #444; border-bottom: none; border-radius: 6px 6px 0 0; padding: 4px 15px; color: #8fdfff; font-family: consolas, monospace; font-size: 11px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 -2px 10px rgba(0,0,0,0.5);">
+            >_ CONSOLE
+        </div>
+        <div id="uiConsole" class="custom-scroll" style="height: 160px; background: rgba(10,10,10,0.95); font-family: consolas, monospace; font-size: 11px; padding: 10px; overflow-y: auto; border: 1px solid #444; border-bottom: none; border-radius: 0 6px 0 0; pointer-events: auto; box-shadow: 0 -4px 15px rgba(0,0,0,0.5);">
+            <div id="uiConsoleContent" style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="color: #cccccc;">> SYSTEM INITIALIZED...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="controls">
+        <div style="grid-column: span 2; color: #8fdfff; font-weight: bold; margin-bottom: 8px; font-size: 18px; text-align: center; border-bottom: 1px solid #444; padding-bottom: 5px;">NEMO CONTROLS</div>
+
+        <div style="display: flex; flex-direction: column;">
+            <button id="repopBtn" onclick="toggleGenomeBank()" style="border-color: palegreen; color: palegreen; margin-bottom: 8px;">OPEN GENOME BANK</button>
+            <button onclick="openWorldBank()" style="border-color: palegreen; color: palegreen; margin-bottom: 8px;">OPEN WORLD BANK</button>
+            <button onclick="clearLineage()" style="border-color: #ff99cc; color: #ff99cc; margin-bottom: 8px;">CLEAR MARKED</button>
+
+            <div class="panel-section">
+                <div class="panel-header">Selection Console</div>
+
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <input type="checkbox" id="disableGovernor" onclick="toggleSimFlag('disableGovernor')" style="cursor: pointer; transform: scale(1.1); margin-right: 6px; accent-color: #8fdfff;">
+                    <label for="disableGovernor" style="font-size: 13px; color: #ccc; cursor: pointer;">Disable Governor</label>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <input type="checkbox" id="disableEnergyDrain" onclick="toggleSimFlag('disableEnergyDrain')" style="cursor: pointer; transform: scale(1.1); margin-right: 6px; accent-color: #8fdfff;">
+                    <label for="disableEnergyDrain" style="font-size: 13px; color: #ccc; cursor: pointer;">Disable Energy Drain</label>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <input type="checkbox" id="disableReproduction" onclick="toggleSimFlag('disableReproduction')" style="cursor: pointer; transform: scale(1.1); margin-right: 6px; accent-color: #8fdfff;">
+                    <label for="disableReproduction" style="font-size: 13px; color: #ccc; cursor: pointer;">Disable Reproduction</label>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <input type="checkbox" id="safeEditMode" onclick="toggleSafeEditMode()" style="cursor: pointer; transform: scale(1.1); margin-right: 6px; accent-color: #8fdfff;">
+                    <label for="safeEditMode" style="font-size: 13px; color: #ccc; cursor: pointer;">Gen Editor Lock</label>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                    <button onclick="scatterFood('meat', 50)" style="margin:0;">Spawn Meat</button>
+                    <button onclick="scatterFood('plant', 100)" style="margin:0;">Spawn Plant</button>
+                    <button onclick="scatterBait(20)" style="margin:0;">Spawn Bait</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                    <button onclick="cullSpecific('herbivores')" style="margin:0;">Cull Herbs</button>
+                    <button onclick="cullSpecific('starving')" style="margin:0;">Cull Starved</button>
+                </div>
+
+                <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                    <select id="champCriteria" style="width: 50%; font-size: 11px; padding: 4px; background: #222; color: white; border: 1px solid #555; border-radius: 4px; outline: none; cursor: pointer; font-family: consolas;">
+                        <option value="sig">Highest Sig.</option>
+                        <option value="kills">Most Kills</option>
+                        <option value="meat">Most Meat</option>
+                        <option value="plants">Most Plants</option>
+                        <option value="age">Oldest</option>
+                    </select>
+                    <button id="champBtn" onclick="handleChampButton()" style="width: 50%; border-color: #ffcc00; color: #ffcc00; margin: 0;">FIND BEST</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 6px;">
+                    <button id="tool-select" onclick="setTool('select')" style="border-color: #ffcc00; color: #ffcc00; margin:0;">Select</button>
+                    <button id="tool-erase" onclick="setTool('erase')" style="margin:0;">Erase</button>
+                    <button id="tool-dummy" onclick="setTool('dummy')" style="margin:0;">Dummy</button>
+                    <button id="tool-wall" onclick="setTool('wall')" style="margin:0;">Wall</button>
+                    <button id="tool-plant" onclick="setTool('plant')" style="margin:0;">Plant</button>
+                    <button id="tool-meat" onclick="setTool('meat')" style="margin:0;">Meat</button>
+                </div>
+            </div>
+
+            <div class="split-button" style="margin-bottom: 8px; width: 100%; display: flex;">
+                <button class="split-main" onclick="switchView(1, 'genome.html')" style="flex: 1;">View Genomes</button>
+                <button class="split-side" onclick="window.open('genome.html', '_blank', 'width=' + window.outerWidth + ',height=' + window.outerHeight)" title="New Window">↗</button>
+            </div>
+            <div class="split-button" style="margin-bottom: 0; width: 100%; display: flex;">
+                <button class="split-main" onclick="switchView(2, 'brain.html')" style="flex: 1;">View Brains</button>
+                <button class="split-side" onclick="window.open('brain.html', '_blank', 'width=' + window.outerWidth + ',height=' + window.outerHeight)" title="New Window">↗</button>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+            <button onclick="startSimulation()" style="border-color: palegreen; color: palegreen;">START</button>
+            <button id="pauseBtn" onclick="togglePause()">PAUSE</button>
+            <button onclick="openRawConfig()">EDIT CONFIG</button>
+            <button onclick="reloadConfig()">RELOAD CONFIG</button>
+            <button onclick="killAll()" style="border-color: tomato; color: tomato;">KILL ALL</button>
+
+            <div class="panel-section">
+                <div class="panel-header">Live Tuning</div>
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Sim Speed:</span><span id="tickRateDisplay" style="color: #8fdfff; font-weight: bold;">Max Speed!</span>
+                    </div>
+                    <input type="range" id="tickRateSlider" min="0" max="100" value="100" style="width: 100%; accent-color: #8fdfff;" oninput="updateTickRate()">
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>UI Refresh:</span><span id="refreshRateDisplay" style="color: #8fdfff; font-weight: bold;">1 FPS</span>
+                    </div>
+                    <input type="range" id="refreshRateSlider" min="1" max="60" value="1" style="width: 100%; accent-color: #8fdfff;" oninput="updateRefreshRate()">
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>GEM:</span><span id="gemDisplay" style="color: #8fdfff; font-weight: bold;">2.50</span>
+                    </div>
+                    <input type="range" id="gemSlider" min="0" max="10.0" step="0.1" value="2.5" style="width: 100%; accent-color: #8fdfff;" oninput="updateConfigValue('globalEnergyMultiplier', 'gemSlider', 'gemDisplay')">
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Waste Penalty:</span><span id="wasteDisplay" style="color: #8fdfff; font-weight: bold;">0.50</span>
+                    </div>
+                    <input type="range" id="wasteSlider" min="0.0" max="5.0" step="0.05" value="0.5" style="width: 100%; accent-color: #8fdfff;" oninput="updateConfigValue('wastePenaltyMultiplier', 'wasteSlider', 'wasteDisplay')">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-header">After Extinction</div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="autoRestart" onclick="toggleAutoRestart()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="autoRestart" style="font-size: 13px; cursor: pointer; color: #ccc;">Auto-Restart</label>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="pauseOnExtinction" onclick="togglePauseOnExtinction()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="pauseOnExtinction" style="font-size: 13px; cursor: pointer; color: #ccc;">Pause & Popup</label>
+                </div>
+            </div>
+
+            <div class="panel-section" style="margin-bottom: 0;">
+                <div class="panel-header">Render & UI</div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="pauseOnSelect" onclick="togglePauseOnSelect()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="pauseOnSelect" style="font-size: 13px; cursor: pointer; color: #ccc;">Pause on Select</label>
+                </div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="renderCones" onclick="toggleRenderCones()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="renderCones" style="font-size: 13px; cursor: pointer; color: #ccc;">Visual Cones</label>
+                </div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="popDensity" onclick="togglePopDensity()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="popDensity" style="font-size: 13px; cursor: pointer; color: #ccc;">Popul. Density</label>
+                </div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="renderFertility" onclick="toggleRenderFertility()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="renderFertility" style="font-size: 13px; cursor: pointer; color: #ccc;">Fertility Map</label>
+                </div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="renderFoods" onclick="toggleRenderFoods()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="renderFoods" style="font-size: 13px; cursor: pointer; color: #ccc;">Draw Food</label>
+                </div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="renderCreatures" onclick="toggleRenderCreatures()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="renderCreatures" style="font-size: 13px; cursor: pointer; color: #ccc;">Draw Creatures</label>
+                </div>
+            </div>
+
+            <div class="panel-section" style="margin-bottom: 0; margin-top: 10px; border-top-color: #ff99cc;">
+                <div class="panel-header" style="color: #ff99cc;">World Recorder</div>
+                <button id="recordBtn" onclick="toggleRecording()" style="border-color: #555; color: white;">START RECORDING</button>
+
+                <div style="margin-bottom: 4px; display: flex; align-items: center;">
+                    <input type="checkbox" id="compressRecordings" onclick="toggleCompression()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #ff99cc">
+                    <label for="compressRecordings" style="font-size: 13px; cursor: pointer; color: #ccc;">Use Compression</label>
+                </div>
+
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Tick Delay:</span><span id="recordDelayDisplay" style="color: #ff99cc; font-weight: bold;">1000</span>
+                    </div>
+                    <input type="range" id="recordDelaySlider" min="5" max="10000" step="10" value="1000" style="width: 100%; accent-color: #ff99cc;" oninput="updateRecordDelay()">
+                </div>
+
+                <div style="font-size: 11px; color: #aaa; background: #111; padding: 6px; border: 1px dashed #555; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div id="estFrameSize">Est. Frame: 0 KB</div>
+                    <div id="estDataRate">Est. Hourly: 0 MB</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="telemetry" class="custom-scroll" style="
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(20, 20, 20, 0.9);
+    padding: 15px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #ccc;
+    font-family: consolas, monospace;
+    font-size: 12px;
+    pointer-events: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    width: 270px;
+    max-height: 90vh;
+    overflow-y: auto;">
+        <div style="color: #8fdfff; font-weight: bold; margin-bottom: 8px; font-size: 14px; text-align: center; border-bottom: 1px solid #444; padding-bottom: 5px;">NEMO TELEMETRY</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+            <span style="color:#aaa;">TPS / Ticks:</span> <span id="t-tps-ticks" style="color: white; text-align: right;">0 / 0</span>
+            <span style="color:#aaa;">Sim / UI CPU:</span> <span id="t-perf" style="color: orange; text-align: right;">0ms / 0ms</span>
+            <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="pop"> Population:</span> <span id="t-pop" style="color: white; font-weight: bold; text-align: right;">0</span>
+            <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="extinctions"> Extinctions:</span> <span id="t-extinctions" style="color: tomato; text-align: right;">0</span>
+            <span style="color:#aaa;">Saved (S/T):</span> <span id="t-saved" style="color: #8fdfff; text-align: right;">0 / 0</span>
+            <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="highestSignificance"> Highest Sig.:</span> <span id="t-significance" style="color: #8fdfff; text-align: right;">0</span>
+            <span style="color:#aaa;">Plants | Meat:</span> <span id="t-food" style="text-align: right; grid-column: span 1;">0 | 0</span>
+        </div>
+
+        <div style="color: #ffcc00; font-weight: bold; margin-top: 8px; border-bottom: 1px dashed #444;">Thermodynamics</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+            <span><input type="checkbox" class="graph-cb" value="eIn"> Avg E-In:</span> <span id="t-ein" style="text-align: right; color: palegreen;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="eOut"> Avg E-Out:</span> <span id="t-eout" style="text-align: right; color: tomato;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="eRatio"> E-Ratio:</span> <span id="t-eratio" style="text-align: right; font-weight: bold;">0.00</span>
+            <span style="margin-top:4px; color:#888;"><input type="checkbox" class="graph-cb" value="totalPlantE"> Total Plant E:</span> <span id="t-te-plant" style="margin-top:4px; text-align: right;">0</span>
+            <span style="color:#888;"><input type="checkbox" class="graph-cb" value="totalMeatE"> Total Meat E:</span> <span id="t-te-meat" style="text-align: right;">0</span>
+            <span style="color:#888;"><input type="checkbox" class="graph-cb" value="totalCreatureE"> Total Bio E:</span> <span id="t-te-bio" style="text-align: right;">0</span>
+            <span style="margin-top:4px; color:#888;"><input type="checkbox" class="graph-cb" value="plantsEaten"> Plants Eaten/1k:</span> <span id="t-peaten" style="margin-top:4px; text-align: right;">0</span>
+            <span style="color:#888;"><input type="checkbox" class="graph-cb" value="meatsEaten"> Meat Eaten/1k:</span> <span id="t-meaten" style="text-align: right;">0</span>
+        </div>
+
+        <div style="color: #ff99cc; font-weight: bold; margin-top: 8px; border-bottom: 1px dashed #444;">Demographics</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+            <span><input type="checkbox" class="graph-cb" value="births"> Births / 1k:</span> <span id="t-births" style="text-align: right;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="deaths"> Deaths / 1k:</span> <span id="t-deaths" style="text-align: right;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="lifeMeas"> Meas. Life:</span> <span id="t-lifeact" style="text-align: right;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="lifeMath"> Math Life:</span> <span id="t-lifemath" style="text-align: right;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="avgGen"> Avg Generation:</span> <span id="t-avggen" style="text-align: right;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="maxGen"> Max Generation:</span> <span id="t-maxgen" style="text-align: right; color: white;">0</span>
+        </div>
+
+        <div style="color: #99ccff; font-weight: bold; margin-top: 8px; border-bottom: 1px dashed #444;">Genetics & Diet</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+            <span><input type="checkbox" class="graph-cb" value="herbivores"> Herbivores:</span> <span id="t-herbs" style="text-align: right; color: lightgreen;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="omnivores"> Omnivores:</span> <span id="t-omnis" style="text-align: right; color: cadetblue;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="hunters"> Predators:</span> <span id="t-hunts" style="text-align: right; color: lightcoral;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="scavengers"> Scavengers:</span> <span id="t-scavs" style="text-align: right; color: sandybrown;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="parasites"> Parasites:</span> <span id="t-paras" style="text-align: right; color: mediumpurple;">0</span>
+            <span style="color:#888;"><input type="checkbox" class="graph-cb" value="attacks"> Attacks/1k:</span> <span id="t-attacks" style="text-align: right;">0</span>
+            <span style="color:#888;"><input type="checkbox" class="graph-cb" value="killRate"> Kills/1k:</span> <span id="t-killrate" style="text-align: right;">0</span>
+            <span style="margin-top:4px;"><input type="checkbox" class="graph-cb" value="avgCarnivory"> Avg Meat Bias:</span> <span id="t-meatbias" style="margin-top:4px; text-align: right;">0.00</span>
+            <span><input type="checkbox" class="graph-cb" value="avgArmor"> Avg Armor:</span> <span id="t-armor" style="text-align: right;">0.00</span>
+            <span><input type="checkbox" class="graph-cb" value="avgLethality"> Avg Lethality:</span> <span id="t-lethal" style="text-align: right;">0.00</span>
+            <span><input type="checkbox" class="graph-cb" value="avgGenes"> Avg Gene Count:</span> <span id="t-genes" style="text-align: right;">0.0</span>
+        </div>
+
+        <div style="color: #8fdfff; font-weight: bold; margin-top: 8px; border-bottom: 1px dashed #444;">Governor System</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+            <span><input type="checkbox" class="graph-cb" value="govCap"> Target Cap:</span> <span id="t-gov-cap" style="text-align: right; color: #8fdfff; font-weight: bold;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="govCurE"> Current E:</span> <span id="t-gov-cure" style="text-align: right;">0</span>
+            <span><input type="checkbox" class="graph-cb" value="capRatio"> Capacity Ratio:</span> <span id="t-gov-ratio" style="text-align: right;">0.00</span>
+            <span><input type="checkbox" class="graph-cb" value="govActLife"> Active Life:</span> <span id="t-gov-actlife" style="text-align: right;">0</span>
+            <span>Math / Meas:</span> <span id="t-gov-lifes" style="text-align: right; color: #aaa;">0 / 0</span>
+            <span><input type="checkbox" class="graph-cb" value="govBlend"> Blend Factor:</span> <span id="t-gov-blend" style="text-align: right;">0%</span>
+            <span><input type="checkbox" class="graph-cb" value="govMom"> Momentum:</span> <span id="t-gov-mom" style="text-align: right;">1.00</span>
+            <span><input type="checkbox" class="graph-cb" value="govWastePen"> Waste Penalty:</span> <span id="t-gov-waste" style="text-align: right; color: tomato;">0.00</span>
+        </div>
+    </div>
+
+    <div id="extinctionModal" style="
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(20, 10, 10, 0.95);
+        border: 2px solid tomato;
+        padding: 30px;
+        z-index: 3000;
+        color: white;
+        font-family: consolas, monospace;
+        text-align: center;
+        box-shadow: 0 0 40px rgba(255, 50, 50, 0.5);
+        border-radius: 8px;
+    ">
+        <h2 style="color: tomato; margin-top: 0;">EXTINCTION EVENT</h2>
+        <p>All creatures have gone extinct.</p>
+        <button onclick="document.getElementById('extinctionModal').style.display='none'" style="margin-top: 15px; border-color: tomato; color: tomato;">CLOSE</button>
+    </div>
+
+    <div id="savePrompt" class="graph-modal" style="display: none; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 250px; z-index: 3000;">
+        <div class="graph-header" style="cursor: default;">
+            <span style="color: #ffcc00; font-weight: bold; font-size: 13px;">NAME GENOME</span>
+            <input type="text" id="saveNameInput" placeholder="Enter name..." style="background: #111; color: white; border: 1px solid #555; padding: 6px; font-family: consolas; border-radius: 4px;">
+            <button id="confirmSaveBtn" onclick="confirmSave()" style="border-color: palegreen; color: palegreen; margin: 0;">SAVE</button>
+        </div>
+    </div>
+
+    <div id="genomeBank" class="graph-modal" style="display: none; right: 480px; top: 10px; width: 320px; max-height: 90vh; position: fixed;">
+        <div class="graph-header" style="cursor: default;">
+            <span style="color: #8fdfff; font-weight: bold; font-size: 13px;">GENOME BANK</span>
+        </div>
+        <div id="bankScroll" class="custom-scroll" style="padding: 10px; overflow-y: auto; flex-grow: 1;">
+
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; background: #222; padding: 4px; border: 1px solid #444; border-radius: 4px;">
+                    <input type="checkbox" id="cb-champ" onclick="toggleBankCategory('champ')" style="margin-right: 8px; accent-color: #ffcc00; cursor: pointer;">
+                    <span onclick="toggleBankFolder('champ')" style="cursor: pointer; flex-grow: 1; color: #ffcc00; font-weight: bold;">> Champions</span>
+                </div>
+                <div id="folder-champ" style="display: none; flex-direction: column; padding-left: 8px; margin-top: 4px; border-left: 1px dashed #555; margin-left: 6px;"></div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; background: #222; padding: 4px; border: 1px solid #444; border-radius: 4px;">
+                    <input type="checkbox" id="cb-editor" onclick="toggleBankCategory('editor')" style="margin-right: 8px; accent-color: palegreen; cursor: pointer;">
+                    <span onclick="toggleBankFolder('editor')" style="cursor: pointer; flex-grow: 1; color: palegreen; font-weight: bold;">> Editor Saved</span>
+                </div>
+                <div id="folder-editor" style="display: none; flex-direction: column; padding-left: 8px; margin-top: 4px; border-left: 1px dashed #555; margin-left: 6px;"></div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; background: #222; padding: 4px; border: 1px solid #444; border-radius: 4px;">
+                    <input type="checkbox" id="cb-extinct" onclick="toggleBankCategory('extinct')" style="margin-right: 8px; accent-color: tomato; cursor: pointer;">
+                    <span onclick="toggleBankFolder('extinct')" style="cursor: pointer; flex-grow: 1; color: tomato; font-weight: bold;">> Extinction Events</span>
+                </div>
+                <div id="folder-extinct" style="display: none; flex-direction: column; padding-left: 8px; margin-top: 4px; border-left: 1px dashed #555; margin-left: 6px;"></div>
+            </div>
+
+        </div>
+        <div style="padding: 10px; border-top: 1px solid #444; background: rgba(20,20,20,0.95); border-radius: 0 0 6px 6px;">
+            <button onclick="executeBankRepopulate()" style="border-color: palegreen; color: palegreen; margin: 0;">REPOPULATE SELECTED</button>
+        </div>
+    </div>
+
+    <div id="rawConfigModal" class="graph-modal" style="display: none; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 600px; height: 80vh; z-index: 3500; position: fixed;">
+        <div class="graph-header" style="cursor: grab;" id="rawConfigHeader">
+            <span style="color: #ff99cc; font-weight: bold; font-size: 13px;">RAW CONFIG EDITOR</span>
+            <button onclick="closeRawConfig()" style="width: 24px; height: 24px; min-width: 24px; margin: 0; padding: 0; background: #222; border: 1px solid tomato; border-radius: 4px; color: tomato; cursor: pointer; font-weight: bold; font-family: consolas; font-size: 14px; display: flex; align-items: center; justify-content: center; line-height: 1;">X</button>
+        </div>
+        <div style="display: flex; padding: 10px; gap: 10px; background: #222;">
+            <button id="btn-config-runtime" onclick="switchConfigMode('runtime')" style="margin:0; border-color: palegreen; color: palegreen;">RUNTIME CONFIG</button>
+            <button id="btn-config-default" onclick="switchConfigMode('default')" style="margin:0; border-color: #555; color: white;">DANGER! DEFAULTS</button>
+        </div>
+        <div style="flex-grow: 1; padding: 10px; display: flex; flex-direction: column;">
+            <textarea id="rawConfigTextarea" spellcheck="false" class="custom-scroll" style="width: 100%; height: 100%; background: #111; color: #ccc; border: 1px solid #555; border-radius: 4px; font-family: consolas; padding: 10px; box-sizing: border-box; resize: none;"></textarea>
+        </div>
+        <div style="padding: 10px; border-top: 1px solid #444; background: rgba(20,20,20,0.95); border-radius: 0 0 6px 6px;">
+            <button id="btn-save-config" onclick="executeSaveRawConfig()" style="border-color: palegreen; color: palegreen; margin: 0;">APPLY & SAVE RUNTIME</button>
+        </div>
+    </div>
+
+    <div id="sim-container">
+        <div id="genOverlay" style="
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 15, 15, 0.9);
+            border: 1px solid #8fdfff;
+            padding: 16px 28px;
+            color: #8fdfff;
+            font-family: consolas, monospace;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            box-shadow: 0 0 25px rgba(143, 223, 255, 0.35);
+            pointer-events: none;
+            z-index: 2500;
+            letter-spacing: 2px;
+        ">
+            GENERATING WORLD...
+        </div>
+        <canvas id="worldCanvas"></canvas>
+    </div>
+
+    <div id="creatureInfo">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 4px; margin-bottom: 6px;">
+            <span style="color: #8fdfff; font-weight: bold; font-size: 11px;">CREATURE HUD</span>
+            <button onclick="closeTrackingHUD()" style="width: 24px; height: 24px; min-width: 24px; margin: 0; padding: 0; background: #222; border: 1px solid tomato; border-radius: 4px; color: tomato; cursor: pointer; font-weight: bold; font-family: consolas; font-size: 14px; display: flex; align-items: center; justify-content: center; line-height: 1;">X</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px;">
+            <span style="color:#aaa;">Age / Gen:</span> <span id="ci-age-gen" style="text-align: right; color: white;">0 / 0</span>
+            <span style="color:#aaa;">Energy:</span> <span id="ci-energy" style="text-align: right; color: palegreen;">0</span>
+            <span style="color:#aaa;">State:</span> <span id="ci-action" style="text-align: right; color: tomato;">Idle</span>
+            <span style="color:#aaa;">Diet Type:</span> <span id="ci-diet" style="text-align: right; color: #ffcc00;">Herbivore</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; margin-top: 2px;">
+            <span style="color:#aaa;">Kills / Dmg:</span> <span id="ci-kills" style="text-align: right; color: tomato;">0 / 0.0</span>
+            <span style="color:#aaa;">Meat / Plants:</span> <span id="ci-food" style="text-align: right; color: palegreen;">0 / 0</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; margin-top: 2px;">
+            <span style="color:#aaa;">Significance:</span> <span id="ci-sig" style="text-align: right; color: #8fdfff;">0.00</span>
+            <span style="color:#aaa;">Lineage Life:</span> <span id="ci-lineage" style="text-align: right; color: #ff99cc;">0</span>
+        </div>
+
+        <div style="color: #ff99cc; font-weight: bold; margin-top: 6px; border-bottom: 1px dashed #444;">Genome & Brain</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; margin-top: 2px;">
+            <span style="color:#aaa;">Sensors/Math/Act:</span> <span id="ci-brain-nodes" style="text-align: right; color: white;">0/0/0</span>
+            <span style="color:#aaa;">Genes / Conns:</span> <span id="ci-brain-genes" style="text-align: right; color: white;">0 / 0</span>
+        </div>
+
+        <div style="color: #8fdfff; font-weight: bold; margin-top: 6px; border-bottom: 1px dashed #444;">Top Traits</div>
+        <div id="ci-phenos" style="display: flex; flex-direction: column; gap: 1px; margin-top: 2px;"></div>
+    </div>
+
+    <div id="context-menu">
+        <div class="menu-title">Creature Options:</div>
+        <button id="trackBtn" onclick="handleTrackButton()" style="border-color: #8fdfff; color: #8fdfff;">DETAILS</button>
+        <button onclick="highlightLineage()" style="border-color: #ff99cc; color: #ff99cc;">MARK</button>
+        <button onclick="startMoveCreature()" style="border-color: #ffcc00; color: #ffcc00;">MOVE</button>
+        <hr style="border-color: #444; margin: 4px 0;">
+        <div class="menu-title">Load Genome:</div>
+        <button onclick="loadGenome('alpha')">Slot 1 [Alpha]</button>
+        <button onclick="loadGenome('beta')">Slot 2 [Beta]</button>
+        <button onclick="loadGenome('gamma')">Slot 3 [Gamma]</button>
+        <button onclick="loadGenome('delta')">Slot 4 [Delta]</button>
+        <hr style="border-color: #444; margin: 4px 0;">
+        <button onclick="killCreature()" style="color: tomato;">Kill Creature</button>
+    </div>
+
+    <div id="masterGraph" class="graph-modal" style="display: none; left: 300px; top: 30px; width: 450px;">
+        <div class="graph-header" id="masterGraphHeader">
+            <span style="color: white; font-weight: bold; font-size: 13px;">MASTER TELEMETRY</span>
+            <button onclick="document.getElementById('masterGraph').style.display='none'" style="width: auto; margin: 0; padding: 2px 6px; background:none; border:none; color:tomato; cursor:pointer; font-weight:bold; font-family:consolas;">X</button>
+        </div>
+        <div style="padding: 10px;">
+            <canvas id="masterCanvas" width="450" height="180" style="background: #111; border: 1px solid #333; border-radius: 4px; display: block; width: 100%;"></canvas>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <input type="range" id="masterSlider" min="0" max="2" value="0" style="width: 100%; cursor: pointer; accent-color: #8fdfff;" oninput="drawMasterGraph()">
+            </div>
+            <div id="masterLegend" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 11px;"></div>
+        </div>
+    </div>
+
+    <div id="worldBankModal" class="graph-modal" style="display: none; left: 320px; top: 10px; width: 320px; max-height: 90vh; position: fixed;">
+        <div class="graph-header" style="cursor: default;">
+            <span style="color: #8fdfff; font-weight: bold; font-size: 13px;">WORLD ARCHIVES</span>
+            <button onclick="document.getElementById('worldBankModal').style.display='none'" style="width: auto; margin: 0; padding: 2px 6px; background:none; border:none; color:tomato; cursor:pointer; font-weight:bold; font-family:consolas;">X</button>
+        </div>
+
+        <div style="padding: 10px; border-bottom: 1px solid #444; background: #222;">
+            <div style="color: #ccc; font-size: 11px; margin-bottom: 6px;">Filter by Frame Count:</div>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <div style="display: flex; flex-direction: column; width: 50%;">
+                    <label style="color: #888; font-size: 10px;">Min Frames</label>
+                    <input type="number" id="wb-min-frames" value="0" min="0" oninput="renderWorldBank()" style="background: #111; color: white; border: 1px solid #555; border-radius: 4px; padding: 4px; font-family: consolas;">
+                </div>
+                <div style="display: flex; flex-direction: column; width: 50%;">
+                    <label style="color: #888; font-size: 10px;">Max Frames</label>
+                    <input type="number" id="wb-max-frames" value="999999" min="0" oninput="renderWorldBank()" style="background: #111; color: white; border: 1px solid #555; border-radius: 4px; padding: 4px; font-family: consolas;">
+                </div>
+            </div>
+            <button onclick="deleteFilteredWorlds()" style="border-color: tomato; color: tomato; margin: 0; font-weight: bold;">DELETE SHOWN WORLDS</button>
+        </div>
+
+        <div id="worldBankScroll" class="custom-scroll" style="padding: 10px; overflow-y: auto; flex-grow: 1;"></div>
+    </div>
+
+    <div id="playbackUI" style="display:none; position:fixed; bottom:20px; left:320px; right:480px; background:rgba(20,20,20,0.9); padding:15px; border-radius:6px; z-index:4000; box-shadow:0 0 20px rgba(143,223,255,0.2); backdrop-filter: blur(5px);">
+        <div style="display: flex; justify-content: space-between; color: #8fdfff; margin-bottom: 8px; font-weight: bold; font-family: consolas;">
+            <span id="pb-runId">RUN ID: NONE</span>
+            <span id="pb-tick">Tick: 0</span>
+        </div>
+        <input type="range" id="pb-slider" min="0" max="100" value="0" style="width: 100%; accent-color: #8fdfff; cursor: pointer;" oninput="scrubTimelineDrag()" onchange="scrubTimelineRelease()">
+        <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+            <button onclick="restoreTimeline()" style="width:150px; border-color:palegreen; color:palegreen; font-weight:bold;">RESTORE HERE</button>
+            <button onclick="exitPlayback()" style="width:150px; border-color:tomato; color:tomato; font-weight:bold;">EXIT PLAYBACK</button>
+        </div>
+    </div>
+
+    <a href="https://github.com/twlv12/NEMO" target="_blank"
+       style="position: fixed; bottom: 12px; right: 16px; color: #555; text-decoration: none; font-size: 18px; font-family: consolas, monospace; z-index: 9000; transition: color 0.2s;"
+       onmouseover="this.style.color='#8fdfff'"
+       onmouseout="this.style.color='#555'">
+        NEMO v1.0 | GitHub Repo ↗
+    </a>
+
+    <script>
+        const isHttps = window.location.protocol === "https:";
+        const wsProtocol = isHttps ? "wss:" : "ws:";
+
+        let wsAddress;
+        if (window.location.port === "8000") {
+            wsAddress = `${wsProtocol}//${window.location.hostname}:8181`;
+        } else {
+            wsAddress = `${wsProtocol}//${window.location.host}/ws`;
+        }
+
+        const socket = new WebSocket(wsAddress);
+
+        const canvas = document.getElementById('worldCanvas');
+        const ctx = canvas.getContext('2d');
+        const contextMenu = document.getElementById('context-menu');
+        const bgCanvas = document.createElement('canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const fertCanvas = document.createElement('canvas');
+        const fertCtx = fertCanvas.getContext('2d');
+        let renderFertility = false;
+        const plantSprite = document.createElement('canvas');
+        const meatSprite = document.createElement('canvas');
+
+        let bgNeedsUpdate = true;
+        let CELL_SIZE = 12;
+        let worldWidth = 0;
+        let worldHeight = 0;
+        let isPaused = false;
+        let scale = 1.0;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let isPlaceMode = false;
+        let placeSlot = null;
+
+        let renderCones = false;
+        let renderPopDensity = false;
+        let autoRestart = false;
+        let pauseOnExtinction = true;
+        let repopExtinct = false;
+        let repopChamp = false;
+        let repopEditor = false;
+        let isPlaybackMode = false;
+        let playbackRunID = "";
+        let playbackAvailableTicks = [];
+        let debounceTimer = null;
+        let cachedWorlds = [];
+        let currentlyShownRunIDs = [];
+        let isRecording = false;
+        let currentTPS = 0;
+        let currentPop = 0;
+
+        canvas.width = 800;
+        canvas.height = 800;
+
+        let staticBlocks = [];
+        let foods = [];
+        let creaturesMap = new Map();
+        let foodsMap = new Map();
+
+        let selectedCreatureId = null;
+        let isHUDTracking = false;
+        let latestTrackedInfo = null;
+        let trackedLineageIds = new Set()
+        let currentTool = 'select';
+        let isDrawing = false;
+        let lastDrawX = -1, lastDrawY = -1;
+        let isMoveMode = false;
+        let moveCreatureId = null;
+        let moveOriginWorldX = 0, moveOriginWorldY = 0;
+        let moveCurrentWorldX = 0, moveCurrentWorldY = 0;
+        let isMoveDragging = false;
+
+        let isBankOpen = false;
+        let pendingSaveType = "";
+        let pendingSaveSlot = "";
+        let showHUD = false;
+        let pauseOnSelect = true;
+        let renderFoods = true;
+        let renderCreatures = true;
+
+        const simHistory = {};
+        let lastGraphTick = -1;
+        const activeGraphs = new Map();
+        let rawConfigMode = "runtime";
+        let cachedRuntimeConfig = "";
+        let cachedDefaultConfig = "";
+        let lastLogText = "";
+        let lastLogCount = 1;
+        let lastLogNode = null;
+        const pageLoadTime = Date.now();
+
+        let largeGraphs = false;
+        let spawnOffsetX = 300;
+        let spawnOffsetY = 30;
+
+        const colorPalette = ['#8fdfff', '#ffcc00', '#ff99cc', 'palegreen', 'tomato', 'mediumpurple', '#ffaa00', '#00ffff'];
+        const masterCanvas = document.getElementById('masterCanvas');
+        const masterCtx = masterCanvas.getContext('2d');
+        const masterSlider = document.getElementById('masterSlider');
+        makeDraggable(document.getElementById('masterGraph'), document.getElementById('masterGraphHeader'));
+        makeDraggable(document.getElementById('rawConfigModal'), document.getElementById('rawConfigHeader'));
+
+        const overlay = document.getElementById('connectionOverlay');
+        const statusEl = document.getElementById('connStatus');
+        if (sessionStorage.getItem('nemo_booted')) {
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        socket.onopen = () => {
+            console.log("Connected to NEMO");
+
+            if (!sessionStorage.getItem('nemo_booted')) {
+                if (statusEl) {
+                    statusEl.innerText = "CONNECTED";
+                    statusEl.style.color = "palegreen";
+                }
+
+                setTimeout(() => {
+                    if (overlay) {
+                        overlay.style.transition = "opacity 0.5s ease-out";
+                        overlay.style.opacity = "0";
+                        setTimeout(() => {
+                            overlay.style.display = 'none';
+                            sessionStorage.setItem('nemo_booted', 'true');
+                        }, 500);
+                    }
+                }, 500);
+            } else {
+                if (overlay) overlay.style.display = 'none';
+            }
+        };
+        socket.onclose = () => {
+            console.warn("Disconnected from NEMO Server. Attempting to reconnect...");
+
+            sessionStorage.removeItem('nemo_booted');
+
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.style.opacity = "1";
+            }
+            if (statusEl) {
+                statusEl.innerText = "DISCONNECTED. SHUTTING DOWN...";
+                statusEl.style.color = "tomato";
+            }
+
+            let attempts = 0;
+            const checkServer = setInterval(() => {
+                attempts++;
+                fetch('/')
+                    .then(response => {
+                        if (response.ok) {
+                            clearInterval(checkServer);
+                            window.location.reload();
+                        }
+                    })
+                    .catch(err => {
+                        if (attempts >= 3) {
+                            window.close();
+                        }
+                    });
+            }, 2000);
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.event === "restoreComplete") {
+                    exitPlayback();
+                    return;
+                }
+
+                if (data.event === "consoleLog") {
+                    const con = document.getElementById('uiConsole');
+                    const content = document.getElementById('uiConsoleContent');
+
+                    if (content) {
+                        if (data.text === lastLogText && lastLogNode) {
+                            lastLogCount++;
+                            lastLogNode.innerHTML = `${data.text} <span style="color: #111; background: #8fdfff; padding: 0 4px; border-radius: 4px; font-weight: bold; margin-left: 6px;">x${lastLogCount}</span>`;
+                        } else {
+                            lastLogText = data.text;
+                            lastLogCount = 1;
+
+                            const color = data.color || "#cccccc";
+                            lastLogNode = document.createElement("div");
+                            lastLogNode.style.color = color;
+                            lastLogNode.innerText = data.text;
+                            content.appendChild(lastLogNode);
+
+                            if (content.childElementCount > 150) content.removeChild(content.firstElementChild);
+                        }
+
+                        con.scrollTop = con.scrollHeight;
+                    }
+                    return;
+                }
+
+                if (data.event === "champFound") {
+                    selectedCreatureId = data.id;
+                    showHUD = true;
+                    isHUDTracking = true;
+
+                    const c = creaturesMap.get(data.id);
+                    if (c) {
+                        panX = (canvas.width / 2) - ((c.x * CELL_SIZE + CELL_SIZE / 2) * scale);
+                        panY = (canvas.height / 2) - ((c.y * CELL_SIZE + CELL_SIZE / 2) * scale);
+                    }
+
+                    let btn = document.getElementById('champBtn');
+                    if (btn) {
+                        btn.innerText = "SAVE BEST";
+                        btn.style.borderColor = "palegreen";
+                        btn.style.color = "palegreen";
+                        setTimeout(() => {
+                            if (btn.innerText === "SAVE BEST") {
+                                btn.innerText = "FIND BEST";
+                                btn.style.borderColor = "#ffcc00";
+                                btn.style.color = "#ffcc00";
+                            }
+                        }, 5000);
+                    }
+                    return;
+                }
+
+                if (data.event === "worldGenerating") {
+                    document.getElementById('genOverlay').style.display = 'block';
+                    bgNeedsUpdate = true;
+                    staticBlocks = [];
+                    return;
+                }
+
+                if (data.event === "syncState") {
+                    isPaused = data.isPaused;
+                    autoRestart = data.autoRestart;
+                    pauseOnExtinction = data.pauseOnExtinction;
+
+                    const sbCheck = document.getElementById('sandboxMode');
+                    if (sbCheck) sbCheck.checked = data.sandboxMode;
+
+                    const seCheck = document.getElementById('safeEditMode');
+                    if (seCheck) seCheck.checked = data.safeEditMode;
+
+                    const pBtn = document.getElementById('pauseBtn');
+                    if (pBtn) {
+                        pBtn.innerText = isPaused ? "RESUME" : "PAUSE";
+                        pBtn.style.borderColor = isPaused ? "tomato" : "#555";
+                    }
+                    const arCheck = document.getElementById('autoRestart');
+                    if (arCheck) arCheck.checked = autoRestart;
+                    const poeCheck = document.getElementById('pauseOnExtinction');
+                    if (poeCheck) poeCheck.checked = pauseOnExtinction;
+                    const extinctCheck = document.getElementById('afterExtinct');
+                    if (extinctCheck) extinctCheck.checked = data.repopExtinct;
+                    const champCheck = document.getElementById('manualChamp');
+                    if (champCheck) champCheck.checked = data.repopChamp;
+                    const editorCheck = document.getElementById('editorSaved');
+                    if (editorCheck) editorCheck.checked = data.repopEditor;
+                    const gCheck = document.getElementById('disableGovernor');
+                    if (gCheck) gCheck.checked = data.disableGovernor;
+                    const eCheck = document.getElementById('disableEnergyDrain');
+                    if (eCheck) eCheck.checked = data.disableEnergyDrain;
+                    const repCheck = document.getElementById('disableReproduction');
+                    if (repCheck) repCheck.checked = data.disableReproduction;
+
+                    if (data.gem !== undefined) {
+                        document.getElementById("gemSlider").value = data.gem;
+                        document.getElementById("gemDisplay").innerText = data.gem.toFixed(2);
+                    }
+                    if (data.wastePenalty !== undefined) {
+                        document.getElementById("wasteSlider").value = data.wastePenalty;
+                        document.getElementById("wasteDisplay").innerText = data.wastePenalty.toFixed(2);
+                    }
+                    if (data.uiRate !== undefined) {
+                        const fps = Math.round(1000 / data.uiRate);
+                        document.getElementById("refreshRateSlider").value = fps;
+                        document.getElementById("refreshRateDisplay").innerText = fps + " FPS";
+                    }
+                    if (data.maxSpeed) {
+                        document.getElementById("tickRateSlider").value = 100;
+                        document.getElementById("tickRateDisplay").innerText = "Max Speed!";
+                        document.getElementById("tickRateDisplay").style.color = "tomato";
+                    } else if (data.tickRate !== undefined) {
+                        let x = Math.pow(data.tickRate / 1000.0, 1.0 / 2.3219) * 100;
+                        document.getElementById("tickRateSlider").value = Math.round(x);
+                        document.getElementById("tickRateDisplay").innerText = data.tickRate + " TPS";
+                        document.getElementById("tickRateDisplay").style.color = "#8fdfff";
+                    }
+
+                    isRecording = data.isRecording;
+                    const recBtn = document.getElementById('recordBtn');
+                    if (recBtn) {
+                        recBtn.innerText = isRecording ? "RECORDING..." : "START RECORDING";
+                        recBtn.style.borderColor = isRecording ? "tomato" : "#555";
+                        recBtn.style.color = isRecording ? "tomato" : "white";
+                    }
+                    if (data.recorderTickDelay) {
+                        document.getElementById("recordDelaySlider").value = data.recorderTickDelay;
+                        document.getElementById("recordDelayDisplay").innerText = data.recorderTickDelay;
+                    }
+                    document.getElementById('compressRecordings').checked = data.compressRecordings;
+
+                    return;
+                }
+
+                if (data.event === "simEnded") {
+                    document.getElementById('extinctionModal').style.display = 'block';
+                    if (autoRestart) setTimeout(() => { startSimulation(); }, 500);
+                    return;
+                }
+
+                if (data.event === "genomeBank") {
+                    populateBankFolder("champ", data.champ, "#ffcc00");
+                    populateBankFolder("editor", data.editor, "palegreen");
+                    populateBankFolder("extinct", data.extinct, "tomato");
+                    return;
+                }
+
+                if (data.event === "rawConfigData") {
+                    cachedRuntimeConfig = data.runtimeJson;
+                    cachedDefaultConfig = data.defaultJson;
+
+                    document.getElementById('rawConfigModal').style.display = 'flex';
+
+                    rawConfigMode = "";
+                    switchConfigMode('runtime');
+                    return;
+                }
+
+                if (data.event === "armPlacement") {
+                    isPlaceMode = true;
+                    placeSlot = data.slot;
+                    return;
+                }
+                if (data.event === "placementDone") {
+                    isPlaceMode = false;
+                    placeSlot = null;
+                    return;
+                }
+
+                if (data.event === "worldBank") {
+                    cachedWorlds = data.worlds;
+
+                    let maxFrames = 0;
+                    cachedWorlds.forEach(w => { if (w.frameCount > maxFrames) maxFrames = w.frameCount; });
+                    document.getElementById('wb-max-frames').value = maxFrames;
+
+                    renderWorldBank();
+                    document.getElementById('worldBankModal').style.display = 'flex';
+                    return;
+                }
+
+                if (data.event === "playbackFrame") {
+                    const snap = data.frameData;
+
+                    document.getElementById('pb-tick').innerText = "Tick: " + formatNum(snap.tick);
+
+                    let snapW = snap.width || 300;
+                    let snapH = snap.height || 300;
+
+                    if (worldWidth !== snapW || worldHeight !== snapH) {
+                        worldWidth = snapW;
+                        worldHeight = snapH;
+
+                        canvas.width = 1600;
+                        canvas.height = 1600;
+
+                        CELL_SIZE = canvas.width / worldWidth;
+                        buildSprites(CELL_SIZE);
+                    }
+
+                    staticBlocks = snap.blocks;
+                    bgNeedsUpdate = true;
+
+                    const currentFoodIDs = new Set();
+                    snap.foods.forEach(f => {
+                        const id = `${f.x},${f.y}`;
+                        currentFoodIDs.add(id);
+                        if (!foodsMap.has(id)) {
+                            foodsMap.set(id, { x: f.x, y: f.y, meat: f.meat, scale: 1, targetScale: 1 });
+                        }
+                    });
+                    for (let id of foodsMap.keys()) {
+                        if (!currentFoodIDs.has(id)) foodsMap.delete(id);
+                    }
+
+                    const currentIDs = new Set();
+                    snap.creatures.forEach(c => {
+                        currentIDs.add(c.id);
+                        const targetAngle = (c.dir - 2) * (Math.PI / 4);
+
+                        let r = 200, g = 200, b = 200;
+                        if (c.r !== undefined) { r = c.r; g = c.g; b = c.b; }
+                        else {
+                            let hash = 0;
+                            for (let i = 0; i < c.id.length; i++) hash = c.id.charCodeAt(i) + ((hash << 5) - hash);
+                            r = Math.abs((hash & 0xFF0000) >> 16) % 255;
+                            g = Math.abs((hash & 0x00FF00) >> 8) % 255;
+                            b = Math.abs(hash & 0x0000FF) % 255;
+                        }
+
+                        if (!creaturesMap.has(c.id)) {
+                            creaturesMap.set(c.id, {
+                                x: c.x, y: c.y, targetX: c.x, targetY: c.y,
+                                angle: targetAngle, targetAngle: targetAngle,
+                                r: r, g: g, b: b,
+                                energy: Math.min(1, Math.max(0, c.energy / 4000)),
+                                cones: []
+                            });
+                        } else {
+                            let existing = creaturesMap.get(c.id);
+                            existing.targetX = c.x;
+                            existing.targetY = c.y;
+                            existing.targetAngle = targetAngle;
+                            existing.energy = Math.min(1, Math.max(0, c.energy / 4000));
+                        }
+                    });
+                    for (let id of creaturesMap.keys()) {
+                        if (!currentIDs.has(id)) creaturesMap.delete(id);
+                    }
+
+                    if (snap.stats) {
+                        document.getElementById('t-pop').innerText = snap.stats.pop;
+                        document.getElementById('t-extinctions').innerText = snap.stats.extinctions;
+                        document.getElementById('t-food').innerText = `${snap.stats.plants} | ${snap.stats.meat}`;
+                        document.getElementById('t-significance').innerText = snap.stats.highestSignificance.toFixed(2);
+                        document.getElementById('t-ein').innerText = snap.stats.eIn.toFixed(1);
+                        document.getElementById('t-eout').innerText = snap.stats.eOut.toFixed(1);
+
+                        let eRatio = snap.stats.eOut > 0 ? (snap.stats.eIn / snap.stats.eOut) : 0;
+                        let ratioEl = document.getElementById('t-eratio');
+                        ratioEl.innerText = eRatio.toFixed(2);
+                        ratioEl.style.color = eRatio >= 1.0 ? "palegreen" : "tomato";
+
+                        document.getElementById('t-te-plant').innerText = formatNum(snap.stats.totalPlantE);
+                        document.getElementById('t-te-meat').innerText = formatNum(snap.stats.totalMeatE);
+                        document.getElementById('t-te-bio').innerText = formatNum(snap.stats.totalCreatureE);
+
+                        document.getElementById('t-births').innerText = (snap.stats.births * 1000).toFixed(1);
+                        document.getElementById('t-deaths').innerText = (snap.stats.deaths * 1000).toFixed(1);
+                        document.getElementById('t-lifeact').innerText = snap.stats.lifeMeas.toFixed(0);
+                        document.getElementById('t-lifemath').innerText = snap.stats.lifeMath.toFixed(0);
+                        document.getElementById('t-peaten').innerText = (snap.stats.plantsEaten * 1000).toFixed(1);
+                        document.getElementById('t-meaten').innerText = (snap.stats.meatsEaten * 1000).toFixed(1);
+                        document.getElementById('t-attacks').innerText = (snap.stats.attacks * 1000).toFixed(1);
+                        document.getElementById('t-killrate').innerText = (snap.stats.killRate * 1000).toFixed(1);
+
+                        document.getElementById('t-avggen').innerText = snap.stats.avgGen.toFixed(1);
+                        document.getElementById('t-maxgen').innerText = snap.stats.maxGen;
+
+                        document.getElementById('t-herbs').innerText = snap.stats.herbivores;
+                        document.getElementById('t-omnis').innerText = snap.stats.omnivores;
+                        document.getElementById('t-hunts').innerText = snap.stats.hunters;
+                        document.getElementById('t-scavs').innerText = snap.stats.scavengers;
+                        document.getElementById('t-paras').innerText = snap.stats.parasites;
+
+                        document.getElementById('t-meatbias').innerText = snap.stats.avgCarnivory.toFixed(2);
+                        document.getElementById('t-armor').innerText = snap.stats.avgArmor.toFixed(2);
+                        document.getElementById('t-lethal').innerText = snap.stats.avgLethality.toFixed(2);
+                        document.getElementById('t-genes').innerText = snap.stats.avgGenes.toFixed(1);
+
+                        document.getElementById('t-gov-cap').innerText = formatNum(snap.stats.govCap);
+                        document.getElementById('t-gov-cure').innerText = formatNum(snap.stats.govCurE);
+                        let capRatio = snap.stats.govCap > 0 ? (snap.stats.govCurE / snap.stats.govCap) : 0;
+                        let govRatioEl = document.getElementById('t-gov-ratio');
+                        govRatioEl.innerText = capRatio.toFixed(2);
+                        govRatioEl.style.color = capRatio <= 1.0 ? "palegreen" : "tomato";
+
+                        document.getElementById('t-gov-actlife').innerText = snap.stats.govActLife.toFixed(0);
+                        document.getElementById('t-gov-lifes').innerText = `${snap.stats.govMathLife.toFixed(0)} | ${snap.stats.lifeMeas.toFixed(0)}`;
+                        document.getElementById('t-gov-blend').innerText = `${(snap.stats.govBlend * 100).toFixed(0)}%`;
+                        document.getElementById('t-gov-mom').innerText = snap.stats.govMom.toFixed(2);
+                        document.getElementById('t-gov-waste').innerText = snap.stats.govWastePen.toFixed(2);
+                    }
+                }
+
+                if (data.event === "playbackTelemetry") {
+                    Object.keys(simHistory).forEach(k => delete simHistory[k]);
+
+                    data.statsList.forEach(statTick => {
+                        Object.keys(statTick).forEach(key => {
+                            if (!simHistory[key]) {
+                                simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
+                            }
+
+                            const hist = simHistory[key];
+                            const val = statTick[key];
+
+                            hist.raw.push(val);
+
+                            hist.midSum += val; hist.midCount++;
+                            if (hist.midCount >= 10) {
+                                hist.mid.push(hist.midSum / hist.midCount);
+                                hist.midSum = 0; hist.midCount = 0;
+                            }
+
+                            hist.longSum += val; hist.longCount++;
+                            if (hist.longCount >= 100) {
+                                hist.long.push(hist.longSum / hist.longCount);
+                                hist.longSum = 0; hist.longCount = 0;
+                            }
+                        });
+                    });
+
+                    drawMasterGraph();
+                    return;
+                }
+
+                if (!data.creatures) return;
+                document.getElementById('genOverlay').style.display = 'none';
+
+                const infoBox = document.getElementById('creatureInfo');
+                if (data.trackedInfo) {
+                    latestTrackedInfo = data.trackedInfo;
+                    if (data.trackedInfo.id && (showHUD || isHUDTracking)) {
+                        selectedCreatureId = data.trackedInfo.id;
+                    }
+                }
+                else {
+                    latestTrackedInfo = null;
+                    if (!isHUDTracking && !showHUD && infoBox) {
+                        infoBox.style.display = 'none';
+                    }
+                }
+
+
+                if (data.stats) {
+                    if (data.stats.ticks !== lastGraphTick) {
+                        lastGraphTick = data.stats.ticks;
+
+                        let eRatio = data.stats.eOut > 0 ? (data.stats.eIn / data.stats.eOut) : 0;
+                        if (data.stats.eIn < 1 || data.stats.eOut < 1) {
+                            eRatio = 1;
+                        }
+                        let capRatio = data.stats.govCap > 0 ? (data.stats.govCurE / data.stats.govCap) : 0;
+
+                        data.stats.eRatio = eRatio;
+                        data.stats.capRatio = capRatio;
+
+                        Object.keys(data.stats).forEach(key => {
+                            if (typeof data.stats[key] === 'number') {
+                                if (!simHistory[key]) {
+                                    simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
+                                }
+
+                                const hist = simHistory[key];
+                                const val = data.stats[key];
+
+                                hist.raw.push(val);
+                                if (hist.raw.length > 1000) hist.raw.shift();
+
+                                hist.midSum += val;
+                                hist.midCount++;
+                                if (hist.midCount >= 10) {
+                                    hist.mid.push(hist.midSum / hist.midCount);
+                                    hist.midSum = 0; hist.midCount = 0;
+                                    if (hist.mid.length > 1000) hist.mid.shift();
+                                }
+
+                                hist.longSum += val;
+                                hist.longCount++;
+                                if (hist.longCount >= 100) {
+                                    hist.long.push(hist.longSum / hist.longCount);
+                                    hist.longSum = 0; hist.longCount = 0;
+                                    if (hist.long.length > 1000) hist.long.shift();
+                                }
+                            }
+                        });
+                        drawMasterGraph();
+                    }
+
+                    document.getElementById('t-pop').innerText = data.stats.pop;
+                    currentPop = data.stats.pop;
+                    currentTPS = data.stats.tps;
+                    updateRecordingEstimate();
+                    document.getElementById('t-extinctions').innerText = data.stats.extinctions;
+                    document.getElementById('t-food').innerText = `${data.stats.plants} | ${data.stats.meat}`;
+
+                    document.getElementById('t-tps-ticks').innerText = `${data.stats.tps} / ${formatNum(data.stats.ticks)}`;
+                    document.getElementById('t-perf').innerText = `${data.stats.simLoad.toFixed(2)}ms / ${data.stats.uiLoad.toFixed(2)}ms`;
+                    document.getElementById('t-saved').innerText = `${data.stats.savedGenomesSession} / ${data.stats.savedGenomesTotal}`;
+                    document.getElementById('t-significance').innerText = data.stats.highestSignificance.toFixed(2);
+
+                    document.getElementById('t-peaten').innerText = (data.stats.plantsEaten * 1000).toFixed(1);
+                    document.getElementById('t-meaten').innerText = (data.stats.meatsEaten * 1000).toFixed(1);
+                    document.getElementById('t-attacks').innerText = (data.stats.attacks * 1000).toFixed(1);
+                    document.getElementById('t-killrate').innerText = (data.stats.killRate * 1000).toFixed(1);
+                    document.getElementById('t-herbs').innerText = data.stats.herbivores;
+                    document.getElementById('t-omnis').innerText = data.stats.omnivores;
+                    document.getElementById('t-hunts').innerText = data.stats.hunters;
+                    document.getElementById('t-scavs').innerText = data.stats.scavengers;
+                    document.getElementById('t-paras').innerText = data.stats.parasites;
+
+                    document.getElementById('t-ein').innerText = data.stats.eIn.toFixed(1);
+                    document.getElementById('t-eout').innerText = data.stats.eOut.toFixed(1);
+
+                    let eRatio = data.stats.eOut > 0 ? (data.stats.eIn / data.stats.eOut) : 0;
+                    let ratioEl = document.getElementById('t-eratio');
+                    ratioEl.innerText = eRatio.toFixed(2);
+                    ratioEl.style.color = eRatio >= 1.0 ? "palegreen" : "tomato";
+
+                    document.getElementById('t-te-plant').innerText = formatNum(data.stats.totalPlantE);
+                    document.getElementById('t-te-meat').innerText = formatNum(data.stats.totalMeatE);
+                    document.getElementById('t-te-bio').innerText = formatNum(data.stats.totalCreatureE);
+
+                    document.getElementById('t-births').innerText = (data.stats.births * 1000).toFixed(1);
+                    document.getElementById('t-deaths').innerText = (data.stats.deaths * 1000).toFixed(1);
+                    document.getElementById('t-lifeact').innerText = data.stats.lifeMeas.toFixed(0);
+                    document.getElementById('t-lifemath').innerText = data.stats.lifeMath.toFixed(0);
+
+                    document.getElementById('t-avggen').innerText = data.stats.avgGen.toFixed(1);
+                    document.getElementById('t-maxgen').innerText = data.stats.maxGen;
+
+                    document.getElementById('t-meatbias').innerText = data.stats.avgCarnivory.toFixed(2);
+                    document.getElementById('t-armor').innerText = data.stats.avgArmor.toFixed(2);
+                    document.getElementById('t-lethal').innerText = data.stats.avgLethality.toFixed(2);
+                    document.getElementById('t-genes').innerText = data.stats.avgGenes.toFixed(1);
+
+                    if (data.stats.govCap !== undefined) {
+                        document.getElementById('t-gov-cap').innerText = formatNum(data.stats.govCap);
+                        document.getElementById('t-gov-cure').innerText = formatNum(data.stats.govCurE);
+
+                        let capRatio = data.stats.govCap > 0 ? (data.stats.govCurE / data.stats.govCap) : 0;
+                        let ratioEl = document.getElementById('t-gov-ratio');
+                        ratioEl.innerText = capRatio.toFixed(2);
+                        ratioEl.style.color = capRatio <= 1.0 ? "palegreen" : "tomato";
+
+                        document.getElementById('t-gov-actlife').innerText = data.stats.govActLife.toFixed(0);
+                        document.getElementById('t-gov-lifes').innerText = `${data.stats.govMathLife.toFixed(0)} | ${data.stats.lifeMeas.toFixed(0)}`;
+                        document.getElementById('t-gov-blend').innerText = `${(data.stats.govBlend * 100).toFixed(0)}%`;
+                        document.getElementById('t-gov-mom').innerText = data.stats.govMom.toFixed(2);
+                        document.getElementById('t-gov-waste').innerText = data.stats.govWastePen.toFixed(2);
+                    }
+                }
+
+                if (worldWidth !== data.width || worldHeight !== data.height) {
+                    worldWidth = data.width;
+                    worldHeight = data.height;
+
+                    canvas.width = 1600;
+                    canvas.height = 1600;
+                    fertCanvas.width = 1600;
+                    fertCanvas.height = 1600;
+
+                    CELL_SIZE = canvas.width / worldWidth;
+                    buildSprites(CELL_SIZE);
+                    bgNeedsUpdate = true;
+                }
+
+                if (data.fertMap) {
+                    const binaryString = atob(data.fertMap);
+
+                    const dw = Math.floor(worldWidth / 2);
+                    const dh = Math.floor(worldHeight / 2);
+
+                    if (fertCanvas.width !== dw || fertCanvas.height !== dh) {
+                        fertCanvas.width = dw;
+                        fertCanvas.height = dh;
+                    }
+
+                    const imgData = fertCtx.createImageData(dw, dh);
+                    const pixels = imgData.data;
+
+                    for (let i = 0; i < binaryString.length; i++) {
+                        const val = binaryString.charCodeAt(i) / 255.0;
+                        const idx = i * 4;
+                        if (val > 0.5) {
+                            pixels[idx] = 143;
+                            pixels[idx + 1] = 223;
+                            pixels[idx + 2] = 255;
+                            pixels[idx + 3] = Math.floor((val - 0.5) * 0.8 * 255);
+                        } else {
+                            pixels[idx + 3] = 0;
+                        }
+                    }
+                    fertCtx.putImageData(imgData, 0, 0);
+                }
+
+                if (data.blocks && data.blocks.length !== staticBlocks.length) {
+                    staticBlocks = data.blocks;
+                    bgNeedsUpdate = true;
+                }
+
+                const currentFoodIDs = new Set();
+                data.foods.forEach(f => {
+                    const id = `${f.x},${f.y}`;
+                    currentFoodIDs.add(id);
+
+                    if (!foodsMap.has(id)) {
+                        foodsMap.set(id, { x: f.x, y: f.y, meat: f.meat, scale: 0, targetScale: 1 });
+                    } else {
+                        let existing = foodsMap.get(id);
+                        existing.meat = f.meat;
+                        existing.targetScale = 1;
+                    }
+                });
+
+                for (let [id, f] of foodsMap.entries()) {
+                    if (!currentFoodIDs.has(id)) {
+                        f.targetScale = 0;
+                    }
+                }
+
+                const currentIDs = new Set();
+
+                data.creatures.forEach(c => {
+                    currentIDs.add(c.id);
+                    const targetAngle = (c.dir - 2) * (Math.PI / 4);
+
+                    if (c.parentId && trackedLineageIds.has(c.parentId)) {
+                        trackedLineageIds.add(c.id);
+                    }
+
+                    if (!creaturesMap.has(c.id)) {
+                        creaturesMap.set(c.id, {
+                            x: c.x, y: c.y, targetX: c.x, targetY: c.y,
+                            angle: targetAngle, targetAngle: targetAngle,
+                            r: c.r, g: c.g, b: c.b,
+                            cones: c.cones,
+                            slot: c.slot,
+                            energy: c.energy,
+                            parentId: c.parentId,
+                        });
+                    } else {
+                        let existing = creaturesMap.get(c.id);
+                        existing.targetX = c.x;
+                        existing.targetY = c.y;
+                        existing.targetAngle = targetAngle;
+                        existing.cones = c.cones;
+                        existing.slot = c.slot;
+                        existing.energy = c.energy;
+
+                        while (existing.targetAngle - existing.angle > Math.PI) existing.targetAngle -= Math.PI * 2;
+                        while (existing.targetAngle - existing.angle < -Math.PI) existing.targetAngle += Math.PI * 2;
+                    }
+                });
+
+                for (let id of creaturesMap.keys()) {
+                    if (!currentIDs.has(id)) {
+                        creaturesMap.delete(id);
+                        if (selectedCreatureId === id) hideContextMenu();
+                        trackedLineageIds.delete(id);
+                    }
+                }
+            } catch (err) {
+                console.error("Socket Message Parse Error:", err);
+            }
+        };
+
+        function startSimulation() {
+            Object.keys(simHistory).forEach(k => delete simHistory[k]);
+            drawMasterGraph();
+            document.getElementById('extinctionModal').style.display = 'none';
+            socket.send(JSON.stringify({ action: "startWorld" }));
+        }
+        function switchView(viewId, url) { window.location.href = url; }
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = 1.1;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            let oldScale = scale;
+            if (e.deltaY < 0) scale *= zoomFactor;
+            else scale /= zoomFactor;
+
+            scale = Math.max(1.0, Math.min(scale, 20.0));
+            panX = mouseX - (mouseX - panX) * (scale / oldScale);
+            panY = mouseY - (mouseY - panY) * (scale / oldScale);
+
+            const maxPanX = 0, minPanX = canvas.width - (canvas.width * scale);
+            const maxPanY = 0, minPanY = canvas.height - (canvas.height * scale);
+            panX = Math.max(minPanX, Math.min(maxPanX, panX));
+            panY = Math.max(minPanY, Math.min(maxPanY, panY));
+        }, { passive: false });
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('graph-cb')) {
+                const checkedBoxes = document.querySelectorAll('.graph-cb:checked');
+                if (checkedBoxes.length > 0) {
+                    document.getElementById('masterGraph').style.display = 'flex';
+                } else {
+                    document.getElementById('masterGraph').style.display = 'none';
+                }
+                drawMasterGraph();
+            }
+        });
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const rawX = (e.clientX - rect.left) * scaleX;
+                const rawY = (e.clientY - rect.top) * scaleY;
+                const clickX = (rawX - panX) / scale;
+                const clickY = (rawY - panY) / scale;
+
+                if (isMoveMode || isPlaceMode) {
+                    isMoveDragging = true;
+                    moveOriginWorldX = clickX;
+                    moveOriginWorldY = clickY;
+                    moveCurrentWorldX = clickX;
+                    moveCurrentWorldY = clickY;
+                } else if (currentTool === 'select') {
+                    isDragging = true;
+                    startX = e.clientX - panX;
+                    startY = e.clientY - panY;
+                } else {
+                    isDrawing = true;
+                    applyTool(e);
+                }
+            }
+        });
+        window.addEventListener('mouseup', () => {
+            if (isMoveDragging) {
+                const gridX = Math.floor(moveOriginWorldX / CELL_SIZE);
+                const gridY = Math.floor(moveOriginWorldY / CELL_SIZE);
+                const dx = moveCurrentWorldX - moveOriginWorldX;
+                const dy = moveCurrentWorldY - moveOriginWorldY;
+                const dir = vectorToDir(dx, dy);
+
+                if (isMoveMode) {
+                    socket.send(JSON.stringify({
+                        action: "moveCreature",
+                        creatureId: moveCreatureId,
+                        x: gridX,
+                        y: gridY,
+                        dir: dir
+                    }));
+                } else if (isPlaceMode) {
+                    socket.send(JSON.stringify({
+                        action: "placeCreatureDir",
+                        slot: placeSlot,
+                        x: gridX,
+                        y: gridY,
+                        dir: dir
+                    }));
+                }
+
+                isMoveMode = false;
+                isPlaceMode = false;
+                placeSlot = null;
+                isMoveDragging = false;
+                moveCreatureId = null;
+            }
+
+            isDragging = false;
+            isDrawing = false;
+            lastDrawX = -1;
+            lastDrawY = -1;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const clickX = (rawX - panX) / scale;
+            const clickY = (rawY - panY) / scale;
+
+            if (isMoveDragging) {
+                moveCurrentWorldX = clickX;
+                moveCurrentWorldY = clickY;
+            } else if (isDragging) {
+                let newPanX = e.clientX - startX;
+                let newPanY = e.clientY - startY;
+                const maxPanX = 0, minPanX = canvas.width - (canvas.width * scale);
+                const maxPanY = 0, minPanY = canvas.height - (canvas.height * scale);
+                panX = Math.max(minPanX, Math.min(maxPanX, newPanX));
+                panY = Math.max(minPanY, Math.min(maxPanY, newPanY));
+            } else if (isDrawing) {
+                applyTool(e);
+            }
+        });
+        canvas.addEventListener('click', (e) => {
+            if (currentTool !== 'select') return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const clickX = (rawX - panX) / scale;
+            const clickY = (rawY - panY) / scale;
+
+            let clickedId = null;
+            let minDist = Infinity;
+
+            for (const [id, c] of creaturesMap.entries()) {
+                const cx = (c.x * CELL_SIZE) + CELL_SIZE / 2;
+                const cy = (c.y * CELL_SIZE) + CELL_SIZE / 2;
+                const dist = Math.hypot(cx - clickX, cy - clickY);
+                if (dist < CELL_SIZE * 1.5 && dist < minDist) {
+                    minDist = dist;
+                    clickedId = id;
+                }
+            }
+
+            if (clickedId) {
+                selectedCreatureId = clickedId;
+
+                if (pauseOnSelect) socket.send(JSON.stringify({ action: "forcePause" }));
+                socket.send(JSON.stringify({ action: "trackCreature", id: clickedId }));
+
+                showHUD = false;
+                isHUDTracking = false;
+
+                let btn = document.getElementById('trackBtn');
+                if (btn) {
+                    btn.innerText = "SHOW DETAILS";
+                    btn.style.borderColor = "#8fdfff";
+                    btn.style.color = "#8fdfff";
+                }
+
+                if (contextMenu) {
+                    contextMenu.style.display = "block";
+
+                    let spawnX = e.clientX - 215;
+                    if (spawnX + 170 > window.innerWidth) {
+                        spawnX = e.clientX - 185;
+                    }
+
+                    let spawnY = Math.max(10, e.clientY - 60);
+                    if (spawnY + 400 > window.innerHeight) {
+                        spawnY = window.innerHeight - 400;
+                    }
+
+                    contextMenu.style.left = spawnX + "px";
+                    contextMenu.style.top = spawnY + "px";
+                }
+            } else {
+                hideContextMenu();
+            }
+        });
+
+        function loadGenome(slotName) {
+            if (selectedCreatureId) {
+                creaturesMap.forEach((c) => { if (c.slot === slotName) c.slot = null; });
+                const targetCreature = creaturesMap.get(selectedCreatureId);
+                if (targetCreature) targetCreature.slot = slotName;
+                socket.send(JSON.stringify({ action: "loadGenome", creatureId: selectedCreatureId, slot: slotName }));
+            }
+            hideContextMenu();
+        }
+
+        function hideContextMenu() {
+            const menu = document.getElementById('context-menu');
+            if (menu) menu.style.display = "none";
+
+            if (!isHUDTracking) {
+                closeTrackingHUD();
+            }
+        }
+        function closeTrackingHUD() {
+            isHUDTracking = false;
+            showHUD = false;
+            selectedCreatureId = null;
+            const infoBox = document.getElementById('creatureInfo');
+            if (infoBox) infoBox.style.display = 'none';
+            socket.send(JSON.stringify({ action: "trackCreature", id: "" }));
+        }
+        function handleTrackButton() {
+            let btn = document.getElementById('trackBtn');
+            if (!showHUD) {
+                showHUD = true;
+                btn.innerText = "TRACK CREATURE";
+                btn.style.borderColor = "#ffcc00";
+                btn.style.color = "#ffcc00";
+            } else {
+                isHUDTracking = true;
+                btn.innerText = "LOCKED";
+                btn.style.borderColor = "palegreen";
+                btn.style.color = "palegreen";
+                hideContextMenu();
+            }
+        }
+        function togglePauseOnSelect() {
+            pauseOnSelect = !pauseOnSelect;
+        }
+
+        function lerp(start, end, factor) { return start + (end - start) * factor; }
+        function drawCreature(ctx, r, g, b, energy) {
+            const size = CELL_SIZE * 1.1;
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.beginPath();
+            ctx.moveTo(size / 2, 0);
+            ctx.lineTo(-size / 2, size / 2.2);
+            ctx.quadraticCurveTo(-size / 5, 0, -size / 2, -size / 2.2);
+            ctx.closePath();
+            ctx.fill();
+
+            //const voidScale = 0.85 * (1 - Math.max(0, Math.min(1, energy)));
+            //if (voidScale > 0) {
+            //    ctx.save();
+            //    ctx.scale(voidScale, voidScale);
+            //    ctx.fillStyle = '#1a1a1a';
+            //    ctx.beginPath();
+            //    ctx.moveTo(size / 2, 0);
+            //    ctx.lineTo(-size / 2, size / 2.2);
+            //    ctx.quadraticCurveTo(-size / 5, 0, -size / 2, -size / 2.2);
+            //    ctx.closePath();
+            //    ctx.fill();
+            //    ctx.restore();
+            //}
+        }
+
+        function buildSprites(baseC) {
+            const resMultiplier = 8;
+            const C = baseC * resMultiplier;
+
+            plantSprite.width = C;
+            plantSprite.height = C;
+            const pCtx = plantSprite.getContext('2d');
+
+            pCtx.fillStyle = '#004400';
+            pCtx.beginPath();
+            pCtx.moveTo(C * 0.5, C * 0.1); pCtx.lineTo(C * 0.9, C * 0.5);
+            pCtx.lineTo(C * 0.5, C * 0.9); pCtx.lineTo(C * 0.1, C * 0.5);
+            pCtx.fill();
+
+            pCtx.fillStyle = '#008800';
+            pCtx.beginPath();
+            pCtx.moveTo(C * 0.5, C * 0.25); pCtx.lineTo(C * 0.75, C * 0.5);
+            pCtx.lineTo(C * 0.5, C * 0.75); pCtx.lineTo(C * 0.25, C * 0.5);
+            pCtx.fill();
+
+            pCtx.fillStyle = '#00dd00';
+            pCtx.fillRect(C * 0.4, C * 0.4, C * 0.2, C * 0.2);
+
+            meatSprite.width = C;
+            meatSprite.height = C;
+            const mCtx = meatSprite.getContext('2d');
+
+            mCtx.fillStyle = '#800000';
+            mCtx.beginPath();
+            mCtx.moveTo(C * 0.3, C * 0.1); mCtx.lineTo(C * 0.7, C * 0.1);
+            mCtx.lineTo(C * 0.9, C * 0.3); mCtx.lineTo(C * 0.9, C * 0.7);
+            mCtx.lineTo(C * 0.7, C * 0.9); mCtx.lineTo(C * 0.3, C * 0.9);
+            mCtx.lineTo(C * 0.1, C * 0.7); mCtx.lineTo(C * 0.1, C * 0.3);
+            mCtx.fill();
+
+            mCtx.fillStyle = '#bb0000';
+            mCtx.beginPath();
+            mCtx.moveTo(C * 0.4, C * 0.3); mCtx.lineTo(C * 0.6, C * 0.3);
+            mCtx.lineTo(C * 0.7, C * 0.4); mCtx.lineTo(C * 0.7, C * 0.6);
+            mCtx.lineTo(C * 0.6, C * 0.7); mCtx.lineTo(C * 0.4, C * 0.7);
+            mCtx.lineTo(C * 0.3, C * 0.6); mCtx.lineTo(C * 0.3, C * 0.4);
+            mCtx.fill();
+        }
+
+        function render() {
+            if (bgNeedsUpdate) {
+                bgCanvas.width = canvas.width;
+                bgCanvas.height = canvas.height;
+                bgCtx.fillStyle = '#1a1a1a';
+                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+                const blockSet = new Set(staticBlocks.map(b => `${b.x},${b.y}`));
+                const isSolid = (x, y) => blockSet.has(`${x},${y}`);
+
+                bgCtx.fillStyle = '#080808';
+                bgCtx.strokeStyle = '#080808';
+                bgCtx.lineWidth = 1;
+                bgCtx.beginPath();
+
+                const C = CELL_SIZE;
+                const hC = C / 2;
+
+                for (let y = -1; y <= worldHeight; y++) {
+                    for (let x = -1; x <= worldWidth; x++) {
+                        let state = 0;
+                        if (isSolid(x, y)) state |= 8;
+                        if (isSolid(x + 1, y)) state |= 4;
+                        if (isSolid(x + 1, y + 1)) state |= 2;
+                        if (isSolid(x, y + 1)) state |= 1;
+
+                        if (state === 0) continue;
+
+                        const px = (x + 0.5) * C;
+                        const py = (y + 0.5) * C;
+
+                        const p0 = [px, py];
+                        const p1 = [px + hC, py];
+                        const p2 = [px + C, py];
+                        const p3 = [px + C, py + hC];
+                        const p4 = [px + C, py + C];
+                        const p5 = [px + hC, py + C];
+                        const p6 = [px, py + C];
+                        const p7 = [px, py + hC];
+
+                        const polys = [
+                            [],
+                            [[p6, p5, p7]],
+                            [[p4, p3, p5]],
+                            [[p6, p4, p3, p7]],
+                            [[p2, p1, p3]],
+                            [[p6, p5, p7], [p2, p1, p3]],
+                            [[p4, p2, p1, p5]],
+                            [[p6, p4, p2, p1, p7]],
+                            [[p0, p7, p1]],
+                            [[p0, p6, p5, p1]],
+                            [[p0, p7, p1], [p4, p3, p5]],
+                            [[p0, p6, p4, p3, p1]],
+                            [[p0, p7, p3, p2]],
+                            [[p0, p6, p5, p3, p2]],
+                            [[p0, p7, p5, p4, p2]],
+                            [[p0, p6, p4, p2]]
+                        ];
+
+                        for (const poly of polys[state]) {
+                            bgCtx.moveTo(poly[0][0], poly[0][1]);
+                            for (let i = 1; i < poly.length; i++) {
+                                bgCtx.lineTo(poly[i][0], poly[i][1]);
+                            }
+                            bgCtx.closePath();
+                        }
+                    }
+                }
+
+                bgCtx.fill();
+                bgCtx.stroke();
+                bgNeedsUpdate = false;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(scale, scale);
+            ctx.drawImage(bgCanvas, 0, 0);
+
+            if (renderPopDensity) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+
+                creaturesMap.forEach(c => {
+                    const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
+                    const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
+
+                    const blurRadius = CELL_SIZE * 18;
+                    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, blurRadius);
+
+                    gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0.1)`);
+                    gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, 0.01)`);
+                    gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, blurRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.restore();
+            }
+
+            if (renderFoods) {
+                for (let [id, f] of foodsMap.entries()) {
+                    f.scale = lerp(f.scale, f.targetScale, 0.03);
+
+                    if (f.targetScale === 0 && f.scale < 0.05) {
+                        foodsMap.delete(id);
+                        continue;
+                    }
+
+                    if (f.scale > 0.01) {
+                        const cx = (f.x * CELL_SIZE) + (CELL_SIZE / 2);
+                        const cy = (f.y * CELL_SIZE) + (CELL_SIZE / 2);
+                        const currentSize = CELL_SIZE * f.scale;
+
+                        ctx.drawImage(
+                            f.meat ? meatSprite : plantSprite,
+                            cx - currentSize / 2,
+                            cy - currentSize / 2,
+                            currentSize,
+                            currentSize
+                        );
+                    }
+                }
+            }
+
+            creaturesMap.forEach((c, id) => {
+                c.x = lerp(c.x, c.targetX, 0.2);
+                c.y = lerp(c.y, c.targetY, 0.2);
+                c.angle = lerp(c.angle, c.targetAngle, 0.2);
+
+                const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
+                const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
+
+                if (renderCreatures) {
+                    const cos = Math.cos(c.angle), sin = Math.sin(c.angle);
+
+                    ctx.setTransform(scale * cos, scale * sin, -scale * sin, scale * cos, cx * scale + panX, cy * scale + panY);
+
+                    if (renderCones && c.cones && c.cones.length > 0) {
+                        c.cones.forEach(cone => {
+                            if (cone.range > 0) {
+                                ctx.save();
+                                const radOffset = cone.offset * (Math.PI / 180);
+                                ctx.rotate(radOffset);
+                                ctx.beginPath();
+                                ctx.moveTo(0, 0);
+                                const radFov = cone.fov * (Math.PI / 180);
+                                ctx.arc(0, 0, cone.range * CELL_SIZE, -radFov / 2, radFov / 2);
+                                ctx.closePath();
+                                ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.15)`;
+                                ctx.fill();
+                                ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`;
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                                ctx.restore();
+                            }
+                        });
+                    }
+
+                    drawCreature(ctx, c.r, c.g, c.b, c.energy);
+
+                    if (id === selectedCreatureId) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, CELL_SIZE * 1.2, 0, Math.PI * 2);
+                        ctx.strokeStyle = "white";
+                        ctx.lineWidth = 8 / scale;
+                        ctx.setLineDash([2 / scale, 2 / scale]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+
+                    if (trackedLineageIds.has(id) && id !== selectedCreatureId) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, CELL_SIZE * 1.6, 0, Math.PI * 2);
+                        ctx.strokeStyle = "rgba(255, 153, 204, 0.6)";
+                        ctx.lineWidth = 4 / scale;
+                        ctx.stroke();
+                    }
+
+                    if (c.slot) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, CELL_SIZE * 1.2, 0, Math.PI * 2);
+                        ctx.strokeStyle = "#8fdfff";
+                        ctx.lineWidth = 8 / scale;
+                        ctx.stroke();
+                        ctx.save();
+                        ctx.setTransform(scale, 0, 0, scale, cx * scale + panX, cy * scale + panY);
+                        const fontSize = Math.max(12, Math.min(24, 18 / scale));
+                        ctx.font = `bold ${fontSize}px consolas`;
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = "#8fdfff";
+                        ctx.fillText(c.slot.toUpperCase(), 0, -CELL_SIZE * 1.8);
+                        ctx.restore();
+                    }
+                }
+            });
+
+            ctx.setTransform(scale, 0, 0, scale, panX, panY);
+
+            if (renderFertility) {
+                ctx.globalCompositeOperation = 'screen';
+                ctx.imageSmoothingEnabled = true;
+                ctx.drawImage(fertCanvas, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+            }
+
+            const infoBox = document.getElementById('creatureInfo');
+            if (infoBox) {
+                if (selectedCreatureId && creaturesMap.has(selectedCreatureId) && showHUD && latestTrackedInfo) {
+                    const c = creaturesMap.get(selectedCreatureId);
+
+                    const rect = canvas.getBoundingClientRect();
+                    const canvasScaleX = rect.width / canvas.width;
+                    const canvasScaleY = rect.height / canvas.height;
+
+                    const worldX = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
+                    const worldY = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
+
+                    const screenX = rect.left + ((worldX * scale + panX) * canvasScaleX);
+                    const screenY = rect.top + ((worldY * scale + panY) * canvasScaleY);
+
+                    let hudX = screenX + 20;
+                    let hudY = screenY - 80;
+                    if (hudX + 240 > window.innerWidth) hudX = window.innerWidth - 240;
+                    if (hudY < 10) hudY = 10;
+                    else if (hudY + 300 > window.innerHeight) hudY = window.innerHeight - 300;
+
+                    infoBox.style.display = 'block';
+                    infoBox.style.left = `${screenX + 20}px`;
+                    infoBox.style.top = `${screenY - 80}px`;
+
+                    if (latestTrackedInfo) {
+                        document.getElementById('ci-age-gen').innerText = `${latestTrackedInfo.age} / ${latestTrackedInfo.gen}`;
+                        document.getElementById('ci-energy').innerText = `${latestTrackedInfo.energy.toFixed(1)} (${(latestTrackedInfo.energyPct * 100).toFixed(0)}%)`;
+                        document.getElementById('ci-action').innerText = latestTrackedInfo.action;
+                        document.getElementById('ci-diet').innerText = latestTrackedInfo.diet;
+
+                        document.getElementById('ci-brain-nodes').innerText = `${latestTrackedInfo.sensors}/${latestTrackedInfo.maths}/${latestTrackedInfo.actions}`;
+                        document.getElementById('ci-brain-genes').innerText = `${latestTrackedInfo.totalGenes} / ${latestTrackedInfo.activeConnections}`;
+
+                        document.getElementById('ci-kills').innerText = `${latestTrackedInfo.kills} / ${latestTrackedInfo.damageDealt.toFixed(1)}`;
+                        document.getElementById('ci-food').innerText = `${latestTrackedInfo.meatsEaten} / ${latestTrackedInfo.plantsEaten}`;
+
+                        document.getElementById('ci-sig').innerText = latestTrackedInfo.significance.toFixed(2);
+                        document.getElementById('ci-lineage').innerText = latestTrackedInfo.lineage.toFixed(0);
+
+                        const phenoDiv = document.getElementById('ci-phenos');
+                        phenoDiv.innerHTML = '';
+                        latestTrackedInfo.phenos.forEach(p => {
+                            let sign = p.diff >= 0 ? '+' : '';
+                            let color = p.diff >= 0 ? 'palegreen' : 'tomato';
+                            phenoDiv.innerHTML += `<div style="display: flex; justify-content: space-between;"><span>${p.name}</span><span style="color: white; font-weight: bold;">${p.val.toFixed(2)} <span style="color:${color}; font-size:10px; margin-left:4px;">(${sign}${p.diff.toFixed(2)})</span></span></div>`;
+                        });
+                    }
+                } else if (!isHUDTracking) {
+                    infoBox.style.display = 'none';
+                }
+            }
+
+            if (isMoveDragging) {
+                ctx.save();
+                ctx.setTransform(scale, 0, 0, scale, panX, panY);
+
+                const origGridX = Math.floor(moveOriginWorldX / CELL_SIZE) * CELL_SIZE;
+                const origGridY = Math.floor(moveOriginWorldY / CELL_SIZE) * CELL_SIZE;
+                ctx.strokeStyle = "#ffcc00";
+                ctx.lineWidth = 2 / scale;
+                ctx.strokeRect(origGridX, origGridY, CELL_SIZE, CELL_SIZE);
+
+                ctx.beginPath();
+                ctx.moveTo(moveOriginWorldX, moveOriginWorldY);
+                ctx.lineTo(moveCurrentWorldX, moveCurrentWorldY);
+                ctx.strokeStyle = "#ffcc00";
+                ctx.lineWidth = 3 / scale;
+                ctx.setLineDash([4 / scale, 4 / scale]);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(moveCurrentWorldX, moveCurrentWorldY, 5 / scale, 0, Math.PI * 2);
+                ctx.fillStyle = "#ffcc00";
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            requestAnimationFrame(render);
+        }
+
+        function makeDraggable(elmnt, header) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            header.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+
+                let highestZ = 2000;
+                document.querySelectorAll('.graph-modal').forEach(el => {
+                    let z = parseInt(window.getComputedStyle(el).zIndex);
+                    if (z > highestZ) highestZ = z;
+                });
+                elmnt.style.zIndex = highestZ + 1;
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+        function drawMasterGraph() {
+            if (document.getElementById('masterGraph').style.display === 'none') return;
+
+            const activeKeys = Array.from(document.querySelectorAll('.graph-cb:checked')).map(cb => cb.value);
+            masterCtx.clearRect(0, 0, masterCanvas.width, masterCanvas.height);
+            document.getElementById('masterLegend').innerHTML = '';
+
+            const scaleLvl = parseInt(masterSlider.value);
+
+            activeKeys.forEach((key, index) => {
+                const dataObj = simHistory[key];
+                if (!dataObj) return;
+
+                const dataArr = scaleLvl === 0 ? dataObj.raw : (scaleLvl === 1 ? dataObj.mid : dataObj.long);
+                if (dataArr.length === 0) return;
+
+                let min = Math.min(...dataArr), max = Math.max(...dataArr);
+                if (max - min < 0.0001) { min -= 1; max += 1; }
+                const range = max - min;
+
+                const stepX = masterCanvas.width / Math.max(2, dataArr.length - 1);
+                const color = colorPalette[index % colorPalette.length];
+
+                const currentVal = dataArr[dataArr.length - 1];
+                document.getElementById('masterLegend').innerHTML +=
+                    `<div style="color: ${color};"><span style="display:inline-block; width:8px; height:8px; background:${color}; margin-right:4px;"></span>${key}: ${currentVal.toFixed(2)}</div>`;
+
+                masterCtx.beginPath();
+                masterCtx.strokeStyle = color;
+                masterCtx.lineWidth = 1.5;
+                masterCtx.lineJoin = 'round';
+
+                for (let i = 0; i < dataArr.length; i++) {
+                    const x = i * stepX;
+                    const normalizedY = (dataArr[i] - min) / range;
+                    const y = masterCanvas.height - (normalizedY * masterCanvas.height * 0.8) - (masterCanvas.height * 0.1);
+
+                    if (i === 0) masterCtx.moveTo(x, y); else masterCtx.lineTo(x, y);
+                }
+                masterCtx.stroke();
+            });
+        }
+
+        function startSimulation() {
+            Object.keys(simHistory).forEach(k => delete simHistory[k]);
+            drawMasterGraph();
+            document.getElementById('extinctionModal').style.display = 'none';
+            socket.send(JSON.stringify({ action: "startWorld" }));
+        }
+
+        function togglePause() { socket.send(JSON.stringify({ action: "togglePause" })); }
+        function toggleSafeEditMode() { socket.send(JSON.stringify({ action: "toggleSafeEditMode" })); }
+        function reloadConfig() { socket.send(JSON.stringify({ action: "reloadConfig" })); }
+        function formatNum(num) {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(3) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+            return Math.floor(num).toString();
+        }
+        function saveChampion() { socket.send(JSON.stringify({ action: "saveChampion" })); }
+        function toggleAutoRestart() { socket.send(JSON.stringify({ action: "toggleAutoRestart" })); }
+        function togglePauseOnExtinction() { socket.send(JSON.stringify({ action: "togglePauseOnExtinction" })); }
+        function killCreature() {
+            if (selectedCreatureId) socket.send(JSON.stringify({ action: "killCreature", creatureId: selectedCreatureId }));
+            hideContextMenu();
+        }
+        function killAll() { socket.send(JSON.stringify({ action: "killAll" })); }
+        function toggleRenderCones() {
+            if ((!isPaused && !renderCones) || (isPaused && renderCones)) {
+                togglePause()
+            }
+            renderCones = !renderCones;
+        }
+        function togglePopDensity() {
+            renderPopDensity = !renderPopDensity
+        }
+        function toggleRenderFoods() { renderFoods = !renderFoods; }
+        function toggleRenderCreatures() { renderCreatures = !renderCreatures; }
+
+        function toggleRepopMode(mode) { socket.send(JSON.stringify({ action: "toggleRepopMode", mode: mode })); }
+        function repopulate() { socket.send(JSON.stringify({ action: "repopulate" })); }
+
+        function highlightLineage() {
+            if (selectedCreatureId) {
+                trackedLineageIds.add(selectedCreatureId);
+
+                let added = true;
+                while (added) {
+                    added = false;
+                    creaturesMap.forEach((c, id) => {
+                        if (c.parentId && trackedLineageIds.has(c.parentId) && !trackedLineageIds.has(id)) {
+                            trackedLineageIds.add(id);
+                            added = true;
+                        }
+                    });
+                }
+            }
+            hideContextMenu();
+        }
+        function clearLineage() {
+            trackedLineageIds.clear();
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            ['select', 'erase', 'wall', 'dummy', 'plant', 'meat'].forEach(t => {
+                const btn = document.getElementById('tool-' + t);
+                if (t === tool) {
+                    btn.style.borderColor = '#ffcc00';
+                    btn.style.color = '#ffcc00';
+                } else {
+                    btn.style.borderColor = '#555';
+                    btn.style.color = 'white';
+                }
+            });
+            if (tool !== 'select') hideContextMenu();
+        }
+        function applyTool(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const clickX = (rawX - panX) / scale;
+            const clickY = (rawY - panY) / scale;
+
+            const gridX = Math.floor(clickX / CELL_SIZE);
+            const gridY = Math.floor(clickY / CELL_SIZE);
+
+            if (gridX >= 0 && gridX < worldWidth && gridY >= 0 && gridY < worldHeight) {
+                if (gridX !== lastDrawX || gridY !== lastDrawY) {
+                    lastDrawX = gridX;
+                    lastDrawY = gridY;
+                    socket.send(JSON.stringify({ action: "draw", type: currentTool, x: gridX, y: gridY }));
+                }
+            }
+        }
+        function toggleSandboxMode() {
+            const isChecked = document.getElementById('sandboxMode').checked;
+            socket.send(JSON.stringify({
+                action: "updateConfig",
+                key: "sandboxMode",
+                value: isChecked ? 1 : 0
+            }));
+        }
+        function startMoveCreature() {
+            if (selectedCreatureId) {
+                isMoveMode = true;
+                moveCreatureId = selectedCreatureId;
+            }
+            hideContextMenu();
+        }
+        function vectorToDir(dx, dy) {
+            if (dx === 0 && dy === 0) return 0;
+            let angle = Math.atan2(dy, dx) + Math.PI / 2;
+            let dir = Math.round(angle / (Math.PI / 4));
+            return (dir % 8 + 8) % 8;
+        }
+
+        function updateTickRate() {
+            const slider = document.getElementById("tickRateSlider");
+            const display = document.getElementById("tickRateDisplay");
+            let x = parseInt(slider.value) / 100.0;
+
+            if (x === 1.0) {
+                display.innerText = "Max Speed!";
+                display.style.color = "tomato";
+                slider.style.accentColor = "tomato";
+                socket.send(JSON.stringify({ action: "updateConfig", key: "maxSpeed", value: 1 }));
+                updateRefreshRate();
+
+            } else {
+                let val = Math.max(1, Math.round(1000 * Math.pow(x, 2.3219)));
+                display.innerText = val + " TPS";
+                display.style.color = "#8fdfff";
+                slider.style.accentColor = "#8fdfff";
+
+                socket.send(JSON.stringify({ action: "updateConfig", key: "maxSpeed", value: 0 }));
+                socket.send(JSON.stringify({ action: "updateConfig", key: "tickRate", value: val }));
+            }
+        }
+        function updateRefreshRate() {
+            const slider = document.getElementById("refreshRateSlider");
+            const display = document.getElementById("refreshRateDisplay");
+            const hz = parseInt(slider.value);
+            display.innerText = hz + " FPS";
+
+            const ms = Math.max(1, Math.round(1000 / hz));
+            socket.send(JSON.stringify({ action: "updateConfig", key: "uiRate", value: ms }));
+        }
+
+        function updateConfigValue(key, sliderId, displayId) {
+            const val = parseFloat(document.getElementById(sliderId).value);
+            document.getElementById(displayId).innerText = val.toFixed(2);
+            socket.send(JSON.stringify({ action: "updateConfig", key: key, value: val }));
+        }
+
+        function toggleGenomeBank() {
+            const btn = document.getElementById('repopBtn');
+            const bank = document.getElementById('genomeBank');
+            isBankOpen = !isBankOpen;
+
+            if (isBankOpen) {
+                btn.innerText = "CLOSE BANK";
+                btn.style.borderColor = "tomato";
+                btn.style.color = "tomato";
+                bank.style.display = "flex";
+                socket.send(JSON.stringify({ action: "getGenomeBank" }));
+            } else {
+                btn.innerText = "OPEN GENOME BANK";
+                btn.style.borderColor = "palegreen";
+                btn.style.color = "palegreen";
+                bank.style.display = "none";
+            }
+        }
+        function toggleBankFolder(folder) {
+            const el = document.getElementById('folder-' + folder);
+            el.style.display = el.style.display === "none" ? "flex" : "none";
+        }
+        function toggleBankCategory(cat) {
+            const checked = document.getElementById('cb-' + cat).checked;
+            const folder = document.getElementById('folder-' + cat);
+            const cbs = folder.querySelectorAll('input[type="checkbox"]');
+            cbs.forEach(cb => cb.checked = checked);
+        }
+        function populateBankFolder(cat, files, color) {
+            const folder = document.getElementById('folder-' + cat);
+            folder.innerHTML = "";
+            files.forEach(f => {
+                const item = document.createElement("div");
+                item.style.display = "flex";
+                item.style.alignItems = "center";
+                item.style.marginBottom = "4px";
+
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.value = f;
+                cb.className = "bank-file-cb";
+                cb.style.marginRight = "6px";
+                cb.style.accentColor = color;
+                cb.style.cursor = "pointer";
+                item.appendChild(cb);
+
+                const span = document.createElement("span");
+                span.innerText = f.replace('.json', '');
+                span.style.color = "#ccc";
+                span.style.fontSize = "11px";
+                span.style.cursor = "pointer";
+                span.onclick = () => { cb.checked = !cb.checked; };
+                item.appendChild(span);
+
+                folder.appendChild(item);
+            });
+        }
+        function executeBankRepopulate() {
+            const cbs = document.querySelectorAll('.bank-file-cb:checked');
+            const files = Array.from(cbs).map(cb => cb.value);
+
+            if (files.length > 0) {
+                socket.send(JSON.stringify({ action: "repopulateBank", files: files }));
+                toggleGenomeBank();
+            }
+        }
+        function handleChampButton() {
+            let btn = document.getElementById('champBtn');
+            let criteria = document.getElementById('champCriteria').value;
+
+            if (btn.innerText === "FIND BEST") {
+                socket.send(JSON.stringify({ action: "findChampion", criteria: criteria }));
+            }
+            else {
+                pendingSaveType = "Champ";
+                let suffix = formatNum(lastGraphTick);
+
+                if (latestTrackedInfo) {
+                    if (criteria === 'kills') suffix += `_Kills${latestTrackedInfo.kills}`;
+                    else if (criteria === 'meat') suffix += `_Meat${latestTrackedInfo.meatsEaten}`;
+                    else if (criteria === 'plants') suffix += `_Plants${latestTrackedInfo.plantsEaten}`;
+                    else if (criteria === 'age') suffix += `_Age${latestTrackedInfo.age}`;
+                    else suffix += `_Sig${latestTrackedInfo.significance.toFixed(1)}`;
+                }
+
+                document.getElementById('saveNameInput').value = "Apex_" + suffix;
+                document.getElementById('savePrompt').style.display = "flex";
+
+                btn.innerText = "FIND BEST";
+                btn.style.borderColor = "#ffcc00";
+                btn.style.color = "#ffcc00";
+            }
+        }
+        function confirmSave() {
+            const name = document.getElementById('saveNameInput').value.replace(/[^a-zA-Z0-9_-]/g, "");
+            if (!name) return;
+
+            socket.send(JSON.stringify({
+                action: "saveNamedGenome",
+                type: pendingSaveType,
+                name: name,
+                slot: pendingSaveSlot
+            }));
+
+            document.getElementById('savePrompt').style.display = "none";
+            if (isBankOpen) socket.send(JSON.stringify({ action: "getGenomeBank" }));
+        }
+
+        function openRawConfig() {
+            socket.send(JSON.stringify({ action: "getRawConfig" }));
+        }
+        function closeRawConfig() {
+            document.getElementById('rawConfigModal').style.display = 'none';
+        }
+        function switchConfigMode(mode) {
+            const ta = document.getElementById('rawConfigTextarea');
+            const saveBtn = document.getElementById('btn-save-config');
+
+            if (rawConfigMode === 'runtime') cachedRuntimeConfig = ta.value;
+            if (rawConfigMode === 'default') cachedDefaultConfig = ta.value;
+
+            rawConfigMode = mode;
+            const btnR = document.getElementById('btn-config-runtime');
+            const btnD = document.getElementById('btn-config-default');
+
+            if (mode === 'runtime') {
+                ta.value = cachedRuntimeConfig;
+                ta.style.color = "#ccc";
+                ta.style.borderColor = "#555";
+
+                btnR.style.borderColor = "palegreen"; btnR.style.color = "palegreen";
+                btnD.style.borderColor = "#555"; btnD.style.color = "white";
+
+                saveBtn.innerText = "APPLY & SAVE RUNTIME";
+                saveBtn.style.borderColor = "palegreen"; saveBtn.style.color = "palegreen";
+            } else {
+                ta.value = cachedDefaultConfig;
+                ta.style.color = "tomato";
+                ta.style.borderColor = "tomato";
+
+                btnR.style.borderColor = "#555"; btnR.style.color = "white";
+                btnD.style.borderColor = "tomato"; btnD.style.color = "tomato";
+
+                saveBtn.innerText = "OVERWRITE DEFAULTS (DANGER)";
+                saveBtn.style.borderColor = "tomato"; saveBtn.style.color = "tomato";
+            }
+        }
+        function executeSaveRawConfig() {
+            const ta = document.getElementById('rawConfigTextarea');
+            const jsonStr = ta.value;
+
+            try {
+                JSON.parse(jsonStr);
+            } catch (e) {
+                alert("Invalid JSON format! Check your syntax.");
+                return;
+            }
+
+            socket.send(JSON.stringify({
+                action: "saveRawConfig",
+                mode: rawConfigMode,
+                json: jsonStr
+            }));
+
+            closeRawConfig();
+        }
+
+        function openWorldBank() {
+            socket.send(JSON.stringify({ action: "getWorldBank" }));
+        }
+        function renderWorldBank() {
+            const scroll = document.getElementById('worldBankScroll');
+            scroll.innerHTML = "";
+            currentlyShownRunIDs = [];
+
+            const minF = parseInt(document.getElementById('wb-min-frames').value) || 0;
+            const maxF = parseInt(document.getElementById('wb-max-frames').value) || 999999;
+
+            cachedWorlds.forEach(w => {
+                if (w.frameCount >= minF && w.frameCount <= maxF) {
+                    currentlyShownRunIDs.push(w.id);
+                    const div = document.createElement('div');
+                    div.style.cssText = "background:#222; border:1px solid #444; border-radius:4px; padding:8px; margin-bottom:8px; cursor:pointer;";
+
+                    const y = w.id.substring(0, 4), mo = w.id.substring(4, 6), d = w.id.substring(6, 8);
+                    const h = w.id.substring(9, 11), mi = w.id.substring(11, 13);
+
+                    let sizeStr = "";
+                    const mb = w.sizeBytes / (1024 * 1024);
+                    if (mb >= 1024) sizeStr = (mb / 1024).toFixed(2) + " GB";
+                    else sizeStr = mb.toFixed(1) + " MB";
+
+                    div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div style="color:#8fdfff; font-weight:bold;">${y}-${mo}-${d} ${h}:${mi}</div>
+                                            <div style="color:#555; font-size:10px;">${w.id}</div>
+                                         </div>
+                                         <div style="color:#aaa; font-size:11px; margin-top:4px;">Duration: ${formatNum(w.lastTick)} Ticks</div>
+                                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 4px;">
+                                            <div style="color:#aaa; font-size:11px;">Frames: <span style="color:white; font-weight:bold;">${w.frameCount}</span> <span style="color:#ff99cc; font-size:10px;">(${w.compressedPct}% Compressed)</span></div>
+                                            <div style="color:palegreen; font-weight:bold; font-size:11px;">${sizeStr}</div>
+                                         </div>`;
+
+                    div.onclick = () => loadPlayback(w.id, w.ticks);
+                    scroll.appendChild(div);
+                }
+            });
+        }
+
+        function deleteFilteredWorlds() {
+            if (currentlyShownRunIDs.length === 0) return;
+
+            if (confirm(`DELETE ${currentlyShownRunIDs.length} WORLDS?`)) {
+                socket.send(JSON.stringify({ action: "deleteWorlds", runIDs: currentlyShownRunIDs }));
+            }
+        }
+        function loadPlayback(runID, ticksArray) {
+            if (!isPaused) togglePause();
+
+            isPlaybackMode = true;
+            playbackRunID = runID;
+            playbackAvailableTicks = ticksArray;
+
+            document.getElementById('worldBankModal').style.display = 'none';
+            document.getElementById('playbackUI').style.display = 'block';
+            document.getElementById('pb-runId').innerText = "RUN ID: " + runID;
+
+            const slider = document.getElementById('pb-slider');
+            slider.max = ticksArray.length - 1;
+            slider.value = 0;
+
+            socket.send(JSON.stringify({ action: "loadRunTelemetry", runID: runID }));
+            socket.send(JSON.stringify({ action: "loadFrame", runID: runID, tick: ticksArray[0] }));
+        }
+        function scrubTimelineDrag() {
+            const idx = parseInt(document.getElementById('pb-slider').value);
+            const targetTick = playbackAvailableTicks[idx];
+            document.getElementById('pb-tick').innerText = "Scrubbing to... " + formatNum(targetTick);
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                socket.send(JSON.stringify({ action: "loadFrame", runID: playbackRunID, tick: targetTick }));
+            }, 100);
+        }
+        function scrubTimelineRelease() {
+            clearTimeout(debounceTimer);
+            const idx = parseInt(document.getElementById('pb-slider').value);
+            socket.send(JSON.stringify({ action: "loadFrame", runID: playbackRunID, tick: playbackAvailableTicks[idx] }));
+        }
+        function exitPlayback() {
+            isPlaybackMode = false;
+            document.getElementById('playbackUI').style.display = 'none';
+            socket.send(JSON.stringify({ action: "getRawConfig" }));
+        }
+
+        function toggleRenderFertility() { renderFertility = !renderFertility; }
+
+        function toggleConsole() {
+            const con = document.getElementById('uiConsole');
+            const tab = document.getElementById('consoleTab');
+            if (con.style.display === 'none') {
+                con.style.display = 'block';
+                tab.style.color = '#8fdfff';
+                tab.innerText = '>_ CONSOLE';
+            } else {
+                con.style.display = 'none';
+                tab.style.color = '#777';
+                tab.innerText = '>_ CONSOLE (Hidden)';
+            }
+        }
+
+        function toggleRecording() {
+            socket.send(JSON.stringify({ action: "toggleRecording" }));
+        }
+        function updateRecordDelay() {
+            const val = parseInt(document.getElementById("recordDelaySlider").value);
+            document.getElementById("recordDelayDisplay").innerText = val;
+            socket.send(JSON.stringify({ action: "updateConfig", key: "recorderTickDelay", value: val }));
+            updateRecordingEstimate();
+        }
+
+        function toggleCompression() {
+            const isChecked = document.getElementById('compressRecordings').checked;
+            socket.send(JSON.stringify({ action: "updateConfig", key: "compressRecordings", value: isChecked ? 1 : 0 }));
+            updateRecordingEstimate();
+        }
+        function updateRecordingEstimate() {
+            const isCompressed = document.getElementById('compressRecordings').checked;
+            const compressionRatio = isCompressed ? 1 : 12;
+
+            let frameSizeKB = 50 + ((worldWidth * worldHeight) * 0.0005) + (currentPop * 0.5);
+            frameSizeKB *= compressionRatio;
+
+            document.getElementById("estFrameSize").innerText = `Est. Frame: ~${Math.round(frameSizeKB)} KB`;
+
+            const delay = parseInt(document.getElementById("recordDelaySlider").value);
+            const activeTPS = Math.max(1, currentTPS);
+
+            const framesPerHour = (activeTPS / delay) * 3600;
+            const dataPerHourMB = (frameSizeKB * framesPerHour) / 1024;
+
+            if (dataPerHourMB > 1024) {
+                document.getElementById("estDataRate").innerText = `Est. Hourly: ~${(dataPerHourMB / 1024).toFixed(2)} GB (at ${activeTPS} TPS)`;
+            }
+            else {
+                document.getElementById("estDataRate").innerText = `Est. Hourly: ~${(dataPerHourMB).toFixed(1)} MB (at ${activeTPS} TPS)`;
+            }
+        }
+        function restoreTimeline() {
+            const idx = parseInt(document.getElementById('pb-slider').value);
+            const targetTick = playbackAvailableTicks[idx];
+            if (confirm(`Restore simulation to tick ${targetTick}?`)) {
+                socket.send(JSON.stringify({ action: "restoreWorld", runID: playbackRunID, tick: targetTick }));
+            }
+        }
+
+        function scatterFood(type, amount) { socket.send(JSON.stringify({ action: "scatterFood", type: type, amount: amount })); }
+        function scatterBait(amount) { socket.send(JSON.stringify({ action: "scatterBait", amount: amount })); }
+        function cullSpecific(type) { socket.send(JSON.stringify({ action: "cullSpecific", type: type })); }
+        function toggleSimFlag(flag) { socket.send(JSON.stringify({ action: "toggleSimFlag", flag: flag })); }
+
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>

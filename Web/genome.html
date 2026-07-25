@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>NEMO</title>
+    <script src="vis-network.min.js"></script>
+    <meta name="theme-color" content="#8fdfff">
+    <link rel="icon" type="image/x-icon" href="nemocon.ico">
+    <style>
+        body {
+            margin: 0;
+            padding: 12px;
+            padding-right: 180px;
+            background-color: #111;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 12px;
+            min-height: 100vh;
+            font-family: consolas, monospace;
+            color: white;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: white;
+            width: 160px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        button {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 6px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: consolas, monospace;
+            font-size: 12px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+            button:hover {
+                background: #444;
+                border-color: #8fdfff;
+            }
+
+        select, input[type="number"] {
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid #555;
+            padding: 4px;
+            border-radius: 4px;
+            font-family: consolas, monospace;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(20, 20, 20, 0.6);
+            border-radius: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+
+            .custom-scroll::-webkit-scrollbar-thumb:hover {
+                background: #444;
+                border-color: palegreen;
+            }
+
+        .graph-modal {
+            position: fixed;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #444;
+            border-radius: 6px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .graph-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: rgba(40,40,40,0.8);
+            border-bottom: 1px solid #555;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .split-button {
+            display: flex;
+            width: 100%;
+            margin-bottom: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+            .split-button:hover {
+                border-color: #8fdfff;
+            }
+
+            .split-button button {
+                margin: 0;
+                border: none;
+                border-radius: 0;
+                background: #333;
+                color: white;
+                padding: 6px;
+                font-family: consolas, monospace;
+                font-size: 12px;
+            }
+
+                .split-button button:hover {
+                    background: #444;
+                }
+
+            .split-button .split-main {
+                flex: 3;
+            }
+
+            .split-button .split-side {
+                flex: 1;
+                border-left: 1px solid #555;
+            }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(20, 20, 20, 0.6);
+            border-radius: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+
+            .custom-scroll::-webkit-scrollbar-thumb:hover {
+                background: #444;
+                border-color: #8fdfff;
+            }
+    </style>
+</head>
+<body>
+
+    <div id="controls" class="custom-scroll">
+        <div style="margin-bottom: 12px; color: #8fdfff; font-size: 14px; font-weight: bold; text-align: center;">Controls</div>
+        <button onclick="reloadConfig()">RELOAD CONFIG</button>
+        <hr style="border-color: #444; margin: 8px 0;">
+        <div class="split-button" style="margin-bottom: 8px; width: 100%; display: flex;">
+            <button class="split-main" onclick="switchView(0, 'index.html')" style="flex: 1;">View Petri Dish</button>
+            <button class="split-side" onclick="window.open('index.html', '_blank', 'width=' + window.outerWidth + ',height=' + window.outerHeight)" title="New Window">↗</button>
+        </div>
+        <div class="split-button" style="margin-bottom: 0; width: 100%; display: flex;">
+            <button class="split-main" onclick="switchView(2, 'brain.html')" style="flex: 1;">View Brains</button>
+            <button class="split-side" onclick="window.open('brain.html', '_blank', 'width=' + window.outerWidth + ',height=' + window.outerHeight)" title="New Window">↗</button>
+        </div>
+        <hr style="border-color: #444; margin: 8px 0;">
+    </div>
+
+    <div id="savePrompt" class="graph-modal" style="display: none; position: fixed; width: 250px; z-index: 3100;">
+        <div class="graph-header" style="cursor: default;">
+            <span style="color: #ffcc00; font-weight: bold; font-size: 13px;">NAME GENOME</span>
+            <button onclick="document.getElementById('savePrompt').style.display='none'" style="width: auto; margin:0; padding: 0 4px; background: none; border: none; color: tomato; cursor: pointer; font-weight: bold; font-family: consolas;">X</button>
+        </div>
+        <div style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+            <input type="text" id="saveNameInput" placeholder="Enter name..." style="background: #111; color: white; border: 1px solid #555; padding: 6px; font-family: consolas; border-radius: 4px;">
+            <button id="confirmSaveBtn" onclick="confirmSave()" style="border-color: #8fdfff; color: #8fdfff; margin: 0;">SAVE</button>
+        </div>
+    </div>
+
+    <div id="genomeBank" class="graph-modal" style="display: none; position: fixed; right: 185px; top: 10px; width: 320px; max-height: 90vh;">
+        <div class="graph-header" style="cursor: default;">
+            <span style="color: #8fdfff; font-weight: bold; font-size: 13px;">GENOME BANK</span>
+            <button onclick="document.getElementById('genomeBank').style.display='none'" style="width: auto; margin:0; padding: 0 4px; background: none; border: none; color: tomato; cursor: pointer; font-weight: bold; font-family: consolas;">X</button>
+        </div>
+        <div id="bankScroll" class="custom-scroll" style="padding: 10px; overflow-y: auto; flex-grow: 1;">
+
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; background: #222; padding: 4px; border: 1px solid #444; border-radius: 4px;">
+                    <input type="checkbox" id="cb-champ" onclick="toggleBankCategory('champ')" style="margin-right: 8px; accent-color: #ffcc00; cursor: pointer;">
+                    <span onclick="toggleBankFolder('champ')" style="cursor: pointer; flex-grow: 1; color: #ffcc00; font-weight: bold;">> Champions</span>
+                </div>
+                <div id="folder-champ" style="display: none; flex-direction: column; padding-left: 8px; margin-top: 4px; border-left: 1px dashed #555; margin-left: 6px;"></div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; background: #222; padding: 4px; border: 1px solid #444; border-radius: 4px;">
+                    <input type="checkbox" id="cb-editor" onclick="toggleBankCategory('editor')" style="margin-right: 8px; accent-color: palegreen; cursor: pointer;">
+                    <span onclick="toggleBankFolder('editor')" style="cursor: pointer; flex-grow: 1; color: palegreen; font-weight: bold;">> Editor Saved</span>
+                </div>
+                <div id="folder-editor" style="display: none; flex-direction: column; padding-left: 8px; margin-top: 4px; border-left: 1px dashed #555; margin-left: 6px;"></div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; background: #222; padding: 4px; border: 1px solid #444; border-radius: 4px;">
+                    <input type="checkbox" id="cb-extinct" onclick="toggleBankCategory('extinct')" style="margin-right: 8px; accent-color: tomato; cursor: pointer;">
+                    <span onclick="toggleBankFolder('extinct')" style="cursor: pointer; flex-grow: 1; color: tomato; font-weight: bold;">> Extinction Events</span>
+                </div>
+                <div id="folder-extinct" style="display: none; flex-direction: column; padding-left: 8px; margin-top: 4px; border-left: 1px dashed #555; margin-left: 6px;"></div>
+            </div>
+
+        </div>
+        <div style="padding: 10px; border-top: 1px solid #444; background: rgba(20,20,20,0.95); border-radius: 0 0 6px 6px;">
+        </div>
+    </div>
+
+
+    <script>
+
+        const sliderDefs =
+            [
+                {
+                    key: "globalMutationRate",
+                    min: 0,
+                    max: 5,
+                    step: 0.25,
+                },
+                {
+                    key: "topologyMutationRate",
+                    min: 0,
+                    max: 5,
+                    step: 0.25,
+                },
+                {
+                    key: "globalNewGeneRate",
+                    min: 0,
+                    max: 5,
+                    step: 0.25,
+                },
+                {
+                    key: "mathSuppressionExponent",
+                    min: -1,
+                    max: 3,
+                    step: 0.25,
+                },
+                {
+                    key: "mathWeightMultiplier",
+                    min: 0,
+                    max: 2,
+                    step: 0.1,
+                },
+                {
+                    key: "baseActionWeight",
+                    min: 0,
+                    max: 2,
+                    step: 0.1,
+                },
+                {
+                    key: "baseSensorWeight",
+                    min: 0,
+                    max: 2,
+                    step: 0.1,
+                },
+                {
+                    key: "weightFlux",
+                    min: 0,
+                    max: 2,
+                    step: 0.01,
+                },
+                {
+                    key: "rewireOneChance",
+                    min: 0,
+                    max: 0.1,
+                    step: 0.001,
+                },
+                {
+                    key: "neuronReplaceChance",
+                    min: 0,
+                    max: 0.1,
+                    step: 0.001,
+                },
+                {
+                    key: "sameTypeChance",
+                    min: 0,
+                    max: 1,
+                    step: 0.05,
+                },
+
+            ];
+        const phenotypeDefs = [
+            { key: "ReproductionThreshold", name: "Repro Threshold", min: 0.1, max: 0.9, step: 0.05, default: 0.8 },
+            { key: "OffspringInvestment", name: "Child Investment", min: 0.1, max: 0.9, step: 0.05, default: 0.5 },
+            { key: "MutationVolatility", name: "Mutation Volatility", min: 0.1, max: 5.0, step: 0.1, default: 2.5 },
+
+            { key: "CarnivoryBias", name: "Meat Bias", min: 0.0, max: 1.0, step: 0.05, default: 0.5 },
+            { key: "MetabolicRate", name: "Metabolic Rate", min: 0.5, max: 3.0, step: 0.1, default: 1.0 },
+            { key: "RestingEfficiency", name: "Resting Efficiency", min: 0.1, max: 2.0, step: 0.05, default: 1.0 },
+            { key: "ScavengerTolerance", name: "Scavenger Tolerance", min: 0.0, max: 1.0, step: 0.05, default: 0.5 },
+
+            { key: "BodyMass", name: "Body Mass", min: 0.5, max: 5.0, step: 0.1, default: 1.0 },
+            { key: "ArmorDensity", name: "Armor Density", min: 0.0, max: 0.9, step: 0.05, default: 0.0 },
+            { key: "SpikeCoating", name: "Spike Coating", min: 0.0, max: 1.0, step: 0.05, default: 0.0 },
+            { key: "Camouflage", name: "Camouflage", min: 0.0, max: 1.0, step: 0.05, default: 0.0 },
+            { key: "ToxicCorpse", name: "Toxic Corpse", min: 0.0, max: 1.0, step: 0.05, default: 0.0 },
+
+            { key: "FastTwitchMuscle", name: "Fast Twitch Muscle", min: 0.5, max: 3.0, step: 0.1, default: 1.0 },
+            { key: "RotationalAgility", name: "Rotational Agility", min: 0.2, max: 3.0, step: 0.1, default: 1.0 },
+            { key: "JitterEfficiency", name: "Jitter Efficiency", min: 0.1, max: 2.0, step: 0.05, default: 1.0 },
+
+            { key: "VisionAcuity", name: "Vision Acuity", min: 0.5, max: 3.0, step: 0.1, default: 1.0 },
+            { key: "FovSpecialization", name: "FOV Specialization", min: 0.5, max: 3.0, step: 0.1, default: 1.0 },
+            { key: "OlfactorySensitivity", name: "Olfactory Sensitivity", min: 0.1, max: 5.0, step: 0.1, default: 1.0 },
+            { key: "BrainSize", name: "Brain Size", min: 0.5, max: 3.0, step: 0.1, default: 1.0 },
+
+            { key: "Vampirism", name: "Vampirism", min: 0.0, max: 1.0, step: 0.05, default: 0.0 },
+            { key: "Lethality", name: "Lethality", min: 0.1, max: 5.0, step: 0.1, default: 1.0 },
+            { key: "SocialCohesion", name: "Social Cohesion", min: 0.0, max: 1.0, step: 0.05, default: 0.0 },
+            { key: "PheromoneVolume", name: "Pheromone Volume", min: 0.1, max: 5.0, step: 0.1, default: 1.0 },
+            { key: "ChemicalVolatility", name: "Chem Volatility", min: 0.1, max: 3.0, step: 0.1, default: 1.0 },
+            { key: "Parasitism", name: "Parasitism", min: 0.0, max: 1.0, step: 0.05, default: 0.0 }
+        ];
+
+        const graphNames = [
+            "alpha",
+            "beta",
+            "gamma",
+            "delta",
+        ];
+        let runtimeConfig = {};
+        const networks = [];
+        let neuronDefs = {};
+        let connectionStartNode = null;
+        let connectionGraph = null;
+        let selectedEdge = null;
+        let selectedGraph = null;
+        let selectedNode = null;
+        let pendingSaveType = "";
+        let pendingSaveSlot = "";
+        let bankTargetSlot = "";
+
+        const isHttps = window.location.protocol === "https:";
+        const wsProtocol = isHttps ? "wss:" : "ws:";
+        
+        let wsAddress;
+        if (window.location.port === "8000") {
+            wsAddress = `${wsProtocol}
+
+
+
+
+
+            ${window.location.hostname}:8181`;
+        } else {
+            wsAddress = `${wsProtocol}//${window.location.host}/ws`;
+        }
+        
+        const socket = new WebSocket(wsAddress);
+        
+        let autoRestart = false;
+        let pauseOnExtinction = true;
+
+        socket.onopen = () => {
+            console.log("Connected to NEMO");
+            socket.send(JSON.stringify({ action: "forcePause" }));
+        };
+        socket.onmessage = (event) => {
+            console.log("WebSocket Received:", event.data.substring(0, 100) + "...");
+
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.event === "syncState") {
+                    isPaused = data.isPaused;
+                    autoRestart = data.autoRestart;
+                    pauseOnExtinction = data.pauseOnExtinction;
+
+                    const pBtn = document.getElementById('pauseBtn');
+                    if (pBtn) {
+                        pBtn.innerText = isPaused ? "RESUME" : "PAUSE";
+                        pBtn.style.borderColor = isPaused ? "tomato" : "#555";
+                    }
+                    const arCheck = document.getElementById('autoRestart');
+                    if (arCheck) {
+                        arCheck.checked = autoRestart;
+                    }
+                    const poeCheck = document.getElementById('pauseOnExtinction');
+                    if (poeCheck) {
+                        poeCheck.checked = pauseOnExtinction;
+                    }
+                    return;
+                }
+
+                if (data.event === "genomeBank") {
+                    populateBankFolder("champ", data.champ, "#ffcc00");
+                    populateBankFolder("editor", data.editor, "palegreen");
+                    populateBankFolder("extinct", data.extinct, "tomato");
+                    return;
+                }
+
+                if (data.event === "placementDone") {
+                    document.querySelectorAll('.place-btn').forEach(btn => {
+                        btn.innerText = "PLACE";
+                        btn.style.borderColor = "#8fdfff";
+                        btn.style.color = "white";
+                    });
+                    return;
+                }
+
+                if (data.graph && data.nodes && data.edges && data.isDead === undefined) {
+                    const graphObj = networks.find(n => n.name === data.graph);
+                    if (graphObj) {
+
+                        const nodeIDs = new Set(data.nodes.map(n => n.id));
+                        const edgeIDs = new Set(data.edges.map(e => e.id));
+
+                        graphObj.data.nodes.forEach(node => {
+                            if (!nodeIDs.has(node.id)) graphObj.data.nodes.remove(node.id);
+                        });
+                        graphObj.data.edges.forEach(edge => {
+                            if (!edgeIDs.has(edge.id)) graphObj.data.edges.remove(edge.id);
+                        });
+
+                        graphObj.data.nodes.update(data.nodes);
+                        graphObj.data.edges.update(data.edges);
+
+                        if (data.phenotypes) {
+                            for (const [key, val] of Object.entries(data.phenotypes)) {
+                                const slider = document.getElementById(`slider_${data.graph}_${key}`);
+                                const valLbl = document.getElementById(`val_${data.graph}_${key}`);
+                                if (slider && valLbl) {
+                                    slider.value = val;
+                                    valLbl.innerText = val.toFixed(2);
+                                }
+                            }
+                        }
+
+                        if (data.isTracking !== undefined && graphObj.title) {
+                            graphObj.title.innerText = data.isTracking ? `${data.graph} [LIVE] - Sim Paused` : data.graph;
+                            graphObj.title.style.color = data.isTracking ? "tomato" : "white";
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("JSON Parse Error on incoming frame:", err);
+            }
+        };
+
+        const controls = document.getElementById("controls");
+
+        function reloadConfig() {
+            socket.send(JSON.stringify({ action: "reloadConfig" }));
+        }
+
+        function switchView(viewId, url) {
+            window.location.href = url;
+        }
+
+        function createSlider(def) {
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "10px";
+
+            const label = document.createElement("div");
+            label.innerText = `${def.key}: ${runtimeConfig[def.key]}`;
+            label.style.fontSize = "12px";
+
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = def.min;
+            slider.max = def.max;
+            slider.step = def.step;
+            console.log(def.key, runtimeConfig[def.key]);
+            slider.value = runtimeConfig[def.key];;
+            slider.style.width = "100%";
+
+            slider.oninput = () => {
+                const value = parseFloat(slider.value);
+                runtimeConfig[def.key] = value;
+                label.innerText = `${def.key}: ${value.toFixed(4)}`;
+
+                socket.send(JSON.stringify({
+                    action: "updateConfig",
+                    key: def.key,
+                    value: value
+                }));
+            };
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(slider);
+
+            controls.appendChild(wrapper);
+        }
+        function createGraphContainer(name) {
+            //#region Elements
+            const box = document.createElement("div");
+            box.style.width = "48%";
+            box.style.height = "500px";
+            box.style.background = "#1a1a1a";
+            box.style.border = "1px solid #333";
+            box.style.position = "relative";
+
+            const title = document.createElement("div");
+            title.innerText = name;
+            title.style.position = "absolute";
+            title.style.left = "10px";
+            title.style.top = "6px";
+            title.style.color = "white";
+            title.style.fontFamily = "consolas";
+            title.style.fontSize = "14px";
+            title.style.zIndex = "10";
+
+            const graphDiv = document.createElement("div");
+            graphDiv.style.width = "100%";
+            graphDiv.style.height = "100%";
+
+
+            const menuContainer = document.createElement("div");
+            menuContainer.style.position = "absolute";
+            menuContainer.style.right = "10px";
+            menuContainer.style.top = "6px";
+            menuContainer.style.zIndex = "10";
+            menuContainer.style.display = "flex";
+            menuContainer.style.flexDirection = "column";
+            menuContainer.style.alignItems = "flex-end";
+
+            const menuTab = document.createElement("div");
+            menuTab.innerText = "v Actions v";
+            menuTab.style.width = "80px";
+            menuTab.style.background = "#222";
+            menuTab.style.color = "#8fdfff";
+            menuTab.style.border = "1px solid #8fdfff";
+            menuTab.style.borderRadius = "4px";
+            menuTab.style.padding = "4px";
+            menuTab.style.textAlign = "center";
+            menuTab.style.cursor = "pointer";
+            menuTab.style.fontSize = "12px";
+            menuTab.style.fontWeight = "bold";
+
+            const dropdown = document.createElement("div");
+            dropdown.style.display = "none";
+            dropdown.style.flexDirection = "column";
+            dropdown.style.gap = "8px";
+            dropdown.style.width = "80px";
+            dropdown.style.marginTop = "4px";
+            dropdown.style.background = "rgba(20, 20, 20, 0.95)";
+            dropdown.style.border = "1px solid #8fdfff";
+            dropdown.style.padding = "4px";
+            dropdown.style.borderRadius = "4px";
+            dropdown.style.maxHeight = "300px";
+            dropdown.style.overflowY = "auto";
+
+            menuContainer.onmouseenter = () => dropdown.style.display = "flex";
+            menuContainer.onmouseleave = () => dropdown.style.display = "none";
+
+            function createMenuBtn(text, onClickHandler, danger) {
+                const btn = document.createElement("button");
+                btn.innerText = text;
+                btn.style.width = "100%";
+                btn.style.padding = "4px";
+                btn.style.margin = "0";
+                btn.onclick = onClickHandler;
+
+                if (danger == 0) {
+                    btn.style.border = "1px solid #8fdfff";
+                }
+                if (danger == 1) {
+                    btn.style.border = "2px solid #ffcc00";
+                }
+                if (danger == 2) {
+                    btn.style.border = "2px solid tomato";
+                }
+                if (danger == -1) {
+                    const div = document.createElement("div");
+                    div.style.height = "16px";
+                    div.innerText = text;
+                    div.style.font = "bold 12px consolas";
+                    div.style.color = "tomato";
+                    return div;
+                }
+
+                return btn;
+            }
+
+            const randBtn = createMenuBtn("Random", () => socket.send(JSON.stringify({ action: "randGenome", slot: name })), 2);
+            const simpleBtn = createMenuBtn("Simple", () => socket.send(JSON.stringify({ action: "simpleGenome", slot: name })), 2);
+            const clearBtn = createMenuBtn("Clear", () => socket.send(JSON.stringify({ action: "clearGenome", slot: name })), 2);
+            const unlinkBtn = createMenuBtn("Unlink", () => socket.send(JSON.stringify({ action: "unlinkSlot", slot: name })), 1);
+            const empty1 = createMenuBtn("", () => socket.send(JSON.stringify({ action: "", slot: name })), -1);
+            const empty2 = createMenuBtn("Overwrite:", () => socket.send(JSON.stringify({ action: "", slot: name })), -1);
+
+            const instPopup = document.createElement("div");
+            instPopup.style.position = "absolute";
+            instPopup.style.right = "100px";
+            instPopup.style.top = "66px";
+            instPopup.style.color = "palegreen";
+            instPopup.style.fontFamily = "consolas, monospace";
+            instPopup.style.fontWeight = "bold";
+            instPopup.style.fontSize = "14px";
+            instPopup.style.opacity = "0";
+            instPopup.style.transition = "opacity 0.2s ease-out";
+            instPopup.style.pointerEvents = "none";
+            instPopup.style.zIndex = "10";
+            box.appendChild(instPopup);
+
+            let instCount = 0;
+            let instTimer = null;
+
+            const createBtn = createMenuBtn("Place 10x", () => {
+                socket.send(JSON.stringify({ action: "newCreature", slot: name, amount: 10 }));
+                instCount += 10;
+                instPopup.innerText = `x${instCount}`;
+                instPopup.style.opacity = "1";
+                clearTimeout(instTimer);
+                instTimer = setTimeout(() => {
+                    instPopup.style.opacity = "0";
+                    setTimeout(() => { instCount = 0; }, 200);
+                }, 5000);
+            }, 0);
+
+            const placeBtn = createMenuBtn("Place", (e) => {
+                const btn = e.target;
+                btn.innerText = "READY";
+                btn.style.borderColor = "palegreen";
+                btn.style.color = "palegreen";
+                socket.send(JSON.stringify({ action: "armPlacement", slot: name }));
+            }, 0);
+            placeBtn.classList.add("place-btn");
+
+            const saveBtn = createMenuBtn("Save", (e) => {
+                pendingSaveType = "Editor";
+                pendingSaveSlot = name;
+                document.getElementById('saveNameInput').value = name + "_" + Date.now().toString().slice(-4);
+
+                const prompt = document.getElementById('savePrompt');
+                const rect = e.target.getBoundingClientRect();
+
+                prompt.style.display = "flex";
+                prompt.style.left = (rect.right - 350) + "px";
+                prompt.style.top = (rect.bottom - 20) + "px";
+                prompt.style.transform = "none";
+            }, 0);
+
+            const loadBtn = createMenuBtn("Load", () => {
+                bankTargetSlot = name;
+                document.getElementById('genomeBank').style.display = "flex";
+                socket.send(JSON.stringify({ action: "getGenomeBank" }));
+            }, 2);
+
+            dropdown.appendChild(saveBtn);
+            dropdown.appendChild(createBtn);
+            dropdown.appendChild(placeBtn)
+            dropdown.appendChild(empty1);
+            dropdown.appendChild(unlinkBtn);
+            dropdown.appendChild(empty2);
+            dropdown.appendChild(loadBtn);
+            dropdown.appendChild(clearBtn);
+            dropdown.appendChild(simpleBtn);
+            dropdown.appendChild(randBtn);
+
+
+            menuContainer.appendChild(menuTab);
+            menuContainer.appendChild(dropdown);
+
+            box.appendChild(title);
+            box.appendChild(menuContainer);
+
+            const phenoContainer = document.createElement("div");
+            phenoContainer.style.position = "absolute";
+            phenoContainer.style.right = "100px";
+            phenoContainer.style.top = "6px";
+            phenoContainer.style.zIndex = "10";
+            phenoContainer.style.display = "flex";
+            phenoContainer.style.flexDirection = "column";
+            phenoContainer.style.alignItems = "flex-end";
+
+            const phenoTab = document.createElement("div");
+            phenoTab.innerText = "v Phenotypes v";
+            phenoTab.style.width = "110px";
+            phenoTab.style.background = "#222";
+            phenoTab.style.color = "palegreen";
+            phenoTab.style.border = "1px solid palegreen";
+            phenoTab.style.borderRadius = "4px";
+            phenoTab.style.padding = "4px";
+            phenoTab.style.textAlign = "center";
+            phenoTab.style.cursor = "pointer";
+            phenoTab.style.fontSize = "12px";
+            phenoTab.style.fontWeight = "bold";
+
+            const phenoDropdown = document.createElement("div");
+            phenoDropdown.classList.add("custom-scroll");
+            phenoDropdown.style.display = "none";
+            phenoDropdown.style.flexDirection = "column";
+            phenoDropdown.style.gap = "8px";
+            phenoDropdown.style.width = "180px";
+            phenoDropdown.style.marginTop = "4px";
+            phenoDropdown.style.background = "rgba(20, 20, 20, 0.95)";
+            phenoDropdown.style.border = "1px solid palegreen";
+            phenoDropdown.style.padding = "10px";
+            phenoDropdown.style.borderRadius = "4px";
+            phenoDropdown.style.maxHeight = "300px";
+            phenoDropdown.style.overflowY = "auto";
+
+            phenoContainer.onmouseenter = () => phenoDropdown.style.display = "flex";
+            phenoContainer.onmouseleave = () => phenoDropdown.style.display = "none";
+
+            for (const def of phenotypeDefs) {
+                const wrapper = document.createElement("div");
+                wrapper.style.display = "flex";
+                wrapper.style.flexDirection = "column";
+                wrapper.style.gap = "2px";
+
+                const labelRow = document.createElement("div");
+                labelRow.style.display = "flex";
+                labelRow.style.justifyContent = "space-between";
+                labelRow.style.fontSize = "11px";
+                labelRow.style.color = "white";
+
+                const nameLbl = document.createElement("span");
+                nameLbl.innerText = def.name;
+
+                const valLbl = document.createElement("span");
+                valLbl.innerText = def.default.toFixed(2);
+                valLbl.style.color = "palegreen";
+
+                labelRow.appendChild(nameLbl);
+                labelRow.appendChild(valLbl);
+
+                const slider = document.createElement("input");
+                slider.type = "range";
+                slider.min = def.min;
+                slider.max = def.max;
+                slider.step = def.step;
+                slider.value = def.default;
+                slider.style.width = "100%";
+                slider.style.cursor = "pointer";
+
+                slider.oninput = () => {
+                    valLbl.innerText = parseFloat(slider.value).toFixed(2);
+                };
+
+                slider.onchange = () => {
+                    socket.send(JSON.stringify({
+                        action: "editPhenotype",
+                        slot: name,
+                        trait: def.key,
+                        value: parseFloat(slider.value)
+                    }));
+                };
+
+                slider.id = `slider_${name}_${def.key}`;
+                valLbl.id = `val_${name}_${def.key}`;
+
+                wrapper.appendChild(labelRow);
+                wrapper.appendChild(slider);
+                phenoDropdown.appendChild(wrapper);
+            }
+
+            phenoContainer.appendChild(phenoTab);
+            phenoContainer.appendChild(phenoDropdown);
+            box.appendChild(phenoContainer);
+            box.appendChild(graphDiv);
+            document.body.appendChild(box);
+            //#endregion
+
+            const data = {
+                nodes: new vis.DataSet([]),
+                edges: new vis.DataSet([])
+            };
+            const options = {
+                physics: {
+                    solver: "forceAtlas2Based",
+                    forceAtlas2Based: {
+                        gravitationalConstant: -20,
+                        centralGravity: 0.002,
+                        springLength: 220,
+                        springConstant: 0.02,
+                        damping: 0.85,
+                        avoidOverlap: 1
+                    },
+
+                    maxVelocity: 2,
+                    minVelocity: 0.02,
+                    timestep: 0.35,
+                    stabilization: false
+                },
+                nodes: {
+                    shape: "dot",
+                    size: 14,
+                    font: {
+                        color: "white"
+                    }
+                },
+                edges: {
+                    smooth: {
+                        type: "dynamic"
+                    },
+                    font: {
+                        color: "white"
+                    },
+                },
+            };
+            const network = new vis.Network(graphDiv, data, options);
+            const graphObj =
+            {
+                name,
+                data,
+                network,
+                box,
+                graphDiv
+            };
+
+            network.on("click", async function (params) {
+                const nodeID = network.getNodeAt(params.pointer.DOM);
+
+                if (!params.event.srcEvent.shiftKey)
+                    return;
+                if (connectionStartNode == null) {
+                    if (nodeID) {
+                        connectionStartNode = nodeID;
+                        connectionGraph = graphObj;
+                        console.log("Selected source:", nodeID);
+                    }
+                    return;
+                }
+                if (nodeID) {
+                    await createConnection(
+                        connectionGraph,
+                        connectionStartNode,
+                        nodeID
+                    );
+                    connectionStartNode = null;
+                    connectionGraph = null;
+                }
+                else {
+                    openAddNeuronMenu(
+                        graphObj,
+                        params.event.srcEvent.clientX,
+                        params.event.srcEvent.clientY
+                    );
+                }
+            });
+            network.on("click", async function (params) {
+                if (params.nodes.length > 0) {
+                    selectedNode = params.nodes[0];
+                    selectedEdge = null;
+                    selectedGraph = graphObj;
+                    return;
+                }
+                if (params.edges.length > 0) {
+                    const edge = graphObj.data.edges.get(params.edges[0]);
+                    selectedEdge = edge.id;
+                    selectedNode = null;
+                    selectedGraph = graphObj;
+
+                    console.log(selectedEdge);
+                    console.log(typeof selectedEdge);
+                    return;
+                }
+                selectedNode = null;
+                selectedEdge = null;
+                selectedGraph = null;
+            });
+            network.on("oncontext", async function (params) {
+                params.event.preventDefault();
+
+                const edgeID = network.getEdgeAt(params.pointer.DOM);
+                if (edgeID) {
+                    socket.send(JSON.stringify({
+                        action: "toggleSlot",
+                        graph: graphObj.name,
+                        edgeID: edgeID,
+                    }));
+
+                    return;
+                }
+
+                const nodeID = network.getNodeAt(params.pointer.DOM);
+                if (nodeID) {
+                    openNeuronEditor(
+                        graphObj,
+                        nodeID,
+                        params.event.clientX,
+                        params.event.clientY
+                    );
+                }
+            });
+            graphDiv.addEventListener(
+                "keydown",
+                function (e) {
+                    if (e.key === "Escape") {
+                        selectedEdge = null;
+                        selectedGraph = null;
+                        connectionStartNode = null;
+                        connectionGraph = null;
+                    }
+                });
+            graphDiv.addEventListener("wheel",
+                async function (e) {
+                    if (!selectedEdge)
+                        return;
+
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    const delta = e.deltaY < 0
+                        ? 0.2
+                        : -0.2;
+                    console.log("SCROLL");
+
+                    socket.send(JSON.stringify({
+                        action: "changeWeight",
+                        graph: selectedGraph.name,
+                        edgeID: selectedEdge,
+                        delta: delta
+                    }));
+                },
+                {
+                    passive: false,
+                    capture: true
+                });
+            graphDiv.addEventListener(
+                "keydown",
+                async function (e) {
+                    if (e.key.toLowerCase() !== "x")
+                        return;
+                    if (selectedEdge) {
+                        socket.send(JSON.stringify({
+                            action: "deleteEdge",
+                            graph: selectedGraph.name,
+                            edgeID: selectedEdge,
+                        }));
+
+                        selectedEdge = null;
+                    }
+                });
+
+            networks.push({ name, data, network, box, graphDiv, title });
+        }
+
+        function openAddNeuronMenu(graphObj, x, y) {
+            const rect = graphObj.box.getBoundingClientRect();
+            const localX = x - rect.left;
+            const localY = y - rect.top;
+
+            //#region Elements
+            const menu = document.createElement("div");
+            menu.style.position = "absolute";
+            menu.style.left = localX + "px";
+            menu.style.top = localY + "px";
+            menu.style.background = "#222";
+            menu.style.padding = "20px";
+            menu.style.border = "1px solid #555";
+            graphObj.box.appendChild(menu);
+
+            const select = document.createElement("select");
+            select.style.background = "#1a1a1a";
+            select.style.color = "white";
+            select.style.border = "1px solid #555";
+            select.style.padding = "6px";
+            select.style.borderRadius = "6px";
+            select.style.fontFamily = "consolas";
+            select.style.fontSize = "13px";
+            select.style.outline = "none";
+            select.style.width = "180px";
+
+            const createButton = document.createElement("button");
+            createButton.innerText = "Create";
+            createButton.style.width = "76%";
+            createButton.style.marginBottom = "12px";
+            createButton.style.padding = "6px";
+            createButton.style.background = "#333";
+            createButton.style.color = "white";
+            createButton.style.border = "1px solid #555";
+            createButton.onclick = async () => {
+                const selectedFunc = select.value;
+                socket.send(JSON.stringify({
+                    action: "addNeuron",
+                    graph: graphObj.name,
+                    src: connectionStartNode,
+                    func: selectedFunc,
+                    x: localX,
+                    y: localY
+                }));
+
+                connectionStartNode = null;
+                connectionGraph = null;
+                menu.remove();
+            };
+            //#endregion
+
+            for (const def of neuronDefs) {
+                const option = document.createElement("option");
+
+                option.value = def.func;
+                option.text =
+                    `${def.func} (${def.type})`;
+
+                select.appendChild(option);
+            }
+
+            menu.appendChild(createButton);
+            menu.appendChild(select);
+            menu.addEventListener(
+                "mousedown",
+                e => e.stopPropagation()
+            );
+            function closeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    connectionStartNode = null;
+                    connectionGraph = null;
+                    menu.remove();
+                    document.removeEventListener(
+                        "mousedown",
+                        closeMenu);
+
+                }
+            }
+            document.addEventListener(
+                "mousedown",
+                closeMenu
+            );
+        }
+        function openNeuronEditor(graphObj, nodeID, x, y) {
+            const node = graphObj.data.nodes.get(nodeID);
+            const menu = document.createElement("div");
+            menu.style.position = "absolute";
+            menu.style.left = x + "px";
+            menu.style.top = y + "px";
+            menu.style.background = "#222";
+            menu.style.padding = "20px";
+            menu.style.border = "1px solid #555";
+            document.body.appendChild(menu);
+            const title = document.createElement("div");
+            title.innerText = node.label;
+            title.style.fontSize = "15px";
+            title.style.fontWeight = "bold";
+            title.style.marginBottom = "14px";
+            title.style.color = "#8fdfff";
+            title.style.fontFamily = "consolas";
+
+            menu.appendChild(title);
+            for (const field of node.fields) {
+                console.log(field);
+                menu.appendChild(createFieldEditor(field));
+            }
+
+            const saveButton = document.createElement("button");
+            saveButton.innerText = "Save";
+            saveButton.style.width = "100%";
+            saveButton.style.padding = "8px";
+            saveButton.style.marginTop = "10px";
+            saveButton.style.background = "#333";
+            saveButton.style.color = "white";
+            saveButton.style.border = "1px solid #555";
+            saveButton.onclick = async () => {
+                try {
+                    socket.send(JSON.stringify({
+                        action: "editNeuron",
+                        graph: graphObj.name,
+                        nodeID: nodeID,
+                        fields: node.fields
+                    }));
+
+                    menu.remove();
+                }
+                catch (err) {
+                    console.error("Save Error:", err);
+                }
+            };
+            menu.appendChild(saveButton);
+
+            menu.addEventListener(
+                "mousedown",
+                e => e.stopPropagation()
+            );
+            function closeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener(
+                        "mousedown",
+                        closeMenu);
+                }
+            }
+            document.addEventListener(
+                "mousedown",
+                closeMenu
+            );
+        }
+        function createFieldEditor(field) {
+            const wrapper = document.createElement("div");
+
+            wrapper.style.display = "flex";
+            wrapper.style.flexDirection = "column";
+            wrapper.style.gap = "4px";
+            wrapper.style.marginBottom = "14px";
+            wrapper.style.fontFamily = "consolas";
+
+            const label = document.createElement("div");
+            label.innerText = field.name;
+
+            label.style.color = "white";
+            label.style.fontSize = "13px";
+            wrapper.appendChild(label);
+
+            if (field.type === "Float"
+                || field.type === "SignedFloat") {
+
+                const slider = document.createElement("input");
+                slider.type = "range";
+                if (field.type === "Float") {
+                    slider.min = 0;
+                    slider.max = 1;
+                }
+                else {
+                    slider.min = -1;
+                    slider.max = 1;
+                }
+
+                slider.step = 0.01;
+                slider.value = getFieldValue(field);
+                slider.style.width = "180px";
+                slider.style.cursor = "pointer";
+                const valueText = document.createElement("div");
+                valueText.style.color = "#8fdfff";
+                valueText.style.fontSize = "12px";
+                valueText.innerText = parseFloat(slider.value).toFixed(2);
+                slider.oninput = () => {
+                    const v = parseFloat(slider.value);
+                    setFieldValue(field, v);
+                    valueText.innerText = v.toFixed(2);
+                };
+                wrapper.appendChild(slider);
+                wrapper.appendChild(valueText);
+            }
+            if (field.type === "Bool") {
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = getFieldValue(field);
+                checkbox.style.transform = "scale(1.2)";
+                checkbox.style.cursor = "pointer";
+                checkbox.onchange = () => {
+                    setFieldValue(field, checkbox.checked);
+                };
+                wrapper.appendChild(checkbox);
+            }
+            if (field.type === "Int") {
+                const input = document.createElement("input");
+                input.type = "number";
+                input.step = 1;
+                input.value = getFieldValue(field);
+                input.style.width = "70px";
+                input.style.background = "#111";
+                input.style.color = "white";
+                input.style.border = "1px solid #555";
+                input.style.padding = "4px";
+
+                input.oninput = () => {
+                    setFieldValue(field, parseInt(input.value));
+                };
+                wrapper.appendChild(input);
+            }
+
+
+
+            return wrapper;
+        }
+        function getFieldValue(field) {
+            switch (field.type) {
+                case "Float":
+                case "SignedFloat":
+                    return field.floatVal;
+                case "Int":
+                    return field.intVal;
+                case "Bool":
+                    return field.boolVal;
+            }
+        }
+        function setFieldValue(field, value) {
+            switch (field.type) {
+                case "Float":
+                case "SignedFloat":
+                    field.floatVal = value;
+                    break;
+                case "Int":
+                    field.intVal = value;
+                    break;
+                case "Bool":
+                    field.boolVal = value;
+                    break;
+            }
+        }
+
+        async function createConnection(graphObj, srcNode, tgtNode) {
+            socket.send(JSON.stringify({
+                action: "addConnection",
+                graph: selectedGraph.name,
+                src: srcNode,
+                tgt: tgtNode
+            }));
+        }
+
+        function toggleAutoRestart() {
+            socket.send(JSON.stringify({ action: "toggleAutoRestart" }));
+        }
+        function killCreature() {
+            if (selectedCreatureId) {
+                socket.send(JSON.stringify({ action: "killCreature", creatureId: selectedCreatureId }));
+            }
+            hideContextMenu();
+        }
+
+        function toggleBankFolder(folder) {
+            const el = document.getElementById('folder-' + folder);
+            el.style.display = el.style.display === "none" ? "flex" : "none";
+        }
+        function toggleBankCategory(cat) {
+            const checked = document.getElementById('cb-' + cat).checked;
+            const folder = document.getElementById('folder-' + cat);
+            const cbs = folder.querySelectorAll('input[type="checkbox"]');
+            cbs.forEach(cb => cb.checked = checked);
+        }
+        function closeGenomeBank() {
+            document.getElementById('genomeBank').style.display = "none";
+        }
+        function populateBankFolder(cat, files, color) {
+            const folder = document.getElementById('folder-' + cat);
+            folder.innerHTML = "";
+            files.forEach(f => {
+                const item = document.createElement("div");
+                item.style.display = "flex";
+                item.style.alignItems = "center";
+                item.style.marginBottom = "4px";
+
+                const span = document.createElement("span");
+                span.innerText = f.replace('.json', '');
+                span.style.color = "#ccc";
+                span.style.fontSize = "12px";
+                span.style.cursor = "pointer";
+                span.style.padding = "2px 4px";
+                span.style.border = "1px solid transparent";
+                span.style.width = "100%";
+
+                span.onmouseover = () => { span.style.borderColor = color; span.style.color = "white"; };
+                span.onmouseout = () => { span.style.borderColor = "transparent"; span.style.color = "#ccc"; };
+
+                span.onclick = () => {
+                    socket.send(JSON.stringify({
+                        action: "loadServerGenome",
+                        slot: bankTargetSlot,
+                        filename: f
+                    }));
+                    closeGenomeBank();
+                };
+
+                item.appendChild(span);
+                folder.appendChild(item);
+            });
+        }
+        function confirmSave() {
+            const name = document.getElementById('saveNameInput').value.replace(/[^a-zA-Z0-9_-]/g, "");
+            if (!name) return;
+
+            socket.send(JSON.stringify({
+                action: "saveNamedGenome",
+                type: pendingSaveType,
+                name: name,
+                slot: pendingSaveSlot
+            }));
+
+            document.getElementById('savePrompt').style.display = "none";
+        }
+
+        async function loadConfig() {
+            const response = await fetch("Config.json");
+            runtimeConfig = await response.json();
+            console.log(runtimeConfig);
+        }
+        async function loadNeuronDefs() {
+            const response = await fetch("NeuronDefs.json?t=" + Date.now());
+            neuronDefs = await response.json();
+        }
+        async function start() {
+            await loadConfig();
+            await loadNeuronDefs();
+
+            for (const def of sliderDefs) {
+                createSlider(def);
+            }
+
+            for (const name of graphNames) {
+                createGraphContainer(name);
+            }
+        }
+
+        start();
+
+    </script>
+</body>
+</html>

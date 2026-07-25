@@ -121,6 +121,9 @@ namespace NEMO
         EmitSignal,
         Consume,
         Attack,
+
+        Proximity,
+        TraitVision,
     }
 
     public enum PType
@@ -166,9 +169,9 @@ namespace NEMO
 
     public static class NeuronDicts
     {
-        public static readonly List<DataField>[] DataDefinitions = new List<DataField>[22];
+        public static readonly List<DataField>[] DataDefinitions = new List<DataField>[24];
         public static readonly List<NFunc>[] FuncsOfType = new List<NFunc>[3];
-        public static readonly NType[] TypesOfFuncs = new NType[22];
+        public static readonly NType[] TypesOfFuncs = new NType[24];
 
         static NeuronDicts()
         {
@@ -209,6 +212,21 @@ namespace NEMO
                 new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Int},
             };
             DataDefinitions[(int)NFunc.Age] = new();
+            DataDefinitions[(int)NFunc.Proximity] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="targetType", startBit=10, bitLength=2, maxValue=3, fieldType=FType.Int},
+                new(){name="steepness", startBit=12, bitLength=2, maxValue=3, fieldType=FType.Int},
+            };
+
+            DataDefinitions[(int)NFunc.TraitVision] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="phenotype", startBit=10, bitLength=5, maxValue=31, fieldType=FType.Int}, 
+                new(){name="steepness", startBit=15, bitLength=1, maxValue=1, fieldType=FType.Int}, 
+            };
 
             DataDefinitions[(int)NFunc.Relay] = new() {
                 new(){name="bias", startBit=0, bitLength=8, fieldType=FType.SignedFloat, mutateSensitivity=0.33f},
@@ -266,7 +284,9 @@ namespace NEMO
                 NFunc.Density,
                 NFunc.GetSignal,
                 NFunc.GeneSimilarity,
-                NFunc.Age
+                NFunc.Age,
+                NFunc.Proximity,
+                NFunc.TraitVision
             };
             FuncsOfType[(int)NType.Math] = new() {
                 NFunc.Relay,
@@ -297,6 +317,8 @@ namespace NEMO
             TypesOfFuncs[(int)NFunc.GeneSimilarity] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.GetRandom] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.Age] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Proximity] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.TraitVision] = NType.Sensor;
 
             TypesOfFuncs[(int)NFunc.Relay] = NType.Math;
             TypesOfFuncs[(int)NFunc.Threshold] = NType.Math;
@@ -336,7 +358,7 @@ namespace NEMO
                 WriteIndented = true
             });
 
-            File.WriteAllText($"{Config.GraphOutputFolder}neuronDefs.json", json);
+            File.WriteAllText($"{Config.WebFolder}/neuronDefs.json", json);
         }
 
         public static void ExportDataDefs()
@@ -363,7 +385,7 @@ namespace NEMO
                 WriteIndented = true
             });
 
-            File.WriteAllText($"{Config.GraphOutputFolder}dataDefs.json", json);
+            File.WriteAllText($"{Config.WebFolder}/dataDefs.json", json);
         }
     }
 }

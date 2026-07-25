@@ -7,7 +7,7 @@ namespace NEMO
         public List<Gene> genes;
         public Dictionary<PType, PhenoFlag> phenotypes;
         public int nextGeneID = 0;
-        
+
         public Genome(List<Gene> genes)
         {
             this.genes = genes;
@@ -283,7 +283,7 @@ namespace NEMO
     public static class GeneTools
     {
         public static Random rand = new Random();
-
+        
         public static Genome MutateGenome(Genome genome)
         {
             if (genome.genes == null || genome.genes.Count == 0)
@@ -297,7 +297,7 @@ namespace NEMO
             List<Gene> genesToAdd = new();
 
             HashSet<NeuronGeneData> mutatedNeurons = new();
-            List <NeuronGeneData> allNeurons = new();
+            List<NeuronGeneData> allNeurons = new();
 
             float volatility = genome.phenotypes[PType.MutationVolatility].value;
             int dynamicMaxGenes = (int)(Config.maxGenes * genome.phenotypes[PType.BrainSize].value);
@@ -327,7 +327,7 @@ namespace NEMO
             {
                 //Weight Flux
                 float w = (gene.weight / 65535f) * 2f - 1f;
-                w += Gaussian(Config.weightSharpness) * Config.weightFlux *effectiveMutationRate;
+                w += Gaussian(Config.weightSharpness) * Config.weightFlux * effectiveMutationRate;
                 gene.weight = (ushort)((w + 1f) * 0.5f * 65535f);
 
                 //Data Flux Src
@@ -344,15 +344,15 @@ namespace NEMO
                 }
 
                 //Slot Flip
-                if (rand.NextSingle() <= 
-                    Config.slotFlipChance * effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.slotFlipChance * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     gene.slot = (byte)(gene.slot == 0 ? 1 : 0);
                     PrintMut($"{gene.graphID}:::Slot Flipped");
                 }
 
                 //Weight Sign Flip
-                if (rand.NextSingle() <= 
+                if (rand.NextSingle() <=
                     Config.wSignFlipChance * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     float w2 = (gene.weight / 65535f) * 2f - 1f;
@@ -362,10 +362,11 @@ namespace NEMO
                 }
 
                 //RewireOne & RegenOne
-                if (rand.NextSingle() <= 
-                    Config.rewireOneChance * effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.rewireOneChance * effectiveMutationRate * Config.topologyMutationRate)
                 {
-                    if (rand.NextSingle() > 0.5f){ //Mutate Src
+                    if (rand.NextSingle() > 0.5f)
+                    { //Mutate Src
                         var compatible = allNeurons.Where(
                             n => n.type == NType.Sensor
                                || n.type == NType.Math).ToList();
@@ -374,7 +375,8 @@ namespace NEMO
 
                         PrintMut($"{gene.graphID}:::Rewired SRC");
                     }
-                    else{
+                    else
+                    {
                         var compatible = allNeurons.Where(
                             n => n.type == NType.Action
                                || n.type == NType.Math).ToList();
@@ -384,42 +386,47 @@ namespace NEMO
                         PrintMut($"{gene.graphID}:::Rewired TGT");
                     }
                 }
-                if (rand.NextSingle() <= 
-                    Config.regenOneChance*effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.regenOneChance * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     NeuronGeneData newN = new();
                     bool mutateSource = rand.NextSingle() > 0.5f;
 
-                    if (mutateSource){
+                    if (mutateSource)
+                    {
                         newN.type = ChooseNeuronType(genome, true, false);
                     }
-                    else{
+                    else
+                    {
                         newN.type = ChooseNeuronType(genome, false, true);
                     }
 
                     newN = RandNeuronOfType(newN.type, ref nextID);
                     allNeurons.Add(newN);
 
-                    if (mutateSource){
+                    if (mutateSource)
+                    {
                         gene.src = newN;
                         PrintMut($"{gene.graphID}:::Regenerated SRC");
                     }
-                    else{
+                    else
+                    {
                         gene.tgt = newN;
                         PrintMut($"{gene.graphID}:::Regenerated TGT");
                     }
                 }
 
                 //Toggle Active
-                if (rand.NextSingle() <= 
-                    Config.geneToggleChance*effectiveMutationRate*Config.topologyMutationRate){
+                if (rand.NextSingle() <=
+                    Config.geneToggleChance * effectiveMutationRate * Config.topologyMutationRate)
+                {
                     gene.disabled = !gene.disabled;
                     PrintMut($"{gene.graphID}:::Toggled Active");
                 }
 
                 //Gene Splitting
-                if (rand.NextSingle() <= 
-                    Config.geneSplitChance*scale*effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.geneSplitChance * scale * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     NeuronGeneData newNeuron = new();
 
@@ -451,8 +458,8 @@ namespace NEMO
                 }
 
                 //Neuron Replacement
-                if (rand.NextSingle() <= 
-                    Config.neuronReplaceChance*effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.neuronReplaceChance * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     bool replacingSource;
                     NeuronGeneData oldNeuron = new();
@@ -469,10 +476,12 @@ namespace NEMO
 
                     NeuronGeneData newNeuron = new();
 
-                    if (rand.NextSingle() <= Config.sameTypeChance){
+                    if (rand.NextSingle() <= Config.sameTypeChance)
+                    {
                         newNeuron.type = oldNeuron.type;
                     }
-                    else{
+                    else
+                    {
                         bool validAsSource = false;
                         bool validAsTarget = false;
                         foreach (Gene gene4 in genome.genes)
@@ -488,19 +497,23 @@ namespace NEMO
                     newNeuron = RandNeuronOfType(newNeuron.type, ref nextID);
                     newNeuron.ID = oldNeuron.ID;
 
-                    if (replacingSource){
+                    if (replacingSource)
+                    {
                         gene.src = newNeuron;
                     }
-                    else{
+                    else
+                    {
                         gene.tgt = newNeuron;
                     }
 
                     foreach (Gene gene3 in genome.genes)
                     {
-                        if (gene3.src == oldNeuron){
+                        if (gene3.src == oldNeuron)
+                        {
                             gene3.src = newNeuron;
                         }
-                        if (gene3.tgt == oldNeuron){
+                        if (gene3.tgt == oldNeuron)
+                        {
                             gene3.tgt = newNeuron;
                         }
                     }
@@ -511,8 +524,8 @@ namespace NEMO
                 }
 
                 //Gene Duplication
-                if (rand.NextSingle() <= 
-                    Config.geneDuplicationChance*scale*effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.geneDuplicationChance * scale * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     if (genome.genes.Count < dynamicMaxGenes)
                     {
@@ -532,20 +545,20 @@ namespace NEMO
                 }
 
                 //Gene Insertion & Removal
-                if (rand.NextSingle() <= 
-                    Config.geneInsertionChance*scale*effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.geneInsertionChance * scale * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     if (genome.genes.Count < Config.maxGenes)
                     {
-                        Gene newGene = GenerateGene(ref nextID, allNeurons);
+                        Gene newGene = GenerateGene(genome, ref nextID, allNeurons);
                         newGene.graphID = genome.nextGeneID;
                         genome.nextGeneID++;
                         genesToAdd.Add(newGene);
                         PrintMut($"{newGene.graphID}:::<- Inserted New Gene");
                     }
                 }
-                if (rand.NextSingle() <= 
-                    Config.geneRemovalChance *scale*effectiveMutationRate*Config.topologyMutationRate)
+                if (rand.NextSingle() <=
+                    Config.geneRemovalChance * scale * effectiveMutationRate * Config.topologyMutationRate)
                 {
                     if (genome.genes.Count > Config.minGenes)
                     {
@@ -556,13 +569,17 @@ namespace NEMO
                 }
             }
 
-            foreach (Gene gene in genesToRemove){
-                if (genome.genes.Count > Config.minGenes){
+            foreach (Gene gene in genesToRemove)
+            {
+                if (genome.genes.Count > Config.minGenes)
+                {
                     genome.genes.Remove(gene);
                 }
             }
-            foreach (Gene gene in genesToAdd){
-                if (genome.genes.Count < Config.maxGenes){
+            foreach (Gene gene in genesToAdd)
+            {
+                if (genome.genes.Count < Config.maxGenes)
+                {
                     gene.graphID = genome.nextGeneID;
                     genome.nextGeneID++;
                     genome.genes.Add(gene);
@@ -574,7 +591,7 @@ namespace NEMO
         {
             foreach (DataField field in NeuronDicts.DataDefinitions[(int)func])
             {
-                if (field.fieldType==FType.SignedFloat)
+                if (field.fieldType == FType.SignedFloat)
                 {
                     float value = DecodeField(data, field);
                     value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * field.mutateSensitivity * effectiveMutationRate;
@@ -584,19 +601,19 @@ namespace NEMO
                                      ((1 << field.bitLength) - 1));
                     data = SetField(data, field, encoded);
                 }
-                else if (field.fieldType==FType.Float)
+                else if (field.fieldType == FType.Float)
                 {
                     float value = DecodeField(data, field);
-                    value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * 0.5f *field.mutateSensitivity * effectiveMutationRate;
+                    value += Gaussian(Config.floatDataSharpness) * Config.floatDataFlux * 0.5f * field.mutateSensitivity * effectiveMutationRate;
                     value = Math.Clamp(value, 0f, 1f);
                     ushort encoded = (ushort)(value
                                      *
                                      ((1 << field.bitLength) - 1));
                     data = SetField(data, field, encoded);
                 }
-                else if (field.fieldType==FType.Bool)
+                else if (field.fieldType == FType.Bool)
                 {
-                    if (rand.NextSingle() < Config.boolFlipChance)
+                    if (rand.NextSingle() < Config.boolFlipChance * effectiveMutationRate)
                     {
                         ushort raw = ExtractField(data, field);
                         raw = (ushort)(raw == 0 ? 1 : 0);
@@ -605,7 +622,7 @@ namespace NEMO
                 }
                 else
                 {
-                    if (rand.NextSingle() < Config.intRandChance)
+                    if (rand.NextSingle() < Config.intRandChance * effectiveMutationRate)
                     {
                         ushort value;
                         if (field.maxValue.HasValue)
@@ -624,7 +641,7 @@ namespace NEMO
             return data;
         }
 
-        public static NType ChooseNeuronType(Genome genome, 
+        public static NType ChooseNeuronType(Genome genome,
             bool validAsSrc, bool validAsTgt)
         {
             float sWeight = Config.baseSensorWeight;
@@ -643,25 +660,31 @@ namespace NEMO
             {
                 allNeurons.Add(gene.src);
                 allNeurons.Add(gene.tgt);
-                if (gene.src.type == NType.Math){
-                    mathNeurons.Add(gene.src);}
-                if (gene.tgt.type == NType.Math){
-                    mathNeurons.Add(gene.tgt);}
+                if (gene.src.type == NType.Math)
+                {
+                    mathNeurons.Add(gene.src);
+                }
+                if (gene.tgt.type == NType.Math)
+                {
+                    mathNeurons.Add(gene.tgt);
+                }
             }
 
             float mathFraction = (float)mathNeurons.Count / (float)allNeurons.Count;
-            float mWeight = (float) Math.Pow(1 - mathFraction, Config.mathSuppressionExponent);
+            float mWeight = (float)Math.Pow(1 - mathFraction, Config.mathSuppressionExponent);
 
             mWeight *= Config.mathWeightMultiplier;
 
             float total = sWeight + aWeight + mWeight;
             float r = rand.NextSingle() * total;
 
-            if (r < sWeight){
+            if (r < sWeight)
+            {
                 return NType.Sensor;
             }
             r -= sWeight;
-            if (r < mWeight){
+            if (r < mWeight)
+            {
                 return NType.Math;
             }
             return NType.Action;
@@ -689,7 +712,7 @@ namespace NEMO
 
             for (int i = 0; i < length; i++)
             {
-                Gene newGene = GenerateGene(ref nextNeuronID, existingNeurons);
+                Gene newGene = GenerateGene(genome, ref nextNeuronID, existingNeurons);
                 newGene.graphID = genome.nextGeneID;
                 genome.nextGeneID++;
                 genome.genes.Add(newGene);
@@ -697,15 +720,13 @@ namespace NEMO
 
             return genome;
         }
-        public static Gene GenerateGene(ref uint nextNeuronID, 
-            List<NeuronGeneData>  existingNeurons)
+        public static Gene GenerateGene(Genome genome, ref uint nextNeuronID, 
+            List<NeuronGeneData> existingNeurons)
         {
             Gene gene = new Gene();
 
-            gene.src = GetOrCreateNeuron(
-                ref nextNeuronID, existingNeurons, true);
-            gene.tgt = GetOrCreateNeuron(
-                ref nextNeuronID, existingNeurons, false);
+            gene.src = GetOrCreateNeuron(genome, ref nextNeuronID, existingNeurons, true);
+            gene.tgt = GetOrCreateNeuron(genome, ref nextNeuronID, existingNeurons, false);
 
             gene.slot = (byte)rand.Next(0, 2);
             gene.weight = (ushort)rand.Next(0, 65536);
@@ -713,8 +734,9 @@ namespace NEMO
 
             return gene;
         }
-        public static Gene CreateGene(NeuronGeneData src,NeuronGeneData tgt,
-            byte slot,ushort weight)
+
+        public static Gene CreateGene(NeuronGeneData src, NeuronGeneData tgt,
+            byte slot, ushort weight)
         {
             return new Gene
             {
@@ -746,7 +768,7 @@ namespace NEMO
                 src = constant,
                 tgt = relay,
                 slot = 0,
-                weight = EncodeFloat(1,16,FType.SignedFloat)
+                weight = EncodeFloat(1, 16, FType.SignedFloat)
             };
             List<Gene> genes = new List<Gene> { gene };
             Genome genome = new Genome(genes);
@@ -756,32 +778,30 @@ namespace NEMO
             return genome;
         }
 
-        public static NeuronGeneData GetOrCreateNeuron(ref uint nextNeuronID, 
+        public static NeuronGeneData GetOrCreateNeuron(Genome genome, ref uint nextNeuronID,
             List<NeuronGeneData> existingNeurons, bool isSource)
         {
-            bool reuse =
-                existingNeurons.Count > 0
-                &&
-                rand.NextSingle() <= Config.neuronReuse;
+            bool reuse = existingNeurons.Count > 0 && rand.NextSingle() <= Config.neuronReuse;
 
             if (reuse)
             {
-                var compatible = existingNeurons.Where(
-                    n => 
-                    isSource ?n.type != NType.Action :n.type != NType.Sensor
-                    ).ToList();
-
-                if (compatible.Any()){
+                var compatible = existingNeurons.Where(n => isSource ? n.type != NType.Action : n.type != NType.Sensor).ToList();
+                if (compatible.Any())
+                {
                     return compatible[rand.Next(compatible.Count)];
                 }
             }
 
             NeuronGeneData neuron = new();
 
-            if (isSource){
-                neuron.type = (NType)rand.Next(0, 2); }
-            else{
-                neuron.type = (NType)rand.Next(1, 3); }
+            if (isSource)
+            {
+                neuron.type = ChooseNeuronType(genome, true, false);
+            }
+            else
+            {
+                neuron.type = ChooseNeuronType(genome, false, true);
+            }
 
             var funcs = NeuronDicts.FuncsOfType[(int)neuron.type];
             neuron.func = funcs[rand.Next(0, funcs.Count)];
@@ -790,10 +810,9 @@ namespace NEMO
             nextNeuronID++;
 
             neuron.data = GenerateData(neuron.func);
-            
+
             existingNeurons.Add(neuron);
             return neuron;
-
         }
         public static ushort GenerateData(NFunc func)
         {
@@ -802,11 +821,13 @@ namespace NEMO
             {
                 ushort dataField;
 
-                if (field.maxValue.HasValue) {
-                    dataField = (ushort) rand.Next(0, field.maxValue.Value +1);
+                if (field.maxValue.HasValue)
+                {
+                    dataField = (ushort)rand.Next(0, field.maxValue.Value + 1);
                 }
-                else{
-                    dataField = (ushort) rand.Next(0, 1<<field.bitLength);
+                else
+                {
+                    dataField = (ushort)rand.Next(0, 1 << field.bitLength);
                 }
 
                 ushort shiftedDataField = (ushort)(dataField << field.startBit);
@@ -814,11 +835,11 @@ namespace NEMO
             }
             return fullDataField;
         }
-        
+
         public static ushort SetField(ushort data, DataField field, ushort newData)
         {
-            ushort mask = (ushort) 
-                (((1 << field.bitLength) - 1) 
+            ushort mask = (ushort)
+                (((1 << field.bitLength) - 1)
                 << field.startBit);
             data = (ushort)(data & ~mask); //Now region to overwrite is cleared
 
@@ -828,17 +849,19 @@ namespace NEMO
         }
         public static ushort ExtractField(ushort data, DataField field)
         {
-            ushort mask = (ushort) ((1 << field.bitLength) -1);
-            return (ushort) ((data >> field.startBit) & mask);
+            ushort mask = (ushort)((1 << field.bitLength) - 1);
+            return (ushort)((data >> field.startBit) & mask);
         }
         public static float DecodeField(ushort data, DataField field)
         {
             float rawVal = ExtractField(data, field);
 
-            if (field.fieldType==FType.SignedFloat) {
+            if (field.fieldType == FType.SignedFloat)
+            {
                 return rawVal / ((1 << field.bitLength) - 1f) * 2f - 1f;
             }
-            if (field.fieldType == FType.Float) {
+            if (field.fieldType == FType.Float)
+            {
                 return rawVal / ((1 << field.bitLength) - 1f);
             }
             return rawVal;
@@ -847,17 +870,20 @@ namespace NEMO
         {
             float rawVal = ExtractField(data, field);
 
-            if (field.fieldType==FType.SignedFloat) {
+            if (field.fieldType == FType.SignedFloat)
+            {
                 return Math.Round((rawVal / ((1 << field.bitLength) - 1f) * 2f - 1f), 2).ToString();
             }
-            if (field.fieldType == FType.Float) {
+            if (field.fieldType == FType.Float)
+            {
                 return Math.Round((rawVal / ((1 << field.bitLength) - 1f)), 2).ToString();
             }
-            if (field.fieldType == FType.Bool) {
-                return rawVal == 1 ?"X|True" :"Y|False";
+            if (field.fieldType == FType.Bool)
+            {
+                return rawVal == 1 ? "X|True" : "Y|False";
             }
 
-            return Math.Round(rawVal,1).ToString();
+            return Math.Round(rawVal, 1).ToString();
         }
         public static ushort EncodeFloat(float value, int bits, FType type)
         {
@@ -886,26 +912,26 @@ namespace NEMO
                 switch (field.type)
                 {
                     case FType.Bool:
-                        encoded = (ushort)(field.boolVal ?1 :0);
+                        encoded = (ushort)(field.boolVal ? 1 : 0);
                         break;
                     case FType.Int:
                         encoded = (ushort)field.intVal;
                         break;
                     case FType.Float:
                     case FType.SignedFloat:
-                        encoded =EncodeFloat(
+                        encoded = EncodeFloat(
                                 field.floatVal,
                                 def.bitLength,
                                 field.type);
                         break;
                 }
 
-                data = SetField(data,def,encoded);
+                data = SetField(data, def, encoded);
             }
             return data;
         }
 
-        public static void RenderGraph(Genome genome, string graphID, bool isTracking=false)
+        public static void RenderGraph(Genome genome, string graphID, bool isTracking = false)
         {
             HashSet<string> emittedNodes = new();
             List<object> nodes = new();
@@ -914,7 +940,8 @@ namespace NEMO
             string BuildNodeLabel(string name, NeuronGeneData neuron)
             {
                 string label = name;
-                foreach (var field in NeuronDicts.DataDefinitions[(int)neuron.func]){
+                foreach (var field in NeuronDicts.DataDefinitions[(int)neuron.func])
+                {
                     string val = DecodeFieldToString(neuron.data, field);
                     label += $"\n{field.name}={val}";
                 }
@@ -928,16 +955,16 @@ namespace NEMO
 
                 emittedNodes.Add(name);
                 string color = neuron.type switch
-                    {
-                        NType.Sensor =>
-                            "skyblue",
-                        NType.Math =>
-                            "palegreen",
-                        NType.Action =>
-                            "tomato",
-                        _ =>
-                            "white"
-                    };
+                {
+                    NType.Sensor =>
+                        "skyblue",
+                    NType.Math =>
+                        "palegreen",
+                    NType.Action =>
+                        "tomato",
+                    _ =>
+                        "white"
+                };
                 nodes.Add(new
                 {
                     id = name,
@@ -993,7 +1020,7 @@ namespace NEMO
                 AddNode(gene.tgt); //tgt
 
                 float weight = (gene.weight / 65535f) * 2f - 1f;
-                string color = weight >= 0 ?"green" :"red";
+                string color = weight >= 0 ? "green" : "red";
                 bool dashed = gene.slot == 1;
 
                 edges.Add(new
@@ -1046,8 +1073,10 @@ namespace NEMO
             return normal / sharpness;
         }
 
-        public static void PrintMut(string text){
-            if (Config.printMutations){
+        public static void PrintMut(string text)
+        {
+            if (Config.printMutations)
+            {
                 Console.WriteLine(text);
             }
         }
