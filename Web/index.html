@@ -282,7 +282,7 @@
 
     <div id="connectionOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10,10,10,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; backdrop-filter: blur(10px);">
         <h1 style="color: #8fdfff; font-family: consolas; font-size: 64px; text-shadow: 0 0 20px rgba(143, 223, 255, 0.5); margin-bottom: 4px;">NEMO ENGINE</h1>
-        <h3 style="color: #8fdfff; font-family: consolas; font-size: 16px; font-weight: normal; opacity: 0.8; text-shadow: 0 0 10px rgba(143, 223, 255, 0.3); margin-top: 0; margin-bottom: 8px;">Version 1.0</h3>
+        <h3 style="color: #8fdfff; font-family: consolas; font-size: 16px; font-weight: normal; opacity: 0.8; text-shadow: 0 0 10px rgba(143, 223, 255, 0.3); margin-top: 0; margin-bottom: 8px;">Version 1.1</h3>
         <h2 style="color: #aaaaaa; font-family: consolas; font-size: 16px; font-weight: normal; letter-spacing: 1px; margin-top: 0; margin-bottom: 24px;">Neural Evolution through Mutation of Organisms</h2>
         <p id="connStatus" style="color: #ffcc00; font-family: consolas; font-weight: bold; font-size: 20px; letter-spacing: 2px;">CONNECTING TO CORE...</p>
     </div>
@@ -753,11 +753,14 @@
         </div>
     </div>
 
+    <div id="devModeBadge" style="display: none; position: fixed; bottom: 10px; right: 280px; color: #ff4444; font-size: 11px; font-weight: bold; font-family: consolas, monospace; z-index: 9000; background: rgba(255, 68, 68, 0.12); border: 1px solid #ff4444; padding: 4px 8px; border-radius: 4px; letter-spacing: 1px; pointer-events: none;">
+        DEV MODE ACTIVE
+    </div>
     <a href="https://github.com/twlv12/NEMO" target="_blank"
        style="position: fixed; bottom: 12px; right: 16px; color: #555; text-decoration: none; font-size: 18px; font-family: consolas, monospace; z-index: 9000; transition: color 0.2s;"
        onmouseover="this.style.color='#8fdfff'"
        onmouseout="this.style.color='#555'">
-        NEMO v1.0 | GitHub Repo ↗
+        NEMO v1.1 | GitHub Repo ↗
     </a>
 
     <script>
@@ -927,6 +930,7 @@
             }, 2000);
         };
 
+        let latestRawData = null;
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
@@ -1000,6 +1004,9 @@
                     isPaused = data.isPaused;
                     autoRestart = data.autoRestart;
                     pauseOnExtinction = data.pauseOnExtinction;
+                    if (data.isDevMode !== undefined) {
+                        document.getElementById("devModeBadge").style.display = data.isDevMode ? "block" : "none";
+                    }
 
                     const sbCheck = document.getElementById('sandboxMode');
                     if (sbCheck) sbCheck.checked = data.sandboxMode;
@@ -1238,6 +1245,17 @@
                         document.getElementById('t-gov-mom').innerText = snap.stats.govMom.toFixed(2);
                         document.getElementById('t-gov-waste').innerText = snap.stats.govWastePen.toFixed(2);
                     }
+                }
+
+                if (data.event === "decompressProgress") {
+                    const bar = document.getElementById(`prog-bar-${data.runID}`);
+                    if (bar) bar.style.width = `${data.percent}%`;
+                    return;
+                }
+
+                if (data.event === "decompressComplete") {
+                    socket.send(JSON.stringify({ action: "getWorldBank" }));
+                    return;
                 }
 
                 if (data.event === "playbackTelemetry") {
@@ -2525,7 +2543,10 @@
                 if (w.frameCount >= minF && w.frameCount <= maxF) {
                     currentlyShownRunIDs.push(w.id);
                     const div = document.createElement('div');
-                    div.style.cssText = "background:#222; border:1px solid #444; border-radius:4px; padding:8px; margin-bottom:8px; cursor:pointer;";
+
+                    div.style.cssText = "background:#222; border:1px solid #444; border-radius:4px; padding:10px; margin-bottom:8px; cursor:pointer; transition: border-color 0.2s;";
+                    div.onmouseover = () => div.style.borderColor = "#8fdfff";
+                    div.onmouseout = () => div.style.borderColor = "#444";
 
                     const y = w.id.substring(0, 4), mo = w.id.substring(4, 6), d = w.id.substring(6, 8);
                     const h = w.id.substring(9, 11), mi = w.id.substring(11, 13);
@@ -2535,20 +2556,58 @@
                     if (mb >= 1024) sizeStr = (mb / 1024).toFixed(2) + " GB";
                     else sizeStr = mb.toFixed(1) + " MB";
 
-                    div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
-                                            <div style="color:#8fdfff; font-weight:bold;">${y}-${mo}-${d} ${h}:${mi}</div>
-                                            <div style="color:#555; font-size:10px;">${w.id}</div>
-                                         </div>
-                                         <div style="color:#aaa; font-size:11px; margin-top:4px;">Duration: ${formatNum(w.lastTick)} Ticks</div>
-                                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 4px;">
-                                            <div style="color:#aaa; font-size:11px;">Frames: <span style="color:white; font-weight:bold;">${w.frameCount}</span> <span style="color:#ff99cc; font-size:10px;">(${w.compressedPct}% Compressed)</span></div>
-                                            <div style="color:palegreen; font-weight:bold; font-size:11px;">${sizeStr}</div>
-                                         </div>`;
+                    let compressUI = "";
+                    if (w.compressedPct > 0) {
+                        let estUncompressedMB = mb * 12; 
+                        let estSizeStr = estUncompressedMB >= 1024 ? (estUncompressedMB / 1024).toFixed(2) + " GB" : estUncompressedMB.toFixed(1) + " MB";
+
+                        compressUI = `
+                            <div style="margin-top: 8px; border-top: 1px dashed #555; padding-top: 8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                                    <span style="color:#ff99cc; font-size:11px; font-weight:bold;">${w.compressedPct}% Compressed</span>
+                                    <button onclick="decompressWorld('${w.id}', event)" style="width: auto; margin: 0; padding: 4px 8px; font-size: 10px; border-color: #ff99cc; color: #ff99cc; cursor: pointer;">DECOMPRESS</button>
+                                </div>
+                                <div style="color:#888; font-size:10px; text-align: right;">Est. Final Size: ~${estSizeStr}</div>
+                                <div id="prog-container-${w.id}" style="display:none; width: 100%; height: 6px; background: #111; border: 1px solid #333; border-radius: 3px; margin-top: 6px; overflow: hidden;">
+                                    <div id="prog-bar-${w.id}" style="width: 0%; height: 100%; background: #ff99cc; transition: width 0.1s linear;"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <div style="color:#8fdfff; font-weight:bold; font-size:13px;">${y}-${mo}-${d} ${h}:${mi}</div>
+                            <div style="color:#555; font-size:10px;">${w.id}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <div style="color:#aaa; font-size:11px;">Duration: <span style="color:white;">${formatNum(w.lastTick)}</span> Ticks</div>
+                            <div style="color:palegreen; font-weight:bold; font-size:12px;">${sizeStr}</div>
+                        </div>
+                        <div style="color:#aaa; font-size:11px;">Frames: <span style="color:white; font-weight:bold;">${w.frameCount}</span></div>
+                        ${compressUI}
+                    `;
 
                     div.onclick = () => loadPlayback(w.id, w.ticks);
                     scroll.appendChild(div);
                 }
             });
+        }
+        function decompressWorld(runID, event) {
+            event.stopPropagation();
+
+            const btn = event.target;
+            btn.innerText = "EXTRACTING...";
+            btn.style.color = "#555";
+            btn.style.borderColor = "#555";
+            btn.disabled = true;
+
+            const progContainer = document.getElementById(`prog-container-${runID}`);
+            if (progContainer) {
+                progContainer.style.display = 'block';
+            }
+
+            socket.send(JSON.stringify({ action: "decompressWorld", runID: runID }));
         }
 
         function deleteFilteredWorlds() {

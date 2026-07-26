@@ -158,7 +158,6 @@ namespace NEMO
         BrainSize,
 
         //interaction
-        Vampirism,
         Lethality,
         SocialCohesion,
         PheromoneVolume,

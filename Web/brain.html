@@ -157,19 +157,17 @@
         let runtimeConfig = {};
         const networks = [];
 
-    const isHttps = window.location.protocol === "https:";
-    const wsProtocol = isHttps ? "wss:" : "ws:";
-    
-    let wsAddress;
-    if (window.location.port === "8000") {
-        wsAddress = `${wsProtocol}
+        const isHttps = window.location.protocol === "https:";
+        const wsProtocol = isHttps ? "wss:" : "ws:";
+        
+        let wsAddress;
+        if (window.location.port === "8000") {
+            wsAddress = `${wsProtocol}//${window.location.hostname}:8181`;
+        } else {
+            wsAddress = `${wsProtocol}//${window.location.host}/ws`;
+        }
 
-        ${window.location.hostname}:8181`;
-    } else {
-        wsAddress = `${wsProtocol}//${window.location.host}/ws`;
-    }
-    
-    const socket = new WebSocket(wsAddress);
+        const socket = new WebSocket(wsAddress);
 
         let autoRestart = false;
         let pauseOnExtinction = true;

@@ -23,7 +23,7 @@
   "plantCutoff": 0.68,
   "lingeringPlants": 0.02,
 
-  "baseNutrition": 400.0,
+  "baseNutrition": 200.0,
   "meatEntropyMulti": 0.85,
   "meatDecayRate": 0.5,
   "deathEnergy": 0.25,
@@ -93,9 +93,10 @@
   "geneRemovalChance": 0.005,
 
 
-  "hideConsole": true,
+  "hideConsole": false,
   "pauseWithoutUI": true,
   "compressRecordings": true,
+  "runLegacyPatcher":  false,
   "uiRate": 33,
   "currentView": 0
 }

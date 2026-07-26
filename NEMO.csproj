@@ -8,6 +8,8 @@
 		<OutputPath>Build\</OutputPath>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<ApplicationIcon>Web\nemocon.ico</ApplicationIcon>
+		<DebugType>none</DebugType>
+		<DebugSymbols>false</DebugSymbols>
 	</PropertyGroup>
 
 	<ItemGroup>

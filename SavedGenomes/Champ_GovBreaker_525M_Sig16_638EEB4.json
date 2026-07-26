@@ -566,12 +566,6 @@
       "max": 3,
       "mutateSensitivity": 0.1
     },
-    "Vampirism": {
-      "value": 0.020884331,
-      "min": 0,
-      "max": 1,
-      "mutateSensitivity": 1
-    },
     "Lethality": {
       "value": 0.1,
       "min": 0.1,

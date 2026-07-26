@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace NEMO
 {
@@ -15,6 +16,7 @@ namespace NEMO
     //potentially remove creatureCount from governor calcs
     //fix ui slowdowns
     //transistor neuron
+    //fix fertmap not loading after restore
 
     public static class NEMO
     {
@@ -132,6 +134,9 @@ namespace NEMO
             Directory.CreateDirectory(Config.SavedGenomesFolder);
             Directory.CreateDirectory(Config.RecordingsFolder);
             savedGenomesTotal = Directory.GetFiles(Config.SavedGenomesFolder, "*.json").Length;
+
+            if (Config.runLegacyPatcher)
+                PatchLegacyRecordings();
             #endregion
 
             #region Servers Handler
@@ -167,7 +172,7 @@ namespace NEMO
    | \ | || ____|  \/  |/ __ \ 
    |  \| ||  _| | |\/| | |  | |
    | |\  || |___| |  | | |__| |
-   |_| \_||_____|_|  |_|\____/  v1.0
+   |_| \_||_____|_|  |_|\____/  v1.1
                                 ");
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine("==================================================");
@@ -463,6 +468,7 @@ namespace NEMO
             var state = new
             {
                 @event = "syncState",
+                isDevMode = Config.IsDevMode,
                 disableGovernor = disableGovernor,
                 disableEnergyDrain = disableEnergyDrain,
                 isPaused = isPaused,
@@ -778,16 +784,19 @@ namespace NEMO
             int patchedCount = 0;
 
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine($"[PATCHER] Found {files.Length} legacy frames. Patching...");
+            Console.WriteLine($"[PATCHER] Scanning {files.Length} legacy frames for repair...");
             Console.ResetColor();
 
-            JsonSerializerOptions options = new JsonSerializerOptions { IncludeFields = true, Converters = { new JsonStringEnumConverter() } };
-
+            int progress = 0;
+            int max = files.Length;
+            int lastProg = 0;
             foreach (var file in files)
             {
                 try
                 {
+                    bool isModified = false;
                     string json;
+
                     using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                     using (GZipStream gz = new GZipStream(fs, CompressionMode.Decompress))
                     using (StreamReader sr = new StreamReader(gz))
@@ -795,39 +804,50 @@ namespace NEMO
                         json = sr.ReadToEnd();
                     }
 
-                    WorldSnapshot? snap = JsonSerializer.Deserialize<WorldSnapshot>(json, options);
-                    bool needsSave = false;
-
-                    if (snap != null)
+                    string vampirismPattern = @"""Vampirism""\s*:\s*\{[^}]+\}\s*,?";
+                    if (Regex.IsMatch(json, vampirismPattern, RegexOptions.IgnoreCase))
                     {
-                        if (snap.width == 0 || snap.height == 0)
-                        {
-                            snap.width = Config.worldWidth;
-                            snap.height = Config.worldHeight;
-                            needsSave = true;
-                        }
+                        json = Regex.Replace(json, vampirismPattern, "", RegexOptions.IgnoreCase);
+                        isModified = true;
+                    }
 
-                        if (snap.creatures != null)
+                    var options = new JsonSerializerOptions
+                    {
+                        IncludeFields = true,
+                        PropertyNameCaseInsensitive = true,
+                        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+                        Converters = { new JsonStringEnumConverter() }
+                    };
+
+                    WorldSnapshot? snap = JsonSerializer.Deserialize<WorldSnapshot>(json, options);
+                    if (snap == null) continue;
+
+                    if (snap.width == 0 || snap.height == 0)
+                    {
+                        snap.width = Config.worldWidth;
+                        snap.height = Config.worldHeight;
+                        isModified = true;
+                    }
+
+                    if (snap.creatures != null)
+                    {
+                        foreach (var c in snap.creatures)
                         {
-                            foreach (var c in snap.creatures)
+                            if (c.genome != null)
                             {
-                                if (c.genome != null)
+                                var trueColor = c.genome.GenerateColor();
+                                if (c.r != trueColor.r || c.g != trueColor.g || c.b != trueColor.b)
                                 {
-                                    var trueColor = c.genome.GenerateColor();
-
-                                    if (c.r != trueColor.r || c.g != trueColor.g || c.b != trueColor.b)
-                                    {
-                                        c.r = trueColor.r;
-                                        c.g = trueColor.g;
-                                        c.b = trueColor.b;
-                                        needsSave = true;
-                                    }
+                                    c.r = trueColor.r;
+                                    c.g = trueColor.g;
+                                    c.b = trueColor.b;
+                                    isModified = true;
                                 }
                             }
                         }
                     }
 
-                    if (needsSave)
+                    if (isModified)
                     {
                         string newJson = JsonSerializer.Serialize(snap, options);
                         using (FileStream fs = new FileStream(file, FileMode.Create))
@@ -837,17 +857,23 @@ namespace NEMO
                             sw.Write(newJson);
                         }
                         patchedCount++;
+                        Log($"[PATCHER] {patchedCount} Frames patched.", "aaa", ConsoleColor.DarkGray);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[PATCHER ERROR] Failed on {file}: {ex.Message}");
+                    Log($"[PATCHER ERROR] Failed on {file}: {ex.Message}", "tomato", ConsoleColor.Red);
                 }
+                int percent = (int)Math.Truncate(((float)progress / (float)max) * 100);
+                if (percent != lastProg)
+                {
+                    lastProg = percent;
+                    Log($"[PATCHER] {percent}% Complete...");
+                }
+                progress++;
             }
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"[PATCHER] Patched {patchedCount} legacy frames.");
-            Console.ResetColor();
+            Log($"[PATCHER] Successfully patched {patchedCount} legacy frames.", "palegreen", ConsoleColor.Green);
         }
 
         public static void ProcessSocketMessage(string jsonMessage, List<Simulation> sims, IWebSocketConnection client)
@@ -1558,10 +1584,10 @@ namespace NEMO
                         {
                             foreach (var runDir in dir.GetDirectories())
                             {
-                                var files = runDir.GetFiles("Frame_*.json*");
+                                var files = runDir.GetFiles("Frame_*");
                                 if (files.Length > 0)
                                 {
-                                    var ticks = files.Select(f => long.Parse(f.Name.Replace("Frame_", "").Replace(".json.gz", "").Replace(".json", ""))).OrderBy(t => t).ToList();
+                                    var ticks = files.Select(f => long.Parse(f.Name.Replace("Frame_", "").Replace(".json.gz", "").Replace(".json", "").Replace(".nemo", ""))).OrderBy(t => t).ToList();
 
                                     long totalSize = 0;
                                     int compressedCount = 0;
@@ -1594,50 +1620,61 @@ namespace NEMO
                     if (actionType == "loadFrame")
                     {
                         string runID = root.GetProperty("runID").GetString()!;
-                        long targetTick = root.GetProperty("tick").GetInt64();
+                        int tick = root.GetProperty("tick").GetInt32();
 
-                        string gzPath = Path.Combine(Config.RecordingsFolder, runID, $"Frame_{targetTick:D9}.json.gz");
-                        string jsonPath = Path.Combine(Config.RecordingsFolder, runID, $"Frame_{targetTick:D9}.json");
+                        string runFolder = Path.Combine(Config.RecordingsFolder, runID);
+                        string nemoPath = Path.Combine(runFolder, $"Frame_{tick:D9}.nemo");
+                        string jsonPath = Path.Combine(runFolder, $"Frame_{tick:D9}.json"); 
+                        string gzPath = Path.Combine(runFolder, $"Frame_{tick:D9}.json.gz");
 
-                        Task.Run(async () =>
+                        _ = Task.Run(async () =>
                         {
                             try
                             {
-                                string rawJson = "";
-                                if (File.Exists(gzPath))
+                                string rawJson = null;
+
+                                if (File.Exists(nemoPath))
                                 {
-                                    using FileStream fs = new FileStream(gzPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                                    using GZipStream gz = new GZipStream(fs, CompressionMode.Decompress);
-                                    using StreamReader sr = new StreamReader(gz);
-                                    rawJson = await sr.ReadToEndAsync();
+                                    using (FileStream fs = new FileStream(nemoPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                                    using (StreamReader reader = new StreamReader(fs))
+                                    {
+                                        rawJson = await reader.ReadToEndAsync();
+                                    }
                                 }
                                 else if (File.Exists(jsonPath))
                                 {
-                                    using FileStream fs = new FileStream(jsonPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                                    using StreamReader sr = new StreamReader(fs);
-                                    rawJson = await sr.ReadToEndAsync();
+                                    using (FileStream fs = new FileStream(jsonPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                                    using (StreamReader reader = new StreamReader(fs))
+                                    {
+                                        rawJson = await reader.ReadToEndAsync();
+                                    }
+                                }
+                                else if (File.Exists(gzPath))
+                                {
+                                    using (FileStream fsIn = new FileStream(gzPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                                    using (GZipStream gz = new GZipStream(fsIn, CompressionMode.Decompress))
+                                    using (StreamReader reader = new StreamReader(gz))
+                                    {
+                                        rawJson = await reader.ReadToEndAsync();
+                                    }
                                 }
 
                                 if (!string.IsNullOrEmpty(rawJson))
                                 {
-                                    JsonSerializerOptions options = new JsonSerializerOptions { IncludeFields = true, Converters = { new JsonStringEnumConverter() } };
-                                    WorldSnapshot? snap = JsonSerializer.Deserialize<WorldSnapshot>(rawJson, options);
-
-                                    if (snap != null && snap.creatures != null)
-                                    {
-                                        foreach (var c in snap.creatures)
-                                        {
-                                            if (string.IsNullOrEmpty(c.id)) c.id = Guid.NewGuid().ToString();
-                                        }
-                                        rawJson = JsonSerializer.Serialize(snap, options);
-                                    }
-
-                                    string payload = $"{{\"event\": \"playbackFrame\", \"frameData\": {rawJson}}}";
+                                    string payload = $"{{\"event\":\"playbackFrame\",\"frameData\":{rawJson}}}";
                                     await client.Send(payload);
                                 }
+                                else
+                                {
+                                    Console.WriteLine($"[PLAYBACK WARNING] Frame {tick} not found.");
+                                }
                             }
-                            catch (Exception ex) { NEMO.Log($"[PLAYBACK] Error: {ex.Message}", "tomato", ConsoleColor.Red); }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[PLAYBACK ERROR] Frame {tick}: {ex.Message}");
+                            }
                         });
+
                         return;
                     }
                     if (actionType == "loadRunTelemetry")
@@ -1683,10 +1720,10 @@ namespace NEMO
                             {
                                 foreach (var runDir in baseDir.GetDirectories())
                                 {
-                                    var files = runDir.GetFiles("Frame_*.json*");
+                                    var files = runDir.GetFiles("Frame_*");
                                     if (files.Length > 0)
                                     {
-                                        var ticks = files.Select(f => long.Parse(f.Name.Replace("Frame_", "").Replace(".json.gz", "").Replace(".json", ""))).OrderBy(t => t).ToList();
+                                        var ticks = files.Select(f => long.Parse(f.Name.Replace("Frame_", "").Replace(".json.gz", "").Replace(".json", "").Replace(".nemo", ""))).OrderBy(t => t).ToList();
 
                                         long totalSize = 0;
                                         int compressedCount = 0;
@@ -1812,6 +1849,70 @@ namespace NEMO
                                 BroadcastState();
                                 NEMO.Log($"[RESTORE] Successfully restored to tick {targetTick}!", "palegreen", ConsoleColor.Green);
                             }
+                        }
+                        return;
+                    }
+                    if (actionType == "decompressWorld")
+                    {
+                        string runID = root.GetProperty("runID").GetString()!;
+                        string runFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Config.RecordingsFolder, runID);
+
+                        if (Directory.Exists(runFolder))
+                        {
+                            Task.Run(() =>
+                            {
+                                var gzFiles = Directory.GetFiles(runFolder, "*.json.gz");
+                                if (gzFiles.Length == 0) return;
+
+                                long totalCompressedBytes = gzFiles.Sum(f => new FileInfo(f).Length);
+                                double compressedMB = totalCompressedBytes / (1024.0 * 1024.0);
+
+                                NEMO.Log($"[DECOMPRESS] Starting decompress of {gzFiles.Length} frames (~{compressedMB:F1}MB)...", "#ffcc00", ConsoleColor.Yellow);
+
+                                Stopwatch timer = Stopwatch.StartNew();
+                                int totalFiles = gzFiles.Length;
+                                int decompressedCount = 0;
+                                int lastReportedPercent = -1;
+                                object socketLock = new object();
+
+                                Parallel.ForEach(gzFiles, gzFile =>
+                                {
+                                    string jsonPath = gzFile.Substring(0, gzFile.Length - 3);
+
+                                    try
+                                    {
+                                        using (FileStream fsIn = new FileStream(gzFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                        using (GZipStream gz = new GZipStream(fsIn, CompressionMode.Decompress))
+                                        using (FileStream fsOut = new FileStream(jsonPath, FileMode.Create, FileAccess.Write))
+                                        {
+                                            gz.CopyTo(fsOut);
+                                        }
+
+                                        File.Delete(gzFile);
+
+                                        int current = Interlocked.Increment(ref decompressedCount);
+                                        int percent = (int)(((double)current / totalFiles) * 100);
+
+                                        if (percent >= lastReportedPercent + 2 || current == totalFiles)
+                                        {
+                                            lock (socketLock)
+                                            {
+                                                lastReportedPercent = percent;
+                                                client.Send(JsonSerializer.Serialize(new { @event = "decompressProgress", runID = runID, percent = percent }));
+                                            }
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"[DECOMPRESS] Error {gzFile}: {ex.Message}");
+                                    }
+                                });
+
+                                timer.Stop();
+                                NEMO.Log($"[DECOMPRESS] {decompressedCount} frames decompressed in {timer.ElapsedMilliseconds}ms.", "palegreen", ConsoleColor.Green);
+
+                                client.Send(JsonSerializer.Serialize(new { @event = "decompressComplete", runID = runID }));
+                            });
                         }
                         return;
                     }

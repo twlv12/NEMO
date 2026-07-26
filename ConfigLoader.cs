@@ -102,20 +102,46 @@ namespace NEMO
         public static bool hideConsole;
         public static bool pauseWithoutUI;
         public static bool compressRecordings;
+        public static bool runLegacyPatcher;
 
-        public static string exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        public static bool IsDevMode => Directory.Exists(Path.GetFullPath(Path.Combine(exeDirectory, "..", "Web")));
-
-        public static string projectDirectory = IsDevMode
-            ? Path.GetFullPath(Path.Combine(exeDirectory, ".."))
-            : exeDirectory;
-
-        public static string MainConfigFile = Path.Combine(projectDirectory, "Config.json");
+        public static string MainConfigFile = GetResolvedConfigPath();
+        public static string projectDirectory = GetResolvedProjectDirectory();
         public static string RuntimeConfigFile = Path.Combine(projectDirectory, "runtimeConfig.json");
 
         public static string WebFolder = Path.Combine(projectDirectory, "Web");
         public static string SavedGenomesFolder = Path.Combine(projectDirectory, "SavedGenomes");
         public static string RecordingsFolder = Path.Combine(projectDirectory, "Recordings");
+
+        public static bool IsDevMode => File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "NEMO.csproj"));
+
+        private static string GetResolvedConfigPath()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+            string localConfig = Path.Combine(baseDir, "Config.json");
+
+            string devConfig = Path.GetFullPath(Path.Combine(baseDir, "..", "Config.json"));
+            string devProjFile = Path.GetFullPath(Path.Combine(baseDir, "..", "NEMO.csproj"));
+
+            if (File.Exists(devConfig) && File.Exists(devProjFile))
+            {
+                return devConfig;
+            }
+
+            return localConfig;
+        }
+        private static string GetResolvedProjectDirectory()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string devProjFile = Path.GetFullPath(Path.Combine(baseDir, "..", "NEMO.csproj"));
+
+            if (File.Exists(devProjFile))
+            {
+                return Path.GetFullPath(Path.Combine(baseDir, ".."));
+            }
+
+            return baseDir;
+        }
 
         public static void Load()
         {

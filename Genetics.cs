@@ -66,9 +66,7 @@ namespace NEMO
                 { PType.BrainSize, new PhenoFlag(1.0f, 0.5f, 3.0f, 0.1f) },
 
                 //interaction
-                //energy from attacking, worse at eating food
-                { PType.Vampirism, new PhenoFlag(0.0f, 0.0f, 1.0f) },
-                //large attack damage, BUT 
+                //large attack damage, but more energy
                 { PType.Lethality, new PhenoFlag(1.0f, 0.1f, 5.0f) },
                 //prevents friendly fire
                 { PType.SocialCohesion, new PhenoFlag(0.0f, 0.0f, 1.0f) },

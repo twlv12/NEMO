@@ -445,11 +445,14 @@ namespace NEMO
                             target.energy -= actualDamage;
                             c.damageDealt += actualDamage;
 
-                            float vampiricDraw = actualDamage * c.GetPheno(PType.Vampirism);
-                            float vampiricAbsorbed = vampiricDraw * Config.meatEntropyMulti;
+                            float biteEfficiency = c.GetPheno(PType.CarnivoryBias) * (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
+                            float caloriesAbsorbed = actualDamage * Config.meatEntropyMulti * biteEfficiency;
 
-                            c.energy += vampiricAbsorbed;
+                            c.energy += caloriesAbsorbed;
                             c.energy -= actualDamage * target.GetPheno(PType.SpikeCoating);
+
+                            tickMeatsEaten++;
+                            c.meatsEaten++;
 
                             if (target.energy <= target.startingEnergy * Config.deathEnergy)
                             {
@@ -581,8 +584,7 @@ namespace NEMO
                 {
                     FoodItem meal = currentCell.foodItem;
                     float efficiency = meal.isMeat ? c.GetPheno(PType.CarnivoryBias) : (1f - c.GetPheno(PType.CarnivoryBias));
-                    if (meal.isMeat) efficiency *= c.GetPheno(PType.ScavengerTolerance);
-                    efficiency *= (1f - c.GetPheno(PType.Vampirism) * 0.8f);
+                    if (meal.isMeat) efficiency *= (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
 
                     c.energy += meal.nutrition * efficiency;
 
@@ -623,8 +625,7 @@ namespace NEMO
                                 if (adjMeal != null)
                                 {
                                     float efficiency = adjMeal.isMeat ? c.GetPheno(PType.CarnivoryBias) : (1f - c.GetPheno(PType.CarnivoryBias));
-                                    if (adjMeal.isMeat) efficiency *= c.GetPheno(PType.ScavengerTolerance);
-                                    efficiency *= (1f - c.GetPheno(PType.Vampirism) * 0.8f);
+                                    if (adjMeal.isMeat) efficiency *= (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
 
                                     c.energy += adjMeal.nutrition * efficiency * c.intentConsume;
 
