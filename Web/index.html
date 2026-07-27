@@ -287,6 +287,7 @@
         <p id="connStatus" style="color: #ffcc00; font-family: consolas; font-weight: bold; font-size: 20px; letter-spacing: 2px;">CONNECTING TO CORE...</p>
     </div>
 
+
     <div id="consoleWrapper" style="position: fixed; bottom: 0; left: 10px; z-index: 5000; width: 420px; display: flex; flex-direction: column; pointer-events: none;">
         <div id="consoleTab" onclick="toggleConsole()" style="width: max-content; background: rgba(20,20,20,0.95); border: 1px solid #444; border-bottom: none; border-radius: 6px 6px 0 0; padding: 4px 15px; color: #8fdfff; font-family: consolas, monospace; font-size: 11px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 -2px 10px rgba(0,0,0,0.5);">
             >_ CONSOLE
@@ -423,12 +424,12 @@
                     <label for="pauseOnSelect" style="font-size: 13px; cursor: pointer; color: #ccc;">Pause on Select</label>
                 </div>
                 <div style="margin-bottom: 4px; display: flex; align-items: center;">
-                    <input type="checkbox" id="renderCones" onclick="toggleRenderCones()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
-                    <label for="renderCones" style="font-size: 13px; cursor: pointer; color: #ccc;">Visual Cones</label>
+                    <input type="checkbox" id="popDensity" onclick="togglePopDensity()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="popDensity" style="font-size: 13px; cursor: pointer; color: #ccc;">Popul. Density</label>
                 </div>
                 <div style="margin-bottom: 4px; display: flex; align-items: center;">
-                    <input type="checkbox" id="popDensity" onclick="togglePopDensity()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
-                    <label for="popDensity" style="font-size: 13px; cursor: pointer; color: #ccc;">Popul. Density</label>
+                    <input type="checkbox" id="renderCones" onclick="toggleRenderCones()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
+                    <label for="renderCones" style="font-size: 13px; cursor: pointer; color: #ccc;">Visual Cones</label>
                 </div>
                 <div style="margin-bottom: 4px; display: flex; align-items: center;">
                     <input type="checkbox" id="renderFertility" onclick="toggleRenderFertility()" style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
@@ -442,6 +443,15 @@
                     <input type="checkbox" id="renderCreatures" onclick="toggleRenderCreatures()" checked style="margin-right: 6px; cursor: pointer; transform: scale(1.1); accent-color: #8fdfff">
                     <label for="renderCreatures" style="font-size: 13px; cursor: pointer; color: #ccc;">Draw Creatures</label>
                 </div>
+                <div style="margin-bottom: 4px; display: flex; align-items: center; border-top: 1px solid #444; padding-top: 6px; margin-top: 6px;">
+                    <span style="font-size: 11px; color: #aaa; width: 100%;">Color Mode:</span>
+                </div>
+                <select id="colorMode" onchange="updateColorMode()" style="width: 100%; font-size: 11px; padding: 4px; background: #222; color: white; border: 1px solid #555; border-radius: 4px; outline: none; cursor: pointer; font-family: consolas; margin-bottom: 4px;">
+                    <option value="default">Default Genetics</option>
+                    <option value="diet">Diet Type</option>
+                    <option value="lineage">Lineage Lifespan</option>
+                    <option value="energy">Current Energy</option>
+                </select>
             </div>
 
             <div class="panel-section" style="margin-bottom: 0; margin-top: 10px; border-top-color: #ff99cc;">
@@ -802,7 +812,7 @@
         let placeSlot = null;
 
         let renderCones = false;
-        let renderPopDensity = false;
+        let renderPopDensity = true;
         let autoRestart = false;
         let pauseOnExtinction = true;
         let repopExtinct = false;
@@ -825,6 +835,7 @@
         let foods = [];
         let creaturesMap = new Map();
         let foodsMap = new Map();
+        let colorMode = 'default';
 
         let selectedCreatureId = null;
         let isHUDTracking = false;
@@ -861,6 +872,7 @@
         let largeGraphs = false;
         let spawnOffsetX = 300;
         let spawnOffsetY = 30;
+        let currentLifeMeas = 50;
 
         const colorPalette = ['#8fdfff', '#ffcc00', '#ff99cc', 'palegreen', 'tomato', 'mediumpurple', '#ffaa00', '#00ffff'];
         const masterCanvas = document.getElementById('masterCanvas');
@@ -930,9 +942,14 @@
             }, 2000);
         };
 
-        let latestRawData = null;
+        let latestWorldData = null;
         socket.onmessage = (event) => {
             try {
+                if (event.data.includes('"creatures":') && !event.data.includes('"event":')) {
+                    latestWorldData = event.data;
+                    return;
+                }
+
                 const data = JSON.parse(event.data);
 
                 if (data.event === "restoreComplete") {
@@ -973,8 +990,16 @@
 
                     const c = creaturesMap.get(data.id);
                     if (c) {
-                        panX = (canvas.width / 2) - ((c.x * CELL_SIZE + CELL_SIZE / 2) * scale);
-                        panY = (canvas.height / 2) - ((c.y * CELL_SIZE + CELL_SIZE / 2) * scale);
+                        scale = 8.0;
+
+                        let targetPanX = (canvas.width / 2) - ((c.x * CELL_SIZE + CELL_SIZE / 2) * scale);
+                        let targetPanY = (canvas.height / 2) - ((c.y * CELL_SIZE + CELL_SIZE / 2) * scale);
+
+                        const maxPanX = 0, minPanX = canvas.width - (canvas.width * scale);
+                        const maxPanY = 0, minPanY = canvas.height - (canvas.height * scale);
+
+                        panX = Math.max(minPanX, Math.min(maxPanX, targetPanX));
+                        panY = Math.max(minPanY, Math.min(maxPanY, targetPanY));
                     }
 
                     let btn = document.getElementById('champBtn');
@@ -1176,16 +1201,27 @@
                             creaturesMap.set(c.id, {
                                 x: c.x, y: c.y, targetX: c.x, targetY: c.y,
                                 angle: targetAngle, targetAngle: targetAngle,
-                                r: r, g: g, b: b,
-                                energy: Math.min(1, Math.max(0, c.energy / 4000)),
-                                cones: []
+                                r: c.r, g: c.g, b: c.b,
+                                cones: c.cones,
+                                slot: c.slot,
+                                energy: c.energy,
+                                parentId: c.parentId,
+                                diet: c.diet,
+                                lineage: c.lineage
                             });
                         } else {
                             let existing = creaturesMap.get(c.id);
                             existing.targetX = c.x;
                             existing.targetY = c.y;
                             existing.targetAngle = targetAngle;
-                            existing.energy = Math.min(1, Math.max(0, c.energy / 4000));
+                            existing.cones = c.cones;
+                            existing.slot = c.slot;
+                            existing.energy = c.energy;
+                            existing.diet = c.diet;
+                            existing.lineage = c.lineage;
+
+                            while (existing.targetAngle - existing.angle > Math.PI) existing.targetAngle -= Math.PI * 2;
+                            while (existing.targetAngle - existing.angle < -Math.PI) existing.targetAngle += Math.PI * 2;
                         }
                     });
                     for (let id of creaturesMap.keys()) {
@@ -1290,242 +1326,6 @@
                     return;
                 }
 
-                if (!data.creatures) return;
-                document.getElementById('genOverlay').style.display = 'none';
-
-                const infoBox = document.getElementById('creatureInfo');
-                if (data.trackedInfo) {
-                    latestTrackedInfo = data.trackedInfo;
-                    if (data.trackedInfo.id && (showHUD || isHUDTracking)) {
-                        selectedCreatureId = data.trackedInfo.id;
-                    }
-                }
-                else {
-                    latestTrackedInfo = null;
-                    if (!isHUDTracking && !showHUD && infoBox) {
-                        infoBox.style.display = 'none';
-                    }
-                }
-
-
-                if (data.stats) {
-                    if (data.stats.ticks !== lastGraphTick) {
-                        lastGraphTick = data.stats.ticks;
-
-                        let eRatio = data.stats.eOut > 0 ? (data.stats.eIn / data.stats.eOut) : 0;
-                        if (data.stats.eIn < 1 || data.stats.eOut < 1) {
-                            eRatio = 1;
-                        }
-                        let capRatio = data.stats.govCap > 0 ? (data.stats.govCurE / data.stats.govCap) : 0;
-
-                        data.stats.eRatio = eRatio;
-                        data.stats.capRatio = capRatio;
-
-                        Object.keys(data.stats).forEach(key => {
-                            if (typeof data.stats[key] === 'number') {
-                                if (!simHistory[key]) {
-                                    simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
-                                }
-
-                                const hist = simHistory[key];
-                                const val = data.stats[key];
-
-                                hist.raw.push(val);
-                                if (hist.raw.length > 1000) hist.raw.shift();
-
-                                hist.midSum += val;
-                                hist.midCount++;
-                                if (hist.midCount >= 10) {
-                                    hist.mid.push(hist.midSum / hist.midCount);
-                                    hist.midSum = 0; hist.midCount = 0;
-                                    if (hist.mid.length > 1000) hist.mid.shift();
-                                }
-
-                                hist.longSum += val;
-                                hist.longCount++;
-                                if (hist.longCount >= 100) {
-                                    hist.long.push(hist.longSum / hist.longCount);
-                                    hist.longSum = 0; hist.longCount = 0;
-                                    if (hist.long.length > 1000) hist.long.shift();
-                                }
-                            }
-                        });
-                        drawMasterGraph();
-                    }
-
-                    document.getElementById('t-pop').innerText = data.stats.pop;
-                    currentPop = data.stats.pop;
-                    currentTPS = data.stats.tps;
-                    updateRecordingEstimate();
-                    document.getElementById('t-extinctions').innerText = data.stats.extinctions;
-                    document.getElementById('t-food').innerText = `${data.stats.plants} | ${data.stats.meat}`;
-
-                    document.getElementById('t-tps-ticks').innerText = `${data.stats.tps} / ${formatNum(data.stats.ticks)}`;
-                    document.getElementById('t-perf').innerText = `${data.stats.simLoad.toFixed(2)}ms / ${data.stats.uiLoad.toFixed(2)}ms`;
-                    document.getElementById('t-saved').innerText = `${data.stats.savedGenomesSession} / ${data.stats.savedGenomesTotal}`;
-                    document.getElementById('t-significance').innerText = data.stats.highestSignificance.toFixed(2);
-
-                    document.getElementById('t-peaten').innerText = (data.stats.plantsEaten * 1000).toFixed(1);
-                    document.getElementById('t-meaten').innerText = (data.stats.meatsEaten * 1000).toFixed(1);
-                    document.getElementById('t-attacks').innerText = (data.stats.attacks * 1000).toFixed(1);
-                    document.getElementById('t-killrate').innerText = (data.stats.killRate * 1000).toFixed(1);
-                    document.getElementById('t-herbs').innerText = data.stats.herbivores;
-                    document.getElementById('t-omnis').innerText = data.stats.omnivores;
-                    document.getElementById('t-hunts').innerText = data.stats.hunters;
-                    document.getElementById('t-scavs').innerText = data.stats.scavengers;
-                    document.getElementById('t-paras').innerText = data.stats.parasites;
-
-                    document.getElementById('t-ein').innerText = data.stats.eIn.toFixed(1);
-                    document.getElementById('t-eout').innerText = data.stats.eOut.toFixed(1);
-
-                    let eRatio = data.stats.eOut > 0 ? (data.stats.eIn / data.stats.eOut) : 0;
-                    let ratioEl = document.getElementById('t-eratio');
-                    ratioEl.innerText = eRatio.toFixed(2);
-                    ratioEl.style.color = eRatio >= 1.0 ? "palegreen" : "tomato";
-
-                    document.getElementById('t-te-plant').innerText = formatNum(data.stats.totalPlantE);
-                    document.getElementById('t-te-meat').innerText = formatNum(data.stats.totalMeatE);
-                    document.getElementById('t-te-bio').innerText = formatNum(data.stats.totalCreatureE);
-
-                    document.getElementById('t-births').innerText = (data.stats.births * 1000).toFixed(1);
-                    document.getElementById('t-deaths').innerText = (data.stats.deaths * 1000).toFixed(1);
-                    document.getElementById('t-lifeact').innerText = data.stats.lifeMeas.toFixed(0);
-                    document.getElementById('t-lifemath').innerText = data.stats.lifeMath.toFixed(0);
-
-                    document.getElementById('t-avggen').innerText = data.stats.avgGen.toFixed(1);
-                    document.getElementById('t-maxgen').innerText = data.stats.maxGen;
-
-                    document.getElementById('t-meatbias').innerText = data.stats.avgCarnivory.toFixed(2);
-                    document.getElementById('t-armor').innerText = data.stats.avgArmor.toFixed(2);
-                    document.getElementById('t-lethal').innerText = data.stats.avgLethality.toFixed(2);
-                    document.getElementById('t-genes').innerText = data.stats.avgGenes.toFixed(1);
-
-                    if (data.stats.govCap !== undefined) {
-                        document.getElementById('t-gov-cap').innerText = formatNum(data.stats.govCap);
-                        document.getElementById('t-gov-cure').innerText = formatNum(data.stats.govCurE);
-
-                        let capRatio = data.stats.govCap > 0 ? (data.stats.govCurE / data.stats.govCap) : 0;
-                        let ratioEl = document.getElementById('t-gov-ratio');
-                        ratioEl.innerText = capRatio.toFixed(2);
-                        ratioEl.style.color = capRatio <= 1.0 ? "palegreen" : "tomato";
-
-                        document.getElementById('t-gov-actlife').innerText = data.stats.govActLife.toFixed(0);
-                        document.getElementById('t-gov-lifes').innerText = `${data.stats.govMathLife.toFixed(0)} | ${data.stats.lifeMeas.toFixed(0)}`;
-                        document.getElementById('t-gov-blend').innerText = `${(data.stats.govBlend * 100).toFixed(0)}%`;
-                        document.getElementById('t-gov-mom').innerText = data.stats.govMom.toFixed(2);
-                        document.getElementById('t-gov-waste').innerText = data.stats.govWastePen.toFixed(2);
-                    }
-                }
-
-                if (worldWidth !== data.width || worldHeight !== data.height) {
-                    worldWidth = data.width;
-                    worldHeight = data.height;
-
-                    canvas.width = 1600;
-                    canvas.height = 1600;
-                    fertCanvas.width = 1600;
-                    fertCanvas.height = 1600;
-
-                    CELL_SIZE = canvas.width / worldWidth;
-                    buildSprites(CELL_SIZE);
-                    bgNeedsUpdate = true;
-                }
-
-                if (data.fertMap) {
-                    const binaryString = atob(data.fertMap);
-
-                    const dw = Math.floor(worldWidth / 2);
-                    const dh = Math.floor(worldHeight / 2);
-
-                    if (fertCanvas.width !== dw || fertCanvas.height !== dh) {
-                        fertCanvas.width = dw;
-                        fertCanvas.height = dh;
-                    }
-
-                    const imgData = fertCtx.createImageData(dw, dh);
-                    const pixels = imgData.data;
-
-                    for (let i = 0; i < binaryString.length; i++) {
-                        const val = binaryString.charCodeAt(i) / 255.0;
-                        const idx = i * 4;
-                        if (val > 0.5) {
-                            pixels[idx] = 143;
-                            pixels[idx + 1] = 223;
-                            pixels[idx + 2] = 255;
-                            pixels[idx + 3] = Math.floor((val - 0.5) * 0.8 * 255);
-                        } else {
-                            pixels[idx + 3] = 0;
-                        }
-                    }
-                    fertCtx.putImageData(imgData, 0, 0);
-                }
-
-                if (data.blocks && data.blocks.length !== staticBlocks.length) {
-                    staticBlocks = data.blocks;
-                    bgNeedsUpdate = true;
-                }
-
-                const currentFoodIDs = new Set();
-                data.foods.forEach(f => {
-                    const id = `${f.x},${f.y}`;
-                    currentFoodIDs.add(id);
-
-                    if (!foodsMap.has(id)) {
-                        foodsMap.set(id, { x: f.x, y: f.y, meat: f.meat, scale: 0, targetScale: 1 });
-                    } else {
-                        let existing = foodsMap.get(id);
-                        existing.meat = f.meat;
-                        existing.targetScale = 1;
-                    }
-                });
-
-                for (let [id, f] of foodsMap.entries()) {
-                    if (!currentFoodIDs.has(id)) {
-                        f.targetScale = 0;
-                    }
-                }
-
-                const currentIDs = new Set();
-
-                data.creatures.forEach(c => {
-                    currentIDs.add(c.id);
-                    const targetAngle = (c.dir - 2) * (Math.PI / 4);
-
-                    if (c.parentId && trackedLineageIds.has(c.parentId)) {
-                        trackedLineageIds.add(c.id);
-                    }
-
-                    if (!creaturesMap.has(c.id)) {
-                        creaturesMap.set(c.id, {
-                            x: c.x, y: c.y, targetX: c.x, targetY: c.y,
-                            angle: targetAngle, targetAngle: targetAngle,
-                            r: c.r, g: c.g, b: c.b,
-                            cones: c.cones,
-                            slot: c.slot,
-                            energy: c.energy,
-                            parentId: c.parentId,
-                        });
-                    } else {
-                        let existing = creaturesMap.get(c.id);
-                        existing.targetX = c.x;
-                        existing.targetY = c.y;
-                        existing.targetAngle = targetAngle;
-                        existing.cones = c.cones;
-                        existing.slot = c.slot;
-                        existing.energy = c.energy;
-
-                        while (existing.targetAngle - existing.angle > Math.PI) existing.targetAngle -= Math.PI * 2;
-                        while (existing.targetAngle - existing.angle < -Math.PI) existing.targetAngle += Math.PI * 2;
-                    }
-                });
-
-                for (let id of creaturesMap.keys()) {
-                    if (!currentIDs.has(id)) {
-                        creaturesMap.delete(id);
-                        if (selectedCreatureId === id) hideContextMenu();
-                        trackedLineageIds.delete(id);
-                    }
-                }
             } catch (err) {
                 console.error("Socket Message Parse Error:", err);
             }
@@ -1789,6 +1589,51 @@
             //    ctx.restore();
             //}
         }
+        function getRenderColor(c) {
+            let r = c.r, g = c.g, b = c.b;
+
+            let diet = c.diet !== undefined ? c.diet : 4;
+            let lineage = c.lineage || 0;
+            let nrg = c.energy || 0;
+
+            if (colorMode === 'diet') {
+                if (diet === 0) { r = 100; g = 251; b = 100; }      
+                else if (diet === 1) { r = 255; g = 99; b = 71; }   
+                else if (diet === 2) { r = 244; g = 164; b = 96; }  
+                else if (diet === 3) { r = 147; g = 112; b = 219; } 
+                else { r = 95; g = 158; b = 160; }                  
+            }
+            else if (colorMode === 'lineage') {
+                let mid = Math.max(1, currentLifeMeas || 1);
+                let ratio = lineage / mid;
+
+                if (ratio <= 1) {
+                    r = 255;
+                    g = Math.round(255 * ratio);
+                    b = 50;
+                } else {
+                    let overRatio = Math.min(1, (ratio - 1));
+                    r = Math.round(255 * (1 - overRatio));
+                    g = 255;
+                    b = 50;
+                }
+            }
+            else if (colorMode === 'energy') {
+                if (nrg > 0.5) {
+                    let ratio = (nrg - 0.5) * 2;
+                    r = Math.round(255 * (1 - ratio));
+                    g = 255;
+                    b = 0;
+                } else {
+                    let ratio = nrg * 2;
+                    r = 255;
+                    g = Math.round(255 * ratio);
+                    b = 0;
+                }
+            }
+
+            return { r: r || 0, g: g || 0, b: b || 0 };
+        }
 
         function buildSprites(baseC) {
             const resMultiplier = 8;
@@ -1835,14 +1680,267 @@
         }
 
         function render() {
+            if (latestWorldData) {
+                const data = JSON.parse(latestWorldData);
+                latestWorldData = null;
+
+                if (!data.creatures) return;
+                document.getElementById('genOverlay').style.display = 'none';
+
+                const infoBox = document.getElementById('creatureInfo');
+                if (data.trackedInfo) {
+                    latestTrackedInfo = data.trackedInfo;
+                    if (data.trackedInfo.id && (showHUD || isHUDTracking)) {
+                        selectedCreatureId = data.trackedInfo.id;
+                    }
+                }
+                else {
+                    latestTrackedInfo = null;
+                    if (!isHUDTracking && !showHUD && infoBox) {
+                        infoBox.style.display = 'none';
+                    }
+                }
+
+                if (data.stats) {
+                    if (data.stats.ticks !== lastGraphTick) {
+                        lastGraphTick = data.stats.ticks;
+
+                        let eRatio = data.stats.eOut > 0 ? (data.stats.eIn / data.stats.eOut) : 0;
+                        if (data.stats.eIn < 1 || data.stats.eOut < 1) {
+                            eRatio = 1;
+                        }
+                        let capRatio = data.stats.govCap > 0 ? (data.stats.govCurE / data.stats.govCap) : 0;
+
+                        data.stats.eRatio = eRatio;
+                        data.stats.capRatio = capRatio;
+
+                        Object.keys(data.stats).forEach(key => {
+                            if (typeof data.stats[key] === 'number') {
+                                if (!simHistory[key]) {
+                                    simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
+                                }
+
+                                const hist = simHistory[key];
+                                const val = data.stats[key];
+
+                                hist.raw.push(val);
+                                if (hist.raw.length > 1000) hist.raw.shift();
+
+                                hist.midSum += val;
+                                hist.midCount++;
+                                if (hist.midCount >= 10) {
+                                    hist.mid.push(hist.midSum / hist.midCount);
+                                    hist.midSum = 0; hist.midCount = 0;
+                                    if (hist.mid.length > 1000) hist.mid.shift();
+                                }
+
+                                hist.longSum += val;
+                                hist.longCount++;
+                                if (hist.longCount >= 100) {
+                                    hist.long.push(hist.longSum / hist.longCount);
+                                    hist.longSum = 0; hist.longCount = 0;
+                                    if (hist.long.length > 1000) hist.long.shift();
+                                }
+                            }
+                        });
+                        drawMasterGraph();
+                    }
+
+                    document.getElementById('t-pop').innerText = data.stats.pop;
+                    currentPop = data.stats.pop;
+                    currentTPS = data.stats.tps;
+                    currentLifeMeas = data.stats.lifeMeas;
+                    updateRecordingEstimate();
+                    document.getElementById('t-extinctions').innerText = data.stats.extinctions;
+                    document.getElementById('t-food').innerText = `${data.stats.plants} | ${data.stats.meat}`;
+
+                    document.getElementById('t-tps-ticks').innerText = `${data.stats.tps} / ${formatNum(data.stats.ticks)}`;
+                    document.getElementById('t-perf').innerText = `${data.stats.simLoad.toFixed(2)}ms / ${data.stats.uiLoad.toFixed(2)}ms`;
+                    document.getElementById('t-saved').innerText = `${data.stats.savedGenomesSession} / ${data.stats.savedGenomesTotal}`;
+                    document.getElementById('t-significance').innerText = data.stats.highestSignificance.toFixed(2);
+
+                    document.getElementById('t-peaten').innerText = (data.stats.plantsEaten * 1000).toFixed(1);
+                    document.getElementById('t-meaten').innerText = (data.stats.meatsEaten * 1000).toFixed(1);
+                    document.getElementById('t-attacks').innerText = (data.stats.attacks * 1000).toFixed(1);
+                    document.getElementById('t-killrate').innerText = (data.stats.killRate * 1000).toFixed(1);
+                    document.getElementById('t-herbs').innerText = data.stats.herbivores;
+                    document.getElementById('t-omnis').innerText = data.stats.omnivores;
+                    document.getElementById('t-hunts').innerText = data.stats.hunters;
+                    document.getElementById('t-scavs').innerText = data.stats.scavengers;
+                    document.getElementById('t-paras').innerText = data.stats.parasites;
+
+                    document.getElementById('t-ein').innerText = data.stats.eIn.toFixed(1);
+                    document.getElementById('t-eout').innerText = data.stats.eOut.toFixed(1);
+
+                    let eRatio = data.stats.eOut > 0 ? (data.stats.eIn / data.stats.eOut) : 0;
+                    let ratioEl = document.getElementById('t-eratio');
+                    ratioEl.innerText = eRatio.toFixed(2);
+                    ratioEl.style.color = eRatio >= 1.0 ? "palegreen" : "tomato";
+
+                    document.getElementById('t-te-plant').innerText = formatNum(data.stats.totalPlantE);
+                    document.getElementById('t-te-meat').innerText = formatNum(data.stats.totalMeatE);
+                    document.getElementById('t-te-bio').innerText = formatNum(data.stats.totalCreatureE);
+
+                    document.getElementById('t-births').innerText = (data.stats.births * 1000).toFixed(1);
+                    document.getElementById('t-deaths').innerText = (data.stats.deaths * 1000).toFixed(1);
+                    document.getElementById('t-lifeact').innerText = data.stats.lifeMeas.toFixed(0);
+                    document.getElementById('t-lifemath').innerText = data.stats.lifeMath.toFixed(0);
+
+                    document.getElementById('t-avggen').innerText = data.stats.avgGen.toFixed(1);
+                    document.getElementById('t-maxgen').innerText = data.stats.maxGen;
+
+                    document.getElementById('t-meatbias').innerText = data.stats.avgCarnivory.toFixed(2);
+                    document.getElementById('t-armor').innerText = data.stats.avgArmor.toFixed(2);
+                    document.getElementById('t-lethal').innerText = data.stats.avgLethality.toFixed(2);
+                    document.getElementById('t-genes').innerText = data.stats.avgGenes.toFixed(1);
+
+                    if (data.stats.govCap !== undefined) {
+                        document.getElementById('t-gov-cap').innerText = formatNum(data.stats.govCap);
+                        document.getElementById('t-gov-cure').innerText = formatNum(data.stats.govCurE);
+
+                        let capRatio = data.stats.govCap > 0 ? (data.stats.govCurE / data.stats.govCap) : 0;
+                        let ratioEl = document.getElementById('t-gov-ratio');
+                        ratioEl.innerText = capRatio.toFixed(2);
+                        ratioEl.style.color = capRatio <= 1.0 ? "palegreen" : "tomato";
+
+                        document.getElementById('t-gov-actlife').innerText = data.stats.govActLife.toFixed(0);
+                        document.getElementById('t-gov-lifes').innerText = `${data.stats.govMathLife.toFixed(0)} | ${data.stats.lifeMeas.toFixed(0)}`;
+                        document.getElementById('t-gov-blend').innerText = `${(data.stats.govBlend * 100).toFixed(0)}%`;
+                        document.getElementById('t-gov-mom').innerText = data.stats.govMom.toFixed(2);
+                        document.getElementById('t-gov-waste').innerText = data.stats.govWastePen.toFixed(2);
+                    }
+                }
+
+                if (worldWidth !== data.width || worldHeight !== data.height) {
+                    worldWidth = data.width;
+                    worldHeight = data.height;
+
+                    canvas.width = 1600;
+                    canvas.height = 1600;
+                    fertCanvas.width = 1600;
+                    fertCanvas.height = 1600;
+
+                    CELL_SIZE = canvas.width / worldWidth;
+                    buildSprites(CELL_SIZE);
+                    bgNeedsUpdate = true;
+                }
+
+                if (data.fertMap) {
+                    const binaryString = atob(data.fertMap);
+
+                    const dw = Math.floor(worldWidth / 2);
+                    const dh = Math.floor(worldHeight / 2);
+
+                    if (fertCanvas.width !== dw || fertCanvas.height !== dh) {
+                        fertCanvas.width = dw;
+                        fertCanvas.height = dh;
+                    }
+
+                    const imgData = fertCtx.createImageData(dw, dh);
+                    const pixels = imgData.data;
+
+                    for (let i = 0; i < binaryString.length; i++) {
+                        const val = binaryString.charCodeAt(i) / 255.0;
+                        const idx = i * 4;
+                        if (val > 0.5) {
+                            pixels[idx] = 143;
+                            pixels[idx + 1] = 223;
+                            pixels[idx + 2] = 255;
+                            pixels[idx + 3] = Math.floor((val - 0.5) * 0.8 * 255);
+                        } else {
+                            pixels[idx + 3] = 0;
+                        }
+                    }
+                    fertCtx.putImageData(imgData, 0, 0);
+                }
+
+                if (data.blocks && data.blocks.length !== staticBlocks.length) {
+                    staticBlocks = data.blocks;
+                    bgNeedsUpdate = true;
+                }
+
+                const currentFoodIDs = new Set();
+                data.foods.forEach(f => {
+                    const id = `${f.x},${f.y}`;
+                    currentFoodIDs.add(id);
+
+                    if (!foodsMap.has(id)) {
+                        foodsMap.set(id, { x: f.x, y: f.y, meat: f.meat, scale: 0, targetScale: 1 });
+                    } else {
+                        let existing = foodsMap.get(id);
+                        existing.meat = f.meat;
+                        existing.targetScale = 1;
+                    }
+                });
+
+                for (let [id, f] of foodsMap.entries()) {
+                    if (!currentFoodIDs.has(id)) {
+                        f.targetScale = 0;
+                    }
+                }
+
+                const currentIDs = new Set();
+
+                data.creatures.forEach(c => {
+                    currentIDs.add(c.id);
+                    const targetAngle = (c.dir - 2) * (Math.PI / 4);
+
+                    if (c.parentId && trackedLineageIds.has(c.parentId)) {
+                        trackedLineageIds.add(c.id);
+                    }
+
+                    if (!creaturesMap.has(c.id)) {
+                        creaturesMap.set(c.id, {
+                            x: c.x, y: c.y, targetX: c.x, targetY: c.y,
+                            angle: targetAngle, targetAngle: targetAngle,
+                            r: c.r, g: c.g, b: c.b,
+                            cones: c.cones,
+                            slot: c.slot,
+                            energy: c.energy,
+                            parentId: c.parentId,
+                            diet: c.diet,
+                            lineage: c.lineage
+                        });
+                    } else {
+                        let existing = creaturesMap.get(c.id);
+                        existing.targetX = c.x;
+                        existing.targetY = c.y;
+                        existing.targetAngle = targetAngle;
+                        existing.cones = c.cones;
+                        existing.slot = c.slot;
+                        existing.energy = c.energy;
+                        existing.diet = c.diet;
+                        existing.lineage = c.lineage;
+
+                        while (existing.targetAngle - existing.angle > Math.PI) existing.targetAngle -= Math.PI * 2;
+                        while (existing.targetAngle - existing.angle < -Math.PI) existing.targetAngle += Math.PI * 2;
+                    }
+                });
+
+                for (let id of creaturesMap.keys()) {
+                    if (!currentIDs.has(id)) {
+                        creaturesMap.delete(id);
+                        if (selectedCreatureId === id) hideContextMenu();
+                        trackedLineageIds.delete(id);
+                    }
+                }
+            }
+
+
             if (bgNeedsUpdate) {
                 bgCanvas.width = canvas.width;
                 bgCanvas.height = canvas.height;
                 bgCtx.fillStyle = '#1a1a1a';
                 bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
-                const blockSet = new Set(staticBlocks.map(b => `${b.x},${b.y}`));
-                const isSolid = (x, y) => blockSet.has(`${x},${y}`);
+                const solidGrid = new Uint8Array(worldWidth * worldHeight);
+                for (let i = 0; i < staticBlocks.length; i++) {
+                    solidGrid[staticBlocks[i].x + (staticBlocks[i].y * worldWidth)] = 1;
+                }
+                const isSolid = (x, y) => {
+                    if (x < 0 || x >= worldWidth || y < 0 || y >= worldHeight) return false;
+                    return solidGrid[x + (y * worldWidth)] === 1;
+                };
 
                 bgCtx.fillStyle = '#080808';
                 bgCtx.strokeStyle = '#080808';
@@ -1925,12 +2023,14 @@
                     const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
                     const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
 
+                    const color = getRenderColor(c);
+
                     const blurRadius = CELL_SIZE * 18;
                     const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, blurRadius);
 
-                    gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0.1)`);
-                    gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, 0.01)`);
-                    gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+                    gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 0.1)`);
+                    gradient.addColorStop(0.4, `rgba(${color.r}, ${color.g}, ${color.b}, 0.01)`);
+                    gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
 
                     ctx.fillStyle = gradient;
                     ctx.beginPath();
@@ -1976,8 +2076,9 @@
 
                 if (renderCreatures) {
                     const cos = Math.cos(c.angle), sin = Math.sin(c.angle);
-
                     ctx.setTransform(scale * cos, scale * sin, -scale * sin, scale * cos, cx * scale + panX, cy * scale + panY);
+
+                    const color = getRenderColor(c);
 
                     if (renderCones && c.cones && c.cones.length > 0) {
                         c.cones.forEach(cone => {
@@ -1990,9 +2091,9 @@
                                 const radFov = cone.fov * (Math.PI / 180);
                                 ctx.arc(0, 0, cone.range * CELL_SIZE, -radFov / 2, radFov / 2);
                                 ctx.closePath();
-                                ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.15)`;
+                                ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.15)`;
                                 ctx.fill();
-                                ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`;
+                                ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`;
                                 ctx.lineWidth = 1;
                                 ctx.stroke();
                                 ctx.restore();
@@ -2000,7 +2101,7 @@
                         });
                     }
 
-                    drawCreature(ctx, c.r, c.g, c.b, c.energy);
+                    drawCreature(ctx, color.r, color.g, color.b, c.energy);
 
                     if (id === selectedCreatureId) {
                         ctx.beginPath();
@@ -2467,6 +2568,9 @@
 
             document.getElementById('savePrompt').style.display = "none";
             if (isBankOpen) socket.send(JSON.stringify({ action: "getGenomeBank" }));
+        }
+        function updateColorMode() {
+            colorMode = document.getElementById('colorMode').value;
         }
 
         function openRawConfig() {

@@ -5,8 +5,8 @@ namespace NEMO
 {
     public class World
     {
-        public Cell[,] grid;
-        public float[,] fertilityMap;
+        public Cell[] grid;
+        public float[] fertilityMap;
         public List<Creature> creatures;
         public ConcurrentQueue<Creature> pendingNewborns = new();
         public readonly string runID = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -95,6 +95,8 @@ namespace NEMO
             public string slot { get; set; }
             public string parentId { get; set; }
             public List<ExportCone> cones { get; set; }
+            public int diet { get; set; }
+            public float lineage { get; set; }
         }
 
         private static readonly Comparison<Creature> CreatureMoveComparer = (a, b) =>
@@ -133,7 +135,7 @@ namespace NEMO
                 }
                 else
                 {
-                    if (fertilityMap[f.x, f.y] < Config.plantCutoff)
+                    if (fertilityMap[f.x + (f.y * width)] < Config.plantCutoff)
                     {
                         f.nutrition -= NEMO.disableEnergyDrain ? 0f : (Config.meatDecayRate * 0.15f);
                         if (f.nutrition <= 0) rottedMeatBuf.Add(f);
@@ -142,7 +144,7 @@ namespace NEMO
             }
             foreach (var r in rottedMeatBuf)
             {
-                grid[r.x, r.y].foodItem = null;
+                grid[r.x + (r.y * width)].foodItem = null;
                 activeFoods.Remove(r);
             }
 
@@ -155,17 +157,23 @@ namespace NEMO
             }
             for (int y = 0; y < height; y++)
             {
-                float fnx = (fertUpdateCol * Config.plantFrequency) / 60f + fertOffsetX;
-                float fny = (y * Config.plantFrequency) / 60f + fertOffsetY;
-                this.fertilityMap[fertUpdateCol, y] = MathfPerlin(fnx, fny);
+                if (!grid[fertUpdateCol + (y * width)].isOasis)
+                {
+                    float fnx = (fertUpdateCol * Config.plantFrequency) / 60f + fertOffsetX;
+                    float fny = (y * Config.plantFrequency) / 60f + fertOffsetY;
+                    this.fertilityMap[fertUpdateCol + (y * width)] = MathfPerlin(fnx, fny);
+                }
             }
             fertUpdateCol = (fertUpdateCol + 1) % width;
 
             DecaySignals();
 
-            System.Threading.Tasks.Parallel.For(0, creatures.Count, i =>
+            System.Threading.Tasks.Parallel.ForEach(Partitioner.Create(0, creatures.Count), range =>
             {
-                if (!creatures[i].isDead) creatures[i].Update();
+                for (int i = range.Item1; i < range.Item2; i++)
+                {
+                    if (!creatures[i].isDead) creatures[i].Update();
+                }
             });
 
             ResolveIntents();
@@ -177,11 +185,11 @@ namespace NEMO
                 int x = rand.Next(0, width);
                 int y = rand.Next(0, height);
 
-                if (!grid[x, y].isBlock && grid[x, y].occupant == null)
+                if (!grid[x + (y * width)].isBlock && grid[x + (y * width)].occupant == null)
                 {
                     Creature c = new Creature(x, y, GeneTools.GenerateGenome(), this);
                     creatures.Add(c);
-                    grid[x, y].occupant = c;
+                    grid[x + (y * width)].occupant = c;
 
                     tickEnergyIn += c.startingEnergy * 0.25f;
                 }
@@ -246,15 +254,15 @@ namespace NEMO
                         int fx = World.rand.Next(width);
                         int fy = World.rand.Next(height);
 
-                        if (!grid[fx, fy].isBlock && grid[fx, fy].occupant == null && grid[fx, fy].foodItem == null)
+                        if (!grid[fx + (fy * width)].isBlock && grid[fx + (fy * width)].occupant == null && grid[fx + (fy * width)].foodItem == null)
                         {
-                            bool isFertileZone = fertilityMap[fx, fy] > Config.plantCutoff;
+                            bool isFertileZone = fertilityMap[fx + (fy * width)] > Config.plantCutoff;
                             bool isWildSprout = World.rand.NextDouble() < Config.lingeringPlants;
 
                             if (isFertileZone || isWildSprout)
                             {
                                 var plant = new FoodItem(fx, fy, false);
-                                grid[fx, fy].foodItem = plant;
+                                grid[fx + (fy * width)].foodItem = plant;
                                 activeFoods.Add(plant);
                                 tickEnergyIn += Config.baseNutrition;
                             }
@@ -273,7 +281,7 @@ namespace NEMO
                     {
                         if (!activeFoods[i].isMeat)
                         {
-                            grid[activeFoods[i].x, activeFoods[i].y].foodItem = null;
+                            grid[activeFoods[i].x + (activeFoods[i].y * width)].foodItem = null;
                             activeFoods.RemoveAt(i);
                             wilted++;
                         }
@@ -318,7 +326,7 @@ namespace NEMO
             foreach (var cell in cellsToClearBuf) activeSignalCells.Remove(cell);
         }
 
-        private void ResolveIntents()
+        private void ResolveIntents()   
         {
             movingCreaturesBuf.Clear();
             newbornsBuf.Clear();
@@ -363,9 +371,9 @@ namespace NEMO
                 int targetY = c.y + (int)c.intentMoveY;
 
                 bool outOfBounds = targetX < 0 || targetX >= width || targetY < 0 || targetY >= height;
-                bool hitBlock = !outOfBounds && grid[targetX, targetY].isBlock;
+                bool hitBlock = !outOfBounds && grid[targetX + (targetY * width)].isBlock;
 
-                if (!outOfBounds && !hitBlock && grid[targetX, targetY].occupant == null)
+                if (!outOfBounds && !hitBlock && grid[targetX + (targetY * width)].occupant == null)
                 {
                     if (!NEMO.disableEnergyDrain)
                     {
@@ -376,10 +384,10 @@ namespace NEMO
                             (1f + c.GetPheno(PType.RotationalAgility) * 0.2f);
                     }
 
-                    grid[c.x, c.y].occupant = null;
+                    grid[c.x + (c.y * width)].occupant = null;
                     c.x = targetX;
                     c.y = targetY;
-                    grid[targetX, targetY].occupant = c;
+                    grid[targetX + (targetY * width)].occupant = c;
                 }
                 else if (outOfBounds || hitBlock)
                 {
@@ -422,7 +430,7 @@ namespace NEMO
 
                     if (targetX >= 0 && targetX < width && targetY >= 0 && targetY < height)
                     {
-                        Creature target = grid[targetX, targetY].occupant;
+                        Creature target = grid[targetX + (targetY * width)].occupant;
                         if (target != null && !target.isDead)
                         {
                             float rDiff = MathF.Abs(c.colorR - target.colorR);
@@ -463,9 +471,9 @@ namespace NEMO
                                 emaLifespan = (emaLifespan * 0.999f) + (target.age * 0.001f);
 
                                 target.isDead = true;
-                                grid[targetX, targetY].occupant = null;
+                                grid[targetX + (targetY * width)].occupant = null;
 
-                                FoodItem? existingItem = grid[targetX, targetY].foodItem;
+                                FoodItem? existingItem = grid[targetX + (targetY * width)].foodItem;
                                 if (existingItem != null) activeFoods.Remove(existingItem);
 
                                 float totalCorpseEnergy = Math.Min(Math.Max(0, target.energy), deathThreshold);
@@ -477,7 +485,7 @@ namespace NEMO
                                     nutrition = corpseCalories * (1f - target.GetPheno(PType.ToxicCorpse) * 0.5f)
                                 };
 
-                                grid[targetX, targetY].foodItem = meat;
+                                grid[targetX + (targetY * width)].foodItem = meat;
                                 activeFoods.Add(meat);
                             }
                         }
@@ -505,7 +513,7 @@ namespace NEMO
                         int cy = c.y + vec.dy;
                         if (cx >= 0 && cx < width && cy >= 0 && cy < height)
                         {
-                            Creature victim = grid[cx, cy].occupant;
+                            Creature victim = grid[cx + (cy * width)].occupant;
                             if (victim != null && victim != c && !victim.isDead)
                             {
                                 float healthRatio = Math.Clamp(victim.energy / victim.startingEnergy, 0f, 1f);
@@ -542,7 +550,7 @@ namespace NEMO
                         int cy = c.y + vec.dy;
                         if (cx >= 0 && cx < width && cy >= 0 && cy < height)
                         {
-                            Creature neighbor = grid[cx, cy].occupant;
+                            Creature neighbor = grid[cx + (cy * width)].occupant;
                             if (neighbor != null && neighbor != c && !neighbor.isDead)
                             {
                                 float neighborSymbiosis = neighbor.GetPheno(PType.Symbiosis);
@@ -579,7 +587,7 @@ namespace NEMO
 
                 c.energy -= tickCost;
 
-                var currentCell = grid[c.x, c.y];
+                var currentCell = grid[c.x + (c.y * width)];
                 if (currentCell.foodItem != null)
                 {
                     FoodItem meal = currentCell.foodItem;
@@ -621,7 +629,7 @@ namespace NEMO
 
                             if (cx >= 0 && cx < width && cy >= 0 && cy < height)
                             {
-                                FoodItem? adjMeal = grid[cx, cy].foodItem;
+                                FoodItem? adjMeal = grid[cx + (cy * width)].foodItem;
                                 if (adjMeal != null)
                                 {
                                     float efficiency = adjMeal.isMeat ? c.GetPheno(PType.CarnivoryBias) : (1f - c.GetPheno(PType.CarnivoryBias));
@@ -643,7 +651,7 @@ namespace NEMO
                                         c.plantsEaten++;
                                     }
                                     activeFoods.Remove(adjMeal);
-                                    grid[cx, cy].foodItem = null;
+                                    grid[cx + (cy * width)].foodItem = null;
                                     ateSomething = true;
                                 }
                             }
@@ -662,9 +670,9 @@ namespace NEMO
                     emaLifespan = (emaLifespan * 0.999f) + (c.age * 0.001f);
 
                     c.isDead = true;
-                    grid[c.x, c.y].occupant = null;
+                    grid[c.x + (c.y * width)].occupant = null;
 
-                    FoodItem? existingItem = grid[c.x, c.y].foodItem;
+                    FoodItem? existingItem = grid[c.x + (c.y * width)].foodItem;
                     if (existingItem != null)
                     {
                         activeFoods.Remove(existingItem);
@@ -680,7 +688,7 @@ namespace NEMO
                         nutrition = corpseCalories * (1f - c.GetPheno(PType.ToxicCorpse) * 0.5f)
                     };
 
-                    grid[c.x, c.y].foodItem = meat;
+                    grid[c.x + (c.y * width)].foodItem = meat;
                     activeFoods.Add(meat);
 
                     continue;
@@ -689,28 +697,27 @@ namespace NEMO
                 if (c.intentSignalChannel >= 0 && c.intentSignalIntensity > 0)
                 {
                     float volume = c.GetPheno(PType.PheromoneVolume);
-                    grid[c.x, c.y].signals[c.intentSignalChannel].intensity += c.intentSignalIntensity * volume;
+                    grid[c.x + (c.y * width)].signals[c.intentSignalChannel].intensity += c.intentSignalIntensity * volume;
                     c.energy -= c.intentSignalIntensity * volume * 0.5f;
 
-                    activeSignalCells.Add(grid[c.x, c.y]);
+                    activeSignalCells.Add(grid[c.x + (c.y * width)]);
 
                     float mappedDecay = 0.2f + 0.797f * (1f - MathF.Pow(1f - c.intentSignalDecay, 3));
                     mappedDecay *= (1f / c.GetPheno(PType.ChemicalVolatility));
 
-                    grid[c.x, c.y].signals[c.intentSignalChannel].decayRate = Math.Clamp(mappedDecay, 0.1f, 0.999f);
+                    grid[c.x + (c.y * width)].signals[c.intentSignalChannel].decayRate = Math.Clamp(mappedDecay, 0.1f, 0.999f);
                 }
 
                 float reqEnergy = c.startingEnergy * c.GetPheno(PType.ReproductionThreshold);
-                if (c.energy >= reqEnergy && c.genome.genes.Count > 0 && !NEMO.disableGovernor)
+                if (c.energy >= reqEnergy && c.genome.genes.Count > 0 && !NEMO.disableGovernor && c.gestationTimer <= 0)
                 {
                     bool placed = false;
                     int spawnX = c.x, spawnY = c.y;
 
-                    int[] dirs = { 0, 1, 2, 3, 4, 5, 6, 7 };
-                    World.rand.Shuffle(dirs);
-                    foreach (int i in dirs)
+                    int startDir = World.rand.Next(8);
+                    for (int i = 0; i < 8; i++)
                     {
-                        var vec = DirectionToVector[i];
+                        var vec = DirectionToVector[(startDir + i) % 8];
                         if (!IsCellObstructed(c.x + vec.dx, c.y + vec.dy))
                         {
                             spawnX = c.x + vec.dx;
@@ -723,6 +730,7 @@ namespace NEMO
                     if (placed)
                     {
                         tickBirths++;
+                        c.gestationTimer = (int)(Config.maturationTime * 3f * c.GetPheno(PType.GestationPeriod));
 
                         EvaluateSignificance(c);
 
@@ -740,7 +748,7 @@ namespace NEMO
                         child.lineageLifespan = (c.lineageLifespan == 0f) ? c.age : (c.lineageLifespan * 0.8f) + (c.age * 0.2f);
                         child.parentID = c.ID.ToString();
 
-                        grid[spawnX, spawnY].occupant = child;
+                        grid[spawnX + (spawnY * width)].occupant = child;
                         newbornsBuf.Add(child);
                     }
                 }
@@ -775,7 +783,7 @@ namespace NEMO
         public bool IsCellObstructed(int x, int y)
         {
             if (x < 0 || x >= width || y < 0 || y >= height) return true;
-            return grid[x, y].isBlock || grid[x, y].occupant != null;
+            return grid[x + (y * width)].isBlock || grid[x + (y * width)].occupant != null;
         }
 
         public string GetStateJson(Creature[] creaturesSnap, FoodItem[] foodsSnap, ExportBlock[] blocksSnap)
@@ -919,9 +927,71 @@ namespace NEMO
             {
                 for (int x = 0; x < dw; x++)
                 {
-                    float val = fertilityMap[x * 2, y * 2];
+                    float val = fertilityMap[x * 2 + (y * 2 * width)];
                     fertBytes[y * dw + x] = (byte)(Math.Clamp(val, 0f, 1f) * 255);
                 }
+            }
+
+            var exportFoods = new List<ExportFood>(foodsSnap.Length);
+            for (int i = 0; i < foodsSnap.Length; i++)
+            {
+                exportFoods.Add(new ExportFood { x = foodsSnap[i].x, y = foodsSnap[i].y, meat = foodsSnap[i].isMeat });
+            }
+
+            var exportCreatures = new List<ExportCreature>(creaturesSnap.Length);
+            float[] angleMap = new float[] { -90f, -45f, -20f, 0f, 20f, 45f, 90f, 180f };
+
+            for (int i = 0; i < creaturesSnap.Length; i++)
+            {
+                var c = creaturesSnap[i];
+                var creatureCones = new List<ExportCone>();
+
+                for (int n = 0; n < c.brain.neurons.Count; n++)
+                {
+                    var vNeuron = c.brain.neurons[n];
+                    if (NeuronDicts.VisionNeurons.Contains(vNeuron.func))
+                    {
+                        if (vNeuron.dataFields != null && vNeuron.dataFields.Length >= 3)
+                        {
+                            int fovMode = vNeuron.dataFields[1].intVal;
+                            float cFov = fovMode switch { 0 => 5f, 1 => 45f, 2 => 90f, 3 => 180f, 4 => 270f, _ => 45f };
+                            float cRange = vNeuron.dataFields[2].intVal * (1f + c.GetPheno(PType.VisionAcuity));
+                            float cOffset = angleMap[Math.Clamp(vNeuron.dataFields[0].intVal, 0, 7)];
+
+                            int steepnessVal = 0;
+                            if (vNeuron.func == NFunc.VisionGenSim && vNeuron.dataFields.Length > 5) steepnessVal = vNeuron.dataFields[5].intVal;
+                            else if (vNeuron.dataFields.Length > 4) steepnessVal = vNeuron.dataFields[4].intVal;
+
+                            creatureCones.Add(new ExportCone { range = cRange, fov = cFov, offset = cOffset, steepness = steepnessVal });
+                        }
+                    }
+                }
+
+                int dietType = 4;
+                float carn = c.GetPheno(PType.CarnivoryBias);
+                float para = c.GetPheno(PType.Parasitism);
+                float scav = c.GetPheno(PType.ScavengerTolerance);
+
+                if (para > 0.2f) dietType = 3;
+                else if (carn > 0.65f) dietType = (scav > 0.5f) ? 2 : 1;
+                else if (carn < 0.35f) dietType = 0;
+
+                exportCreatures.Add(new ExportCreature
+                {
+                    id = c.ID.ToString(),
+                    x = c.x,
+                    y = c.y,
+                    dir = c.facingDirection,
+                    r = c.colorR,
+                    g = c.colorG,
+                    b = c.colorB,
+                    energy = Math.Clamp(c.energy / c.startingEnergy, 0f, 1f),
+                    slot = c.trackedSlot ?? "",
+                    cones = creatureCones,
+                    parentId = c.parentID,
+                    diet = dietType,
+                    lineage = c.lineageLifespan
+                });
             }
 
             var payload = new
@@ -990,66 +1060,8 @@ namespace NEMO
                 trackedInfo = trackedInfoObj,
 
                 blocks = blocksSnap,
-                foods = foodsSnap.Select(f => new ExportFood { x = f.x, y = f.y, meat = f.isMeat }).ToList(),
-                creatures = creaturesSnap.Select(c =>
-                {
-                    List<ExportCone> creatureCones = new List<ExportCone>();
-
-                    var visionNeurons = c.brain.neurons.Where(n =>
-                        n.func == NFunc.Blockage ||
-                        n.func == NFunc.GeneSimilarity ||
-                        n.func.ToString() == "Proximity" ||
-                        n.func.ToString() == "TraitVision");
-
-                    foreach (var vNeuron in visionNeurons)
-                    {
-                        if (vNeuron.dataFields != null && vNeuron.dataFields.Length >= 3)
-                        {
-                            int angleOffset = vNeuron.dataFields[0].intVal;
-                            int fovMode = vNeuron.dataFields[1].intVal;
-                            int baseRange = vNeuron.dataFields[2].intVal;
-
-                            int steepnessVal = 0;
-                            if (vNeuron.func == NFunc.GeneSimilarity && vNeuron.dataFields.Length > 5)
-                                steepnessVal = vNeuron.dataFields[5].intVal;
-                            else if (vNeuron.dataFields.Length > 4)
-                                steepnessVal = vNeuron.dataFields[4].intVal;
-
-                            float cFov = fovMode switch
-                            {
-                                0 => 5f,
-                                1 => 45f,
-                                2 => 90f,
-                                3 => 180f,
-                                4 => 270f,
-                                _ => 45f
-                            };
-
-                            float cRange = baseRange * (1f + c.GetPheno(PType.VisionAcuity));
-
-                            float[] angleMap = new float[] { -90f, -45f, -20f, 0f, 20f, 45f, 90f, 180f };
-                            float cOffset = angleMap[Math.Clamp(angleOffset, 0, 7)];
-
-                            creatureCones.Add(new ExportCone { range = cRange, fov = cFov, offset = cOffset, steepness = steepnessVal });
-                        }
-                    }
-
-                    return new ExportCreature
-                    {
-                        id = c.ID.ToString(),
-                        x = c.x,
-                        y = c.y,
-                        dir = c.facingDirection,
-                        r = c.colorR,
-                        g = c.colorG,
-                        b = c.colorB,
-                        energy = Math.Clamp(c.energy / c.startingEnergy, 0f, 1f),
-                        slot = c.trackedSlot ?? "",
-                        cones = creatureCones,
-                        parentId = c.parentID,
-                    };
-
-                }).ToList()
+                foods = exportFoods,
+                creatures = exportCreatures,
             };
             return JsonSerializer.Serialize(payload);
         }
@@ -1071,14 +1083,14 @@ namespace NEMO
             this.width = width;
             this.height = height;
 
-            grid = new Cell[width, height];
-            this.fertilityMap = new float[width, height];
+            grid = new Cell[width*height];
+            this.fertilityMap = new float[width * height];
 
-            for (int x = 0; x < width; x++)
-            {
+            for(int x = 0; x < width; x++)
+{
                 for (int y = 0; y < height; y++)
                 {
-                    grid[x, y] = new Cell(x, y);
+                    grid[x + (y * width)] = new Cell(x, y);
                 }
             }
 
@@ -1093,7 +1105,10 @@ namespace NEMO
 
                 for (int x = 0; x < width; x++)
                     for (int y = 0; y < height; y++)
-                        grid[x, y].isBlock = false;
+                    {
+                        grid[x + (y * width)].isBlock = false;
+                        grid[x + (y * width)].isOasis = false;
+                    }
 
                 float terrainOffsetX = (float)rand.NextDouble() * 10000f;
                 float terrainOffsetY = (float)rand.NextDouble() * 10000f;
@@ -1120,15 +1135,51 @@ namespace NEMO
                         }
                         elevation /= maxAmp;
 
-                        if (elevation > Config.elevation)
-                        {
-                            grid[x, y].isBlock = true;
-                            staticBlocks.Add(new ExportBlock { x = x, y = y });
-                        }
+                        if (elevation > Config.elevation) grid[x + (y * width)].isBlock = true;
 
                         float fnx = (x * Config.plantFrequency) / 60f + fertOffsetX;
                         float fny = (y * Config.plantFrequency) / 60f + fertOffsetY;
-                        this.fertilityMap[x, y] = MathfPerlin(fnx, fny);
+                        this.fertilityMap[x + (y * width)] = MathfPerlin(fnx, fny);
+                    }
+                }
+
+                float veinOffsetX = (float)rand.NextDouble() * 10000f;
+                float veinOffsetY = (float)rand.NextDouble() * 10000f;
+
+                for (int x = 0; x < width; x++)
+                {
+                    for (int y = 0; y < height; y++)
+                    {
+                        float vx = (x * Config.frequency * Config.caveFrequency) / 60f + veinOffsetX;
+                        float vy = (y * Config.frequency * Config.caveFrequency) / 60f + veinOffsetY;
+                        float veinNoise = MathfPerlin(vx, vy);
+
+                        if (veinNoise > 0.46f && veinNoise < 0.54f)
+                        {
+                            grid[x + (y * width)].isBlock = false;
+
+                            if (rand.NextDouble() < 0.005)
+                            {
+                                int radius = rand.Next(5, 15);
+                                for (int dx = -radius; dx <= radius; dx++)
+                                {
+                                    for (int dy = -radius; dy <= radius; dy++)
+                                    {
+                                        if (dx * dx + dy * dy <= radius * radius)
+                                        {
+                                            int nx = x + dx, ny = y + dy;
+                                            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+                                            {
+                                                grid[nx + (ny * width)].isBlock = false;
+
+                                                grid[nx + (ny * width)].isOasis = true;
+                                                this.fertilityMap[nx + (ny * width)] = 1.0f;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1136,24 +1187,32 @@ namespace NEMO
                 {
                     for (int y = 1; y < height - 1; y++)
                     {
-                        if (!grid[x, y].isBlock)
+                        if (!grid[x + (y * width)].isBlock)
                         {
                             int neighborBlocks = 0;
-                            if (grid[x + 1, y].isBlock) neighborBlocks++;
-                            if (grid[x - 1, y].isBlock) neighborBlocks++;
-                            if (grid[x, y + 1].isBlock) neighborBlocks++;
-                            if (grid[x, y - 1].isBlock) neighborBlocks++;
+                            if (grid[x + 1 + (y * width)].isBlock) neighborBlocks++;
+                            if (grid[x - 1 + (y * width)].isBlock) neighborBlocks++;
+                            if (grid[x + ((y + 1) * width)].isBlock) neighborBlocks++;
+                            if (grid[x + ((y - 1) * width)].isBlock) neighborBlocks++;
 
-                            if (neighborBlocks == 4)
-                            {
-                                grid[x, y].isBlock = true;
-                                staticBlocks.Add(new ExportBlock { x = x, y = y });
-                            }
+                            if (neighborBlocks == 4) grid[x + (y * width)].isBlock = true;
                         }
                     }
                 }
 
-                terrainValid = CheckConnectivity();
+                staticBlocks.Clear();
+                for (int x = 0; x < width; x++)
+                {
+                    for (int y = 0; y < height; y++)
+                    {
+                        if (grid[x + (y * width)].isBlock)
+                        {
+                            staticBlocks.Add(new ExportBlock { x = x, y = y });
+                        }
+                    }
+                }
+
+                terrainValid = EnforceConnectivity();
             }
 
             if (!terrainValid)
@@ -1169,14 +1228,14 @@ namespace NEMO
                 int x = rand.Next(0, width);
                 int y = rand.Next(0, height);
 
-                if (!grid[x, y].isBlock && grid[x, y].occupant == null)
+                if (!grid[x + (y * width)].isBlock && grid[x + (y * width)].occupant == null)
                 {
                     Genome gen = genomePool.Count > 0 ? genomePool[rand.Next(genomePool.Count)] : GeneTools.GenerateGenome();
                     Creature c = new Creature(x, y, gen, this);
                     c.energy = c.startingEnergy * (c.GetPheno(PType.ReproductionThreshold) + Config.deathEnergy) / 2f;
 
                     creatures.Add(c);
-                    grid[x, y].occupant = c;
+                    grid[x + (y * width)].occupant = c;
                 }
             }
 
@@ -1190,77 +1249,86 @@ namespace NEMO
                 int fx = rand.Next(0, width);
                 int fy = rand.Next(0, height);
 
-                if (!grid[fx, fy].isBlock && grid[fx, fy].occupant == null && grid[fx, fy].foodItem == null)
+                if (!grid[fx + (fy * width)].isBlock && grid[fx + (fy * width)].occupant == null && grid[fx + (fy * width)].foodItem == null)
                 {
-                    bool isFertileZone = fertilityMap[fx, fy] > Config.plantCutoff;
+                    bool isFertileZone = fertilityMap[fx + (fy * width)] > Config.plantCutoff;
                     bool isWildSprout = World.rand.NextDouble() < Config.lingeringPlants;
 
                     if (isFertileZone || isWildSprout)
                     {
                         var plant = new FoodItem(fx, fy, false);
-                        grid[fx, fy].foodItem = plant;
+                        grid[fx + (fy * width)].foodItem = plant;
                         activeFoods.Add(plant);
                         tickEnergyIn += Config.baseNutrition;
+                        foodPlaced++;
                     }
                 }
             }
             NEMO.Log($"[WORLD] Seeded {foodPlaced} food items.", "palegreen", ConsoleColor.Green);
         }
 
-        private bool CheckConnectivity()
+        private bool EnforceConnectivity()
         {
-            bool[,]? visited = new bool[width, height];
-            int totalOpenCells = 0;
-            int startX = -1, startY = -1;
+            bool[,] visited = new bool[width, height];
+            List<List<(int x, int y)>> regions = new List<List<(int x, int y)>>();
+
+            int[] dx = { 0, 0, 1, -1 };
+            int[] dy = { 1, -1, 0, 0 };
 
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
-                    if (!grid[x, y].isBlock)
+                    if (!grid[x + (y * width)].isBlock && !visited[x, y])
                     {
-                        totalOpenCells++;
-                        if (startX == -1)
+                        List<(int x, int y)> newRegion = new List<(int x, int y)>();
+                        Queue<(int x, int y)> queue = new Queue<(int x, int y)>();
+
+                        queue.Enqueue((x, y));
+                        visited[x, y] = true;
+
+                        while (queue.Count > 0)
                         {
-                            startX = x;
-                            startY = y;
+                            var (cx, cy) = queue.Dequeue();
+                            newRegion.Add((cx, cy));
+
+                            for (int i = 0; i < 4; i++)
+                            {
+                                int nx = cx + dx[i];
+                                int ny = cy + dy[i];
+
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+                                {
+                                    if (!grid[nx + (ny * width)].isBlock && !visited[nx, ny])
+                                    {
+                                        visited[nx, ny] = true;
+                                        queue.Enqueue((nx, ny));
+                                    }
+                                }
+                            }
                         }
+                        regions.Add(newRegion);
                     }
                 }
             }
 
-            if (totalOpenCells == 0) return false;
+            if (regions.Count == 0) return false;
+            regions.Sort((a, b) => b.Count.CompareTo(a.Count));
 
-            Queue<(int x, int y)> queue = new Queue<(int x, int y)>();
-            queue.Enqueue((startX, startY));
-            visited[startX, startY] = true;
-            int reachedCount = 1;
+            float openSpaceRatio = (float)regions[0].Count / (width * height);
+            if (openSpaceRatio < (Config.elevation - 0.15f) || openSpaceRatio > (Config.elevation + 0.15f))
+                return false;
 
-            int[] dx = { 0, 0, 1, -1 };
-            int[] dy = { 1, -1, 0, 0 };
-
-            while (queue.Count > 0)
+            for (int i = 1; i < regions.Count; i++)
             {
-                var (cx, cy) = queue.Dequeue();
-
-                for (int i = 0; i < 4; i++)
+                foreach (var cell in regions[i])
                 {
-                    int nx = cx + dx[i];
-                    int ny = cy + dy[i];
-
-                    if (nx >= 0 && nx < width && ny >= 0 && ny < height)
-                    {
-                        if (!grid[nx, ny].isBlock && !visited[nx, ny])
-                        {
-                            visited[nx, ny] = true;
-                            queue.Enqueue((nx, ny));
-                            reachedCount++;
-                        }
-                    }
+                    grid[cell.x + (cell.y * width)].isBlock = true;
+                    staticBlocks.Add(new ExportBlock { x = cell.x, y = cell.y });
                 }
             }
 
-            return reachedCount == totalOpenCells;
+            return true;
         }
 
         private float MathfPerlin(float x, float y)
@@ -1326,6 +1394,7 @@ namespace NEMO
 
         public float energy = Config.baseStartingEnergy;
         public bool isDead = false;
+        public int gestationTimer = 0;
 
         public float intentMove = 0f;
         public float intentMoveX = 0f;
@@ -1423,6 +1492,7 @@ namespace NEMO
         public int y;
 
         public bool isBlock = false;
+        public bool isOasis = false;
         public FoodItem? foodItem = null;
         public Creature? occupant = null;
 

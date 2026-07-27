@@ -24,6 +24,8 @@ namespace NEMO
                 { PType.OffspringInvestment, new PhenoFlag(0.5f, 0.1f, 0.9f) },
                 //global mutation rate multiplier
                 { PType.MutationVolatility, new PhenoFlag(2.5f, 0.1f, 5.0f, 0.5f) },
+                //multiplier on reproduction delay
+                { PType.GestationPeriod, new PhenoFlag(1f, 0.25f, 4f, 0.75f) },
 
                 //metabolism
                 //efficiency from meat/plants

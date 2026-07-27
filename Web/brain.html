@@ -315,7 +315,7 @@
             wrapper.style.marginBottom = "10px";
 
             const label = document.createElement("div");
-            label.innerText =`${def.key}: ${runtimeConfig[def.key]}`;
+            label.innerText = `${def.key}: ${runtimeConfig[def.key]}`;
             label.style.fontSize = "12px";
 
             const slider = document.createElement("input");
@@ -323,29 +323,23 @@
             slider.min = def.min;
             slider.max = def.max;
             slider.step = def.step;
-            console.log(def.key, runtimeConfig[def.key]);
-            slider.value = runtimeConfig[def.key];;
+            slider.value = runtimeConfig[def.key];
             slider.style.width = "100%";
 
-            slider.oninput = async () => {
+            slider.oninput = () => {
                 const value = parseFloat(slider.value);
-                runtimeConfig[def.key] = value;;
+                runtimeConfig[def.key] = value;
                 label.innerText = `${def.key}: ${value.toFixed(4)}`;
 
-                await fetch("/config",
-                    {
-                        method: "POST",
-                        headers:
-                        {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(runtimeConfig)
-                    });
+                socket.send(JSON.stringify({
+                    action: "updateConfig",
+                    key: def.key,
+                    value: value
+                }));
             };
 
             wrapper.appendChild(label);
             wrapper.appendChild(slider);
-
             controls.appendChild(wrapper);
         }
         function createGraphContainer(name) {

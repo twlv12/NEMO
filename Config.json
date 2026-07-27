@@ -4,51 +4,69 @@
   "tickRate": 30,
   "maxSpeed": false,
 
+  //Starting creature count.
   "creatureCount": 500,
+  //Governor system variables. 
+  //Strength increases rate of wilting/growth.
   "governorStrength": 3,
+  //Mulitpliers which act on energy, usually affects population.
   "globalEnergyMultiplier": 1.5,
   "wastePenaltyMultiplier": 0.5,
   "momentumInfluence": 0.35,
 
-  "elevation": 0.55,
+  //Terrain generation parameters,
+  //using Perlin noise.
+  //Elevation controls rock-ness of map.
+  "elevation": 0.5,
   "frequency": 1.0,
+  "caveFrequency": 0.5,
   "amplitude": 1.0,
   "numOctaves": 3,
-  "maxGenAttempts": 100,
+  "maxGenAttempts": 200,
+  //Fertile biome movement speed.
   "migrationSpeed": 1,
 
+  //Plant biome parameters.
   "foodWorldCoverage": 0.04,
   "plantClustering": 0.85,
   "plantFrequency": 1.0,
   "plantCutoff": 0.68,
-  "lingeringPlants": 0.02,
+  "lingeringPlants": 0.03,
 
-  "baseNutrition": 200.0,
+  //Energy from plants, and meat params.
+  "baseNutrition": 300.0,
   "meatEntropyMulti": 0.85,
   "meatDecayRate": 0.5,
   "deathEnergy": 0.25,
 
+  //Base energy costs - subject to phenotypes.
   "baseStartingEnergy": 4000,
   "maturationTime": 25,
   "birthEfficiency": 0.8,
   "costOfLiving": 1,
-  "movementCost": 1,
+  "movementCost": 2,
   "attackCost": 10,
   "baseAttackDmg": 1000,
   "wallCollisionDmg": 500,
 
+  //Parasitic phenotype penalties.
   "paraEntropyMulti": 0.95,
   "paraSomaticTax": 10,
   "paraDrainPower": 15,
 
+  //Auto-genome saving based on significance.
   "selectionThreshold": 2.8,
+  //Max similarity to already-saved genome.
   "selectKinshipThreshold": 0.8,
   "autoChampTickDelay": 50000,
+  //Recorder params.
   "recorderTickDelay": 5000,
   "recorderMaxGB": 20,
 
+  //Enforces population > Config.creatureCount.
   "maintainPopulation": false,
 
+  //Base genome parameters.
   "minGenes": 8,
   "baseGenes": 24,
   "maxGenes": 64,
@@ -56,11 +74,16 @@
 
 
 
-  "printMutations": false,
+  //Changes overall mutation and phenotype mutation.
   "globalMutationRate": 0.25,
-  "topologyMutationRate": 1,
-
   "phenoMutationFlux": 0.75,
+
+  //The below values all are for changing specific genome
+  //mutation types. It is best to leave these alone.
+  //Flux changes the overall strength of any floating-type value
+  //Sharpness tightens gaussian distribution.
+
+  "topologyMutationRate": 1,
   "phenoMutationSharpness": 7,
 
   "mathSuppressionExponent": 0.25,
@@ -91,12 +114,26 @@
   "geneDuplicationChance": 0.001,
   "geneInsertionChance": 0.003,
   "geneRemovalChance": 0.005,
+  "printMutations": false,
 
 
+  //Console can be shown separately in case 
+  //program won't start, or crashing.
   "hideConsole": false,
+  //Legacy patcher will scan entire worldbank for
+  //missisng features and repair them.
+  //I will add in extra regexes for this whenever I 
+  //remove features - should always work in releases.
+  "runLegacyPatcher": false,
+
+  //Add local IP here to open to LAN. Requires ADMIN.
+  "customIPs": [
+    "192.168.86.110"
+  ],
+
+  //Do not touch.
   "pauseWithoutUI": true,
   "compressRecordings": true,
-  "runLegacyPatcher":  false,
-  "uiRate": 33,
+  "uiRate": 100,
   "currentView": 0
 }

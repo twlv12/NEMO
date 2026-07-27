@@ -10,6 +10,7 @@
 		<ApplicationIcon>Web\nemocon.ico</ApplicationIcon>
 		<DebugType>none</DebugType>
 		<DebugSymbols>false</DebugSymbols>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
 	</PropertyGroup>
 
 	<ItemGroup>

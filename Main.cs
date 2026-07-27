@@ -9,14 +9,20 @@ using System.Text.RegularExpressions;
 namespace NEMO
 {
     //TODO - NEVER IN ORDER
-    //kinematics sensor
+    //add significance/CEQ bias to mutation?
+    //add world switching - copy creatures to new world.
+    //extinction prevention
+    //do somethign about predator rotation jittering.
+    //why creatures not using signals?
+    //-- add signal ovelay.
+    //test creature location goals
+    //fix governor overcorrction/oscilaltion
+    //add family tree
+    //add save heavy current world frame data in separate tab.
     //add a smart system for tailoring specific behaviours
-    //fix garbag collection to use 100% CPU.
     //fix birthing dead children
     //potentially remove creatureCount from governor calcs
-    //fix ui slowdowns
-    //transistor neuron
-    //fix fertmap not loading after restore
+    //make restfactor increase movement cost
 
     public static class NEMO
     {
@@ -37,7 +43,7 @@ namespace NEMO
         public static Stopwatch tpsTimer = Stopwatch.StartNew();
         public static int ticksThisSecond = 0;
         public static int currentTPS = 0;
-        public static bool autoRestart = false;
+        public static bool autoRestart = true;
 
         public static bool pauseOnExtinction = true;
         public static bool worldWasEmpty = false;
@@ -54,8 +60,18 @@ namespace NEMO
         public static bool repopEditor = false;
         public static bool isRecording = false;
 
+        public static int isGenerating = 0;
+        public static int terrainVersion = 0;
+        public static int lastBroadcastTerrainVersion = -1;
+
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool AllocConsole();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetConsoleWindow();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
         public static bool hasUIConnectedOnce = false;
         const int SW_HIDE = 0;
@@ -114,6 +130,13 @@ namespace NEMO
             if (!Config.hideConsole)
             {
                 AllocConsole();
+
+                IntPtr handle = GetConsoleWindow();
+                if (handle != IntPtr.Zero)
+                {
+                    MoveWindow(handle, 0, 0, 590, 920, true);
+                }
+
                 StreamWriter standardOutput = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
                 Console.SetOut(standardOutput);
             }
@@ -204,10 +227,33 @@ namespace NEMO
             Task.Run(() =>
             {
                 var listener = new System.Net.HttpListener();
+
                 listener.Prefixes.Add("http://localhost:8000/");
                 listener.Prefixes.Add("http://127.0.0.1:8000/");
 
+                if (Config.customIPs != null)
+                {
+                    foreach (string ip in Config.customIPs)
+                    {
+                        if (string.IsNullOrWhiteSpace(ip)) continue;
+
+                        string prefix = ip.Trim();
+                        if (!prefix.StartsWith("http://") && !prefix.StartsWith("https://"))
+                            prefix = "http://" + prefix;
+
+                        if (prefix.LastIndexOf(':') <= 5)
+                            prefix += ":8000";
+
+                        if (!prefix.EndsWith("/"))
+                            prefix += "/";
+
+                        listener.Prefixes.Add(prefix);
+                    }
+                }
+
                 bool httpStarted = false;
+                bool fallbackAttempted = false;
+
                 while (!httpStarted)
                 {
                     try
@@ -217,9 +263,20 @@ namespace NEMO
                         if (!Config.hideConsole) NEMO.Log("[Network] Web Server running on port 8000", "palegreen", ConsoleColor.Green);
                         LaunchUI();
                     }
+                    catch (System.Net.HttpListenerException e) when (e.ErrorCode == 5 && !fallbackAttempted)
+                    {
+                        fallbackAttempted = true;
+                        NEMO.Log("[Network] Admin rights missing for custom network IPs. Falling back to localhost only...", "#ffcc00", ConsoleColor.Yellow);
+
+                        try { listener.Close(); } catch { }
+
+                        listener = new System.Net.HttpListener();
+                        listener.Prefixes.Add("http://localhost:8000/");
+                        listener.Prefixes.Add("http://127.0.0.1:8000/");
+                    }
                     catch (Exception e)
                     {
-                        NEMO.Log($"[Network] Waiting for port 8000 to release... ({e.Message})", "tomato", ConsoleColor.Red);
+                        NEMO.Log($"[Network] Waiting for port 8000 to free... ({e.Message})", "tomato", ConsoleColor.Red);
                         Thread.Sleep(1000);
                     }
                 }
@@ -330,7 +387,8 @@ namespace NEMO
                         {
                             clients.Add(socket);
                             hasUIConnectedOnce = true;
-                            if (!Config.hideConsole) NEMO.Log($"[Socket] UI Connected. Clients: {clients.Count}", "palegreen", ConsoleColor.Green);
+                            lastBroadcastTerrainVersion = -1;
+                            NEMO.Log($"[Socket] UI Connected. Clients: {clients.Count}", "palegreen", ConsoleColor.Green);
                             BroadcastState();
                         };
 
@@ -498,8 +556,14 @@ namespace NEMO
 
             Creature[] creaturesSnap = world.creatures.ToArray();
             FoodItem[] foodsSnap = world.activeFoods.ToArray();
-            World.ExportBlock[] blocksSnap = world.staticBlocks.ToArray();
             IWebSocketConnection[] clientsSnap = clients.ToArray();
+
+            World.ExportBlock[] blocksSnap = null!;
+            if (terrainVersion != lastBroadcastTerrainVersion)
+            {
+                blocksSnap = world.staticBlocks.ToArray();
+                lastBroadcastTerrainVersion = terrainVersion;
+            }
 
             Task.Run(() =>
             {
@@ -908,21 +972,36 @@ namespace NEMO
 
                     if (actionType == "startWorld")
                     {
-                        foreach (var s in sims)
+                        if (Interlocked.CompareExchange(ref isGenerating, 1, 0) == 1) return;
+
+                        Task.Run(() =>
                         {
-                            if (s.trackedCreature != null) s.trackedCreature.trackedSlot = null;
-                            s.trackedCreature = null;
+                            try
+                            {
+                                foreach (var s in sims)
+                                {
+                                    if (s.trackedCreature != null) s.trackedCreature.trackedSlot = null;
+                                    s.trackedCreature = null;
 
-                            foreach (var n in s.brain.neurons) n.host = null;
-                        }
-                        activeWorld = null;
+                                    foreach (var n in s.brain.neurons) n.host = null;
+                                }
+                                activeWorld = null;
 
-                        var genMsg = JsonSerializer.Serialize(new { @event = "worldGenerating" });
-                        foreach (var x in clients.ToList()) x.Send(genMsg);
+                                var genMsg = JsonSerializer.Serialize(new { @event = "worldGenerating" });
+                                foreach (var x in clients.ToList()) x.Send(genMsg);
 
-                        activeWorld = new World(Config.worldWidth, Config.worldHeight, new List<Genome>());
-                        isPaused = false;
-                        BroadcastState();
+                                World newWorld = new World(Config.worldWidth, Config.worldHeight, new List<Genome>());
+
+                                activeWorld = newWorld;
+                                terrainVersion++;
+                                isPaused = false;
+                                BroadcastState();
+                            }
+                            finally
+                            {
+                                Interlocked.Exchange(ref isGenerating, 0);
+                            }
+                        });
                         return;
                     }
                     if (actionType == "togglePause")
@@ -975,7 +1054,7 @@ namespace NEMO
                             Creature c = new Creature(x, y, targetSim.genome, activeWorld);
                             c.energy = c.startingEnergy * (c.GetPheno(PType.ReproductionThreshold) + Config.deathEnergy) / 2f;
 
-                            activeWorld.grid[x, y].occupant = c;
+                            activeWorld.grid[x + (y * activeWorld.width)].occupant = c;
                             activeWorld.pendingNewborns.Enqueue(c);
 
                             targetSim.trackedCreature = c;
@@ -1159,38 +1238,40 @@ namespace NEMO
 
                         if (type == "erase")
                         {
-                            activeWorld.grid[x, y].isBlock = false;
+                            activeWorld.grid[x + (y * activeWorld.width)].isBlock = false;
                             activeWorld.staticBlocks.RemoveAll(b => b.x == x && b.y == y);
+                            terrainVersion++;
 
-                            if (activeWorld.grid[x, y].foodItem != null)
+                            if (activeWorld.grid[x + (y * activeWorld.width)].foodItem != null)
                             {
                                 lock (activeWorld.activeFoods)
                                 {
-                                    activeWorld.activeFoods.Remove(activeWorld.grid[x, y].foodItem!);
+                                    activeWorld.activeFoods.Remove(activeWorld.grid[x + (y * activeWorld.width)].foodItem!);
                                 }
-                                activeWorld.grid[x, y].foodItem = null;
+                                activeWorld.grid[x + (y * activeWorld.width)].foodItem = null;
                             }
-                            if (activeWorld.grid[x, y].occupant != null)
+                            if (activeWorld.grid[x + (y * activeWorld.width)].occupant != null)
                             {
-                                activeWorld.grid[x, y].occupant.energy = -1;
+                                activeWorld.grid[x + (y * activeWorld.width)].occupant.energy = -1;
                             }
                         }
                         else if (type == "wall")
                         {
-                            if (activeWorld.grid[x, y].occupant == null && activeWorld.grid[x, y].foodItem == null)
+                            if (activeWorld.grid[x + (y * activeWorld.width)].occupant == null && activeWorld.grid[x + (y * activeWorld.width)].foodItem == null)
                             {
-                                activeWorld.grid[x, y].isBlock = true;
+                                activeWorld.grid[x + (y * activeWorld.width)].isBlock = true;
                                 if (!activeWorld.staticBlocks.Any(b => b.x == x && b.y == y))
                                     activeWorld.staticBlocks.Add(new World.ExportBlock { x = x, y = y });
+                                terrainVersion++;
                             }
                         }
                         else if (type == "plant" || type == "meat")
                         {
-                            if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].foodItem == null && activeWorld.grid[x, y].occupant == null)
+                            if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].foodItem == null && activeWorld.grid[x + (y * activeWorld.width)].occupant == null)
                             {
                                 var f = new FoodItem(x, y, type == "meat");
                                 if (type == "meat") f.nutrition = 1000f;
-                                activeWorld.grid[x, y].foodItem = f;
+                                activeWorld.grid[x + (y * activeWorld.width)].foodItem = f;
 
                                 lock (activeWorld.activeFoods)
                                 {
@@ -1200,7 +1281,7 @@ namespace NEMO
                         }
                         else if (type == "dummy")
                         {
-                            if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                            if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].occupant == null)
                             {
                                 Genome dummyGen = new Genome(new List<Gene>());
                                 dummyGen.InitializeDefaultPhenotypes();
@@ -1209,7 +1290,7 @@ namespace NEMO
                                 dummy.startingEnergy = Config.baseStartingEnergy;
                                 dummy.energy = Config.baseStartingEnergy;
 
-                                activeWorld.grid[x, y].occupant = dummy;
+                                activeWorld.grid[x + (y * activeWorld.width)].occupant = dummy;
                                 activeWorld.pendingNewborns.Enqueue(dummy);
                             }
                         }
@@ -1226,12 +1307,12 @@ namespace NEMO
                         var c = activeWorld.creatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
                         if (c != null && targetX >= 0 && targetX < activeWorld.width && targetY >= 0 && targetY < activeWorld.height)
                         {
-                            if (activeWorld.grid[c.x, c.y].occupant == c)
+                            if (activeWorld.grid[c.x + (c.y * activeWorld.width)].occupant == c)
                             {
-                                activeWorld.grid[c.x, c.y].occupant = null;
+                                activeWorld.grid[c.x + (c.y * activeWorld.width)].occupant = null;
                             }
 
-                            if (!activeWorld.grid[targetX, targetY].isBlock)
+                            if (!activeWorld.grid[targetX + (targetY * activeWorld.width)].isBlock)
                             {
                                 c.x = targetX;
                                 c.y = targetY;
@@ -1240,7 +1321,7 @@ namespace NEMO
                                 c.facingDirection = Math.Clamp(dir, 0, 7);
                                 c.lastFacing = c.facingDirection;
 
-                                activeWorld.grid[targetX, targetY].occupant = c;
+                                activeWorld.grid[targetX + (targetY * activeWorld.width)].occupant = c;
                             }
                         }
                         return;
@@ -1295,13 +1376,13 @@ namespace NEMO
                             {
                                 int x = World.rand.Next(0, activeWorld.width);
                                 int y = World.rand.Next(0, activeWorld.height);
-                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].occupant == null)
                                 {
                                     Genome gen = pool[World.rand.Next(pool.Count)].Clone();
                                     Creature c = new Creature(x, y, gen, activeWorld);
                                     c.energy = c.startingEnergy * (c.GetPheno(PType.ReproductionThreshold) + Config.deathEnergy) / 2f;
 
-                                    activeWorld.grid[x, y].occupant = c;
+                                    activeWorld.grid[x + (y * activeWorld.width)].occupant = c;
                                     activeWorld.pendingNewborns.Enqueue(c);
                                     currentTotal++;
                                 }
@@ -1384,11 +1465,11 @@ namespace NEMO
                             {
                                 int x = World.rand.Next(activeWorld.width);
                                 int y = World.rand.Next(activeWorld.height);
-                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null && activeWorld.grid[x, y].foodItem == null)
+                                if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].occupant == null && activeWorld.grid[x + (y * activeWorld.width)].foodItem == null)
                                 {
                                     var f = new FoodItem(x, y, type == "meat");
                                     if (type == "meat") f.nutrition = 1000f;
-                                    activeWorld.grid[x, y].foodItem = f;
+                                    activeWorld.grid[x + (y * activeWorld.width)].foodItem = f;
                                     lock (activeWorld.activeFoods) activeWorld.activeFoods.Add(f);
                                 }
                             }
@@ -1407,13 +1488,13 @@ namespace NEMO
                             {
                                 int x = World.rand.Next(activeWorld.width);
                                 int y = World.rand.Next(activeWorld.height);
-                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].occupant == null)
                                 {
                                     Creature dummy = new Creature(x, y, dummyGen, activeWorld);
                                     dummy.startingEnergy = Config.baseStartingEnergy;
                                     dummy.energy = Config.baseStartingEnergy;
 
-                                    activeWorld.grid[x, y].occupant = dummy;
+                                    activeWorld.grid[x + (y * activeWorld.width)].occupant = dummy;
                                     activeWorld.pendingNewborns.Enqueue(dummy);
                                 }
                             }
@@ -1525,12 +1606,12 @@ namespace NEMO
                                     int x = rand.Next(0, activeWorld.width);
                                     int y = rand.Next(0, activeWorld.height);
 
-                                    if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                    if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].occupant == null)
                                     {
                                         Creature c = new Creature(x, y, targetSim.genome, activeWorld);
                                         c.energy = c.startingEnergy * (c.GetPheno(PType.ReproductionThreshold) + Config.deathEnergy) / 2f;
 
-                                        activeWorld.grid[x, y].occupant = c;
+                                        activeWorld.grid[x + (y * activeWorld.width)].occupant = c;
                                         activeWorld.pendingNewborns.Enqueue(c);
                                         break;
                                     }
@@ -1558,7 +1639,7 @@ namespace NEMO
                         {
                             if (x >= 0 && x < activeWorld.width && y >= 0 && y < activeWorld.height)
                             {
-                                if (!activeWorld.grid[x, y].isBlock && activeWorld.grid[x, y].occupant == null)
+                                if (!activeWorld.grid[x + (y * activeWorld.width)].isBlock && activeWorld.grid[x + (y * activeWorld.width)].occupant == null)
                                 {
                                     Creature c = new Creature(x, y, targetSim.genome, activeWorld);
                                     c.energy = c.startingEnergy * (c.GetPheno(PType.ReproductionThreshold) + Config.deathEnergy) / 2f;
@@ -1566,7 +1647,7 @@ namespace NEMO
                                     c.facingDirection = Math.Clamp(dir, 0, 7);
                                     c.lastFacing = c.facingDirection;
 
-                                    activeWorld.grid[x, y].occupant = c;
+                                    activeWorld.grid[x + (y * activeWorld.width)].occupant = c;
                                     activeWorld.pendingNewborns.Enqueue(c);
                                 }
                             }
@@ -1792,22 +1873,22 @@ namespace NEMO
                                 {
                                     for (int y = 0; y < snap.height; y++)
                                     {
-                                        newWorld.grid[x, y].isBlock = false;
-                                        newWorld.grid[x, y].occupant = null;
-                                        newWorld.grid[x, y].foodItem = null;
+                                        newWorld.grid[x + (y * newWorld.width)].isBlock = false;
+                                        newWorld.grid[x + (y * newWorld.width)].occupant = null;
+                                        newWorld.grid[x + (y * newWorld.width)].foodItem = null;
                                     }
                                 }
 
                                 foreach (var b in snap.blocks)
                                 {
-                                    newWorld.grid[b.x, b.y].isBlock = true;
+                                    newWorld.grid[b.x + (b.y * newWorld.width)].isBlock = true;
                                     newWorld.staticBlocks.Add(b);
                                 }
 
                                 foreach (var f in snap.foods)
                                 {
                                     var food = new FoodItem(f.x, f.y, f.meat);
-                                    newWorld.grid[f.x, f.y].foodItem = food;
+                                    newWorld.grid[f.x + (f.y * newWorld.width)].foodItem = food;
                                     newWorld.activeFoods.Add(food);
                                 }
 
@@ -1829,7 +1910,7 @@ namespace NEMO
 
                                     if (!string.IsNullOrEmpty(c.parentId)) restored.parentID = c.parentId;
 
-                                    newWorld.grid[c.x, c.y].occupant = restored;
+                                    newWorld.grid[c.x + (c.y * newWorld.width)].occupant = restored;
                                     newWorld.creatures.Add(restored);
                                 }
 
@@ -1953,7 +2034,7 @@ namespace NEMO
                             {
                                 RebuildLiveBrain(actionSim);
                                 foreach (Neuron n in actionSim.trackedCreature.brain.neurons)
-                                    if (n.func == NFunc.Blockage || n.func == NFunc.GeneSimilarity)
+                                    if (n.func == NFunc.VisionBlockage || n.func == NFunc.VisionGenSim)
                                         n.GenerateVisionLUT();
                             }
                             break;

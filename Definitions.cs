@@ -97,16 +97,27 @@ namespace NEMO
     }
     public enum NFunc : byte
     {
+        //Sensors
         Constant,
         GetRandom,
-        Blockage,
         Gradient,
         MoveDelta,
         Density,
         GetSignal,
-        GeneSimilarity,
         Age,
+        Energy,
+        Oscillator,
 
+        //Sensor-Vision
+        VisionBlockage,
+        VisionProximity,
+        VisionTrait,
+        VisionGenSim,
+        VisionKinematics,
+        VisionHealth,
+        VisionIsolation,
+
+        //Math
         Relay,
         Threshold,
         Multiply,
@@ -114,16 +125,17 @@ namespace NEMO
         Compare,
         Amplify,
         Pulse,
+        Transistor,
+        Derivative,
+        Divide,
 
+        //Actions
         Move,
         Rotate,
         Jitter,
         EmitSignal,
         Consume,
-        Attack,
-
-        Proximity,
-        TraitVision,
+        Attack
     }
 
     public enum PType
@@ -132,6 +144,7 @@ namespace NEMO
         ReproductionThreshold,
         OffspringInvestment,
         MutationVolatility,
+        GestationPeriod,
 
         //metabolism
         CarnivoryBias,
@@ -168,9 +181,14 @@ namespace NEMO
 
     public static class NeuronDicts
     {
-        public static readonly List<DataField>[] DataDefinitions = new List<DataField>[24];
         public static readonly List<NFunc>[] FuncsOfType = new List<NFunc>[3];
-        public static readonly NType[] TypesOfFuncs = new NType[24];
+        public static readonly List<DataField>[] DataDefinitions = new List<DataField>[32];
+        public static readonly NType[] TypesOfFuncs = new NType[32];
+
+        public static readonly HashSet<NFunc> VisionNeurons = new() {
+            NFunc.VisionBlockage, NFunc.VisionProximity, NFunc.VisionTrait,
+            NFunc.VisionGenSim, NFunc.VisionKinematics, NFunc.VisionHealth, NFunc.VisionIsolation
+        };
 
         static NeuronDicts()
         {
@@ -180,24 +198,9 @@ namespace NEMO
             DataDefinitions[(int)NFunc.GetRandom] = new() {
                 new(){name="averageCount", startBit=0, bitLength=4, fieldType=FType.Int},
             };
-            DataDefinitions[(int)NFunc.Blockage] = new() {
-                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
-                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
-                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
-                new(){name="targetMode", startBit=10, bitLength=3, maxValue=7, fieldType=FType.Int},
-                new(){name="steepness", startBit=13, bitLength=3, maxValue=7, fieldType=FType.Int},
-            };
             DataDefinitions[(int)NFunc.GetSignal] = new() {
                 new(){name="channel", startBit=0, bitLength=4, maxValue=15, fieldType=FType.Int},
                 new(){name="radius", startBit=4, bitLength=3, maxValue=7, fieldType=FType.Int},
-            };
-            DataDefinitions[(int)NFunc.GeneSimilarity] = new() {
-                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
-                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
-                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
-                new(){name="exactMatch", startBit=10, bitLength=1, fieldType=FType.Bool},
-                new(){name="massMode", startBit=11, bitLength=1, fieldType=FType.Bool},
-                new(){name="steepness", startBit=12, bitLength=3, maxValue=7, fieldType=FType.Int},
             };
             DataDefinitions[(int)NFunc.MoveDelta] = new() {
                 new(){name="checkRotation", startBit=0, bitLength=1, fieldType=FType.Bool},
@@ -211,20 +214,64 @@ namespace NEMO
                 new(){name="axis", startBit=0, bitLength=1, fieldType=FType.Int},
             };
             DataDefinitions[(int)NFunc.Age] = new();
-            DataDefinitions[(int)NFunc.Proximity] = new() {
+            DataDefinitions[(int)NFunc.Energy] = new() {
+                
+            };
+            DataDefinitions[(int)NFunc.Oscillator] = new() {
+                new(){name="useWorldTime", startBit=0, bitLength=1, fieldType=FType.Bool},
+                new(){name="speciesSync", startBit=1, bitLength=1, fieldType=FType.Bool},
+                new(){name="periodScale", startBit=2, bitLength=6, maxValue=63, fieldType=FType.Int},
+            };
+
+            DataDefinitions[(int)NFunc.VisionBlockage] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="targetMode", startBit=10, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="steepness", startBit=13, bitLength=3, maxValue=7, fieldType=FType.Int},
+            };
+            DataDefinitions[(int)NFunc.VisionGenSim] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="exactMatch", startBit=10, bitLength=1, fieldType=FType.Bool},
+                new(){name="massMode", startBit=11, bitLength=1, fieldType=FType.Bool},
+                new(){name="steepness", startBit=12, bitLength=3, maxValue=7, fieldType=FType.Int},
+            };
+            DataDefinitions[(int)NFunc.VisionProximity] = new() {
                 new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
                 new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
                 new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
                 new(){name="targetType", startBit=10, bitLength=2, maxValue=3, fieldType=FType.Int},
                 new(){name="steepness", startBit=12, bitLength=2, maxValue=3, fieldType=FType.Int},
             };
-
-            DataDefinitions[(int)NFunc.TraitVision] = new() {
+            DataDefinitions[(int)NFunc.VisionKinematics] = new() {
                 new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
                 new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
                 new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
-                new(){name="phenotype", startBit=10, bitLength=5, maxValue=31, fieldType=FType.Int}, 
-                new(){name="steepness", startBit=15, bitLength=1, maxValue=1, fieldType=FType.Int}, 
+                new(){name="targetAction", startBit=10, bitLength=2, maxValue=3, fieldType=FType.Int},
+                new(){name="steepness", startBit=12, bitLength=2, maxValue=3, fieldType=FType.Int},
+            };
+            DataDefinitions[(int)NFunc.VisionTrait] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="phenotype", startBit=10, bitLength=5, maxValue=31, fieldType=FType.Int},
+                new(){name="steepness", startBit=15, bitLength=1, maxValue=1, fieldType=FType.Int},
+            };
+            DataDefinitions[(int)NFunc.VisionHealth] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="massMode", startBit=10, bitLength=1, fieldType=FType.Bool},
+                new(){name="steepness", startBit=11, bitLength=2, maxValue=3, fieldType=FType.Int},
+            };
+            DataDefinitions[(int)NFunc.VisionIsolation] = new() {
+                new(){name="angle", startBit=0, bitLength=3, maxValue=7, fieldType=FType.Int},
+                new(){name="fov", startBit=3, bitLength=3, maxValue=4, fieldType=FType.Int},
+                new(){name="distance", startBit=6, bitLength=4, maxValue=15, fieldType=FType.Int},
+                new(){name="searchRadius", startBit=10, bitLength=3, maxValue=5, fieldType=FType.Int},
+                new(){name="steepness", startBit=13, bitLength=2, maxValue=3, fieldType=FType.Int},
             };
 
             DataDefinitions[(int)NFunc.Relay] = new() {
@@ -252,6 +299,12 @@ namespace NEMO
                 new(){name="deltaReq", startBit=0, bitLength=8, fieldType=FType.Float},
                 new(){name="strength", startBit=8, bitLength=8, fieldType=FType.Float},
             };
+            DataDefinitions[(int)NFunc.Transistor] = new() {
+                new(){name="slotAIsGate", startBit=0, bitLength=1, fieldType=FType.Bool},
+                new(){name="invertGate", startBit=1, bitLength=1, fieldType=FType.Bool}
+            };
+            DataDefinitions[(int)NFunc.Derivative] = new();
+            DataDefinitions[(int)NFunc.Divide] = new();
 
             DataDefinitions[(int)NFunc.Move] = new() {
                 new(){name="sensitivity", startBit=0, bitLength=8, fieldType=FType.Float},
@@ -277,15 +330,20 @@ namespace NEMO
             FuncsOfType[(int)NType.Sensor] = new() {
                 NFunc.Constant,
                 NFunc.GetRandom,
-                NFunc.Blockage,
+                NFunc.VisionBlockage,
                 NFunc.Gradient,
                 NFunc.MoveDelta,
                 NFunc.Density,
                 NFunc.GetSignal,
-                NFunc.GeneSimilarity,
+                NFunc.VisionGenSim,
                 NFunc.Age,
-                NFunc.Proximity,
-                NFunc.TraitVision
+                NFunc.VisionProximity,
+                NFunc.VisionTrait,
+                NFunc.Energy,
+                NFunc.Oscillator,
+                NFunc.VisionKinematics,
+                NFunc.VisionHealth,
+                NFunc.VisionIsolation
             };
             FuncsOfType[(int)NType.Math] = new() {
                 NFunc.Relay,
@@ -294,7 +352,10 @@ namespace NEMO
                 NFunc.Memory,
                 NFunc.Compare,
                 NFunc.Amplify,
-                NFunc.Pulse
+                NFunc.Pulse,
+                NFunc.Transistor,
+                NFunc.Derivative,
+                NFunc.Divide
             };
             FuncsOfType[(int)NType.Action] = new() {
                 NFunc.Move,
@@ -310,14 +371,19 @@ namespace NEMO
             TypesOfFuncs[(int)NFunc.Constant] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.Gradient] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.MoveDelta] = NType.Sensor;
-            TypesOfFuncs[(int)NFunc.Blockage] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionBlockage] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.Density] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.GetSignal] = NType.Sensor;
-            TypesOfFuncs[(int)NFunc.GeneSimilarity] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionGenSim] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.GetRandom] = NType.Sensor;
             TypesOfFuncs[(int)NFunc.Age] = NType.Sensor;
-            TypesOfFuncs[(int)NFunc.Proximity] = NType.Sensor;
-            TypesOfFuncs[(int)NFunc.TraitVision] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionProximity] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionTrait] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Energy] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.Oscillator] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionKinematics] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionHealth] = NType.Sensor;
+            TypesOfFuncs[(int)NFunc.VisionIsolation] = NType.Sensor;
 
             TypesOfFuncs[(int)NFunc.Relay] = NType.Math;
             TypesOfFuncs[(int)NFunc.Threshold] = NType.Math;
@@ -326,6 +392,9 @@ namespace NEMO
             TypesOfFuncs[(int)NFunc.Compare] = NType.Math;
             TypesOfFuncs[(int)NFunc.Amplify] = NType.Math;
             TypesOfFuncs[(int)NFunc.Pulse] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Transistor] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Derivative] = NType.Math;
+            TypesOfFuncs[(int)NFunc.Divide] = NType.Math;
 
             TypesOfFuncs[(int)NFunc.Move] = NType.Action;
             TypesOfFuncs[(int)NFunc.Rotate] = NType.Action;

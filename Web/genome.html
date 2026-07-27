@@ -483,26 +483,24 @@
             slider.min = def.min;
             slider.max = def.max;
             slider.step = def.step;
-            console.log(def.key, runtimeConfig[def.key]);
-            slider.value = runtimeConfig[def.key];;
+            slider.value = runtimeConfig[def.key];
             slider.style.width = "100%";
 
             slider.oninput = () => {
-                valLbl.innerText = parseFloat(slider.value).toFixed(2);
+                const value = parseFloat(slider.value);
+                label.innerText = `${def.key}: ${value.toFixed(2)}`;
             };
 
             slider.onchange = () => {
                 socket.send(JSON.stringify({
-                    action: "editPhenotype",
-                    slot: name,
-                    trait: def.key,
+                    action: "updateConfig",
+                    key: def.key,
                     value: parseFloat(slider.value)
                 }));
             };
 
             wrapper.appendChild(label);
             wrapper.appendChild(slider);
-
             controls.appendChild(wrapper);
         }
         function createGraphContainer(name) {
@@ -1286,8 +1284,11 @@
         }
 
         async function loadConfig() {
-            const response = await fetch("Config.json");
-            runtimeConfig = await response.json();
+            const response = await fetch("Config.json?t=" + Date.now());
+            const text = await response.text();
+
+            const cleanText = text.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+            runtimeConfig = JSON.parse(cleanText);
             console.log(runtimeConfig);
         }
         async function loadNeuronDefs() {

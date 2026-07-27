@@ -18,6 +18,7 @@ namespace NEMO
 
         public static float elevation;
         public static float frequency;
+        public static float caveFrequency;
         public static float amplitude;
         public static int numOctaves;
         public static int maxGenAttempts;
@@ -98,11 +99,13 @@ namespace NEMO
         public static float geneInsertionChance;
         public static float geneRemovalChance;
 
-        public static int uiRate;
+        public static bool runLegacyPatcher;
         public static bool hideConsole;
+
+        public static int uiRate;
         public static bool pauseWithoutUI;
         public static bool compressRecordings;
-        public static bool runLegacyPatcher;
+        public static List<string> customIPs = new List<string>();
 
         public static string MainConfigFile = GetResolvedConfigPath();
         public static string projectDirectory = GetResolvedProjectDirectory();
@@ -166,7 +169,13 @@ namespace NEMO
         {
             try
             {
-                using JsonDocument doc = JsonDocument.Parse(json);
+                var options = new JsonDocumentOptions
+                {
+                    CommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                };
+
+                using JsonDocument doc = JsonDocument.Parse(json, options);
                 foreach (var prop in doc.RootElement.EnumerateObject())
                 {
                     var field = typeof(Config).GetField(prop.Name, BindingFlags.Public | BindingFlags.Static);
@@ -176,12 +185,23 @@ namespace NEMO
                         else if (field.FieldType == typeof(float)) field.SetValue(null, (float)prop.Value.GetDecimal());
                         else if (field.FieldType == typeof(bool)) field.SetValue(null, prop.Value.GetBoolean());
                         else if (field.FieldType == typeof(string)) field.SetValue(null, prop.Value.GetString());
+
+                        else if (field.FieldType == typeof(List<string>))
+                        {
+                            var list = new List<string>();
+                            foreach (var item in prop.Value.EnumerateArray())
+                            {
+                                string s = item.GetString();
+                                if (!string.IsNullOrWhiteSpace(s)) list.Add(s);
+                            }
+                            field.SetValue(null, list);
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[CONFIG] Error applying JSON: {ex.Message}");
+                Console.WriteLine($"[CONFIG] Error loading JSON: {ex.Message}");
             }
         }
     }
