@@ -1,4 +1,5 @@
 {
+  //=== PETRI CONFIGS ==================================================
   "worldHeight": 300,
   "worldWidth": 300,
   "tickRate": 30,
@@ -34,18 +35,20 @@
   "lingeringPlants": 0.03,
 
   //Energy from plants, and meat params.
-  "baseNutrition": 300.0,
-  "meatEntropyMulti": 0.85,
-  "meatDecayRate": 0.5,
+  "baseNutrition": 220.0,
+  "meatEntropyMulti": 0.9,
+  "meatDecayRate": 0.0,
   "deathEnergy": 0.25,
 
   //Base energy costs - subject to phenotypes.
   "baseStartingEnergy": 4000,
+  "tickStomachCapacity": 500,
   "maturationTime": 25,
+  "gestationPeriod": 3,
   "birthEfficiency": 0.8,
   "costOfLiving": 1,
   "movementCost": 2,
-  "attackCost": 10,
+  "attackCost": 3,
   "baseAttackDmg": 1000,
   "wallCollisionDmg": 500,
 
@@ -54,8 +57,8 @@
   "paraSomaticTax": 10,
   "paraDrainPower": 15,
 
-  //Auto-genome saving based on significance.
-  "selectionThreshold": 2.8,
+  //Auto-genome saving based on survivalRatio.
+  "selectionThreshold": 3,
   //Max similarity to already-saved genome.
   "selectKinshipThreshold": 0.8,
   "autoChampTickDelay": 50000,
@@ -66,17 +69,40 @@
   //Enforces population > Config.creatureCount.
   "maintainPopulation": false,
 
+
+
+
+  //=== TRAINER CONFIGS ==================================================
+  "TworldHeight": 400,
+  "TworldWidth": 400,
+  "TmaxTime": 5000,
+  "TnumToSelect": 1,
+  "TnumActiveCreatures": 150,
+  "TnumBaitCreatures": 0,
+
+  "TbaseStartingEnergy": 4000,
+  "TbaseNutrition": 1000,
+  "TcostOfLiving": 0,
+  "TmovementCost": 0,
+  "TrotationMulti": 0,
+  "TattackCost": 10,
+
+  "TinstantKills": false,
+  "TwallDeath": true,
+
+
+
+
+  //=== GENETIC CONFIGS ==================================================
+  //Changes overall mutation and phenotype mutation.
+  "globalMutationRate": 5,
+  "phenoMutationFlux": 0.75,
+
   //Base genome parameters.
   "minGenes": 8,
   "baseGenes": 24,
   "maxGenes": 64,
   "neuronReuse": 0.6,
-
-
-
-  //Changes overall mutation and phenotype mutation.
-  "globalMutationRate": 0.25,
-  "phenoMutationFlux": 0.75,
 
   //The below values all are for changing specific genome
   //mutation types. It is best to leave these alone.
@@ -117,9 +143,12 @@
   "printMutations": false,
 
 
+
+
+  //=== DEV CONFIGS ====================================================
   //Console can be shown separately in case 
   //program won't start, or crashing.
-  "hideConsole": false,
+  "hideConsole": true,
   //Legacy patcher will scan entire worldbank for
   //missisng features and repair them.
   //I will add in extra regexes for this whenever I 
@@ -128,12 +157,11 @@
 
   //Add local IP here to open to LAN. Requires ADMIN.
   "customIPs": [
-    "192.168.86.110"
   ],
 
   //Do not touch.
   "pauseWithoutUI": true,
   "compressRecordings": true,
-  "uiRate": 100,
+  "uiRate": 33,
   "currentView": 0
 }

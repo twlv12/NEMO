@@ -8,7 +8,7 @@
     "type": "Sensor"
   },
   {
-    "func": "Blockage",
+    "func": "VisionBlockage",
     "type": "Sensor"
   },
   {
@@ -28,7 +28,7 @@
     "type": "Sensor"
   },
   {
-    "func": "GeneSimilarity",
+    "func": "VisionGenSim",
     "type": "Sensor"
   },
   {
@@ -36,11 +36,31 @@
     "type": "Sensor"
   },
   {
-    "func": "Proximity",
+    "func": "VisionProximity",
     "type": "Sensor"
   },
   {
-    "func": "TraitVision",
+    "func": "VisionTrait",
+    "type": "Sensor"
+  },
+  {
+    "func": "Energy",
+    "type": "Sensor"
+  },
+  {
+    "func": "Oscillator",
+    "type": "Sensor"
+  },
+  {
+    "func": "VisionKinematics",
+    "type": "Sensor"
+  },
+  {
+    "func": "VisionHealth",
+    "type": "Sensor"
+  },
+  {
+    "func": "VisionIsolation",
     "type": "Sensor"
   },
   {
@@ -69,6 +89,18 @@
   },
   {
     "func": "Pulse",
+    "type": "Math"
+  },
+  {
+    "func": "Transistor",
+    "type": "Math"
+  },
+  {
+    "func": "Derivative",
+    "type": "Math"
+  },
+  {
+    "func": "Divide",
     "type": "Math"
   },
   {

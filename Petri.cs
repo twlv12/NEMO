@@ -3,27 +3,29 @@ using System.Text.Json;
 
 namespace NEMO
 {
-    public class World
+    public class World : IWorld
     {
         public Cell[] grid;
+        public ICell[] iGrid => grid;
         public float[] fertilityMap;
         public List<Creature> creatures;
         public ConcurrentQueue<Creature> pendingNewborns = new();
         public readonly string runID = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         public static bool isRecording = false;
 
-        public int width = Config.worldWidth;
-        public int height = Config.worldHeight;
+        public int width { get; set; } = Config.worldWidth;
+        public int height { get; set; } = Config.worldHeight;
+        public long totalTicks { get; set; } = 0;
         public static Random rand = new Random();
         public float fertOffsetX;
         public float fertOffsetY;
         private int fertUpdateCol = 0;
 
         #region Telemetry
-        public long totalTicks = 0;
         public Genome? bestGenome = null;
         public int highestGeneration = 0;
-        public float highestSignificance = 0f;
+        public float highestSurvivalRatio = 0f;
+        public float highestCEQ = 0f;
 
         public float emaEnergyIn = 0f;
         public float emaEnergyOut = 0f;
@@ -97,6 +99,8 @@ namespace NEMO
             public List<ExportCone> cones { get; set; }
             public int diet { get; set; }
             public float lineage { get; set; }
+            public float mass { get; set; }
+            public float sr { get; set; }
         }
 
         private static readonly Comparison<Creature> CreatureMoveComparer = (a, b) =>
@@ -212,20 +216,17 @@ namespace NEMO
 
             float avgBurnPerTick = emaEnergyOut / Math.Max(1f, creatures.Count);
             float mathLifespan = Math.Min(5000f, Config.baseStartingEnergy / Math.Max(0.001f, avgBurnPerTick));
-            float blendFactor = Math.Clamp(avgGen / 3.0f, 0f, 1f);
+
+            float blendFactor = Math.Clamp(avgGen / 25.0f, 0f, 1f);
             float activeLifespan = (mathLifespan * (1f - blendFactor)) + (Math.Max(50f, emaLifespan) * blendFactor);
-
-            float baselineEnergy = Config.creatureCount * Config.baseStartingEnergy * Config.globalEnergyMultiplier;
-
-            float demographicShift = (emaBirths - emaDeaths) / Math.Max(0.001f, emaBirths + emaDeaths);
-            float momentum = 1.0f + (Config.momentumInfluence * demographicShift * blendFactor);
 
             float wasteRatio = Math.Min(1.0f, emaEnergyWasted / Math.Max(0.001f, emaEnergyOut));
             float wastePenalty = wasteRatio * Config.wastePenaltyMultiplier * blendFactor;
 
             float dietFactor = 1.0f - (avgCarnivory * 0.8f);
 
-            float dynamicCapacity = baselineEnergy * momentum * Math.Max(0.1f, 1.0f - wastePenalty) * dietFactor;
+            float baselineEnergy = Config.creatureCount * Config.baseStartingEnergy * Config.globalEnergyMultiplier;
+            float dynamicCapacity = baselineEnergy * Math.Max(0.5f, 1.0f - wastePenalty) * dietFactor;
 
             this.govDynamicCapacity = dynamicCapacity;
             this.govCurrentEnergy = currentSystemEnergy;
@@ -233,7 +234,6 @@ namespace NEMO
             this.govActiveLifespan = activeLifespan;
             this.govMathLifespan = mathLifespan;
             this.govBlendFactor = blendFactor;
-            this.govMomentum = momentum;
             this.govWastePenalty = wastePenalty;
             this.govDietFactor = dietFactor;
             #endregion
@@ -336,16 +336,22 @@ namespace NEMO
                 var c = creatures[i];
                 if (c.isDead) continue;
                 c.age++;
+                EvaluateSR(c);
 
                 c.lastX = c.x;
                 c.lastY = c.y;
                 c.lastFacing = c.facingDirection;
+                c.ticksSinceLastMove++;
+                if (c.gestationTimer > 0) c.gestationTimer--;
 
                 if (Math.Abs(c.intentRotate) > 0.01f && rand.NextDouble() < Math.Abs(c.intentRotate))
                 {
                     if (c.intentRotate > 0) c.facingDirection = (c.facingDirection + 1) % 8;
                     else c.facingDirection = (c.facingDirection + 7) % 8;
-                    float rotCost = NEMO.disableEnergyDrain ? 0f : Config.movementCost * 0.25f * (1f / c.GetPheno(PType.RotationalAgility));
+
+                    float rotCost = NEMO.disableEnergyDrain ? 0f :
+                        Config.movementCost * 0.25f * c.GetPheno(PType.BodyMass) * (1f / c.GetPheno(PType.RotationalAgility));
+
                     c.energy -= rotCost;
                 }
 
@@ -373,25 +379,90 @@ namespace NEMO
                 bool outOfBounds = targetX < 0 || targetX >= width || targetY < 0 || targetY >= height;
                 bool hitBlock = !outOfBounds && grid[targetX + (targetY * width)].isBlock;
 
-                if (!outOfBounds && !hitBlock && grid[targetX + (targetY * width)].occupant == null)
+                if (!outOfBounds && !hitBlock)
                 {
-                    if (!NEMO.disableEnergyDrain)
-                    {
-                        c.energy -= Config.movementCost *
-                            c.GetPheno(PType.BodyMass) *
-                            c.GetPheno(PType.FastTwitchMuscle) *
-                            (1f + c.GetPheno(PType.ArmorDensity)) *
-                            (1f + c.GetPheno(PType.RotationalAgility) * 0.2f);
-                    }
+                    Creature targetOccupant = grid[targetX + (targetY * width)].occupant;
 
-                    grid[c.x + (c.y * width)].occupant = null;
-                    c.x = targetX;
-                    c.y = targetY;
-                    grid[targetX + (targetY * width)].occupant = c;
+                    if (targetOccupant == null)
+                    {
+                        if (!NEMO.disableEnergyDrain)
+                        {
+                            float massMoveFactor = MathF.Pow(Math.Max(0.1f, c.GetPheno(PType.BodyMass)), 0.5f);
+
+                            c.energy -= Config.movementCost *
+                                massMoveFactor *
+                                c.GetPheno(PType.FastTwitchMuscle) *
+                                (1f + c.GetPheno(PType.ArmorDensity)) *
+                                (1f + c.GetPheno(PType.RotationalAgility) * 0.2f)
+                                * Math.Max(0.5f, c.GetPheno(PType.RestingEfficiency));
+                        }
+
+                        grid[c.x + (c.y * width)].occupant = null;
+                        c.x = targetX;
+                        c.y = targetY;
+                        grid[targetX + (targetY * width)].occupant = c;
+                    }
+                    else if (targetOccupant != c)
+                    {
+                        float myMass = c.GetPheno(PType.BodyMass);
+                        float theirMass = targetOccupant.GetPheno(PType.BodyMass);
+
+                        if (myMass > theirMass * 1.25f && c.intentMove > 0.5f)
+                        {
+                            if (!NEMO.disableEnergyDrain)
+                            {
+                                c.energy -= Config.movementCost * myMass * 1.5f;
+
+                                float trampleDmg = Config.wallCollisionDmg * c.intentMove * (myMass / theirMass);
+                                targetOccupant.energy -= trampleDmg * (1f - targetOccupant.GetPheno(PType.ArmorDensity));
+                            }
+
+                            grid[c.x + (c.y * width)].occupant = targetOccupant;
+                            targetOccupant.x = c.x;
+                            targetOccupant.y = c.y;
+                            targetOccupant.lastX = c.x; 
+                            targetOccupant.lastY = c.y;
+
+                            c.x = targetX;
+                            c.y = targetY;
+                            grid[targetX + (targetY * width)].occupant = c;
+                        }
+                        else
+                        {
+                            c.facingDirection = (c.facingDirection + 4) % 8;
+
+                            float kineticDamage = Config.wallCollisionDmg * c.intentMove * c.GetPheno(PType.BodyMass);
+                            if (!NEMO.disableEnergyDrain)
+                            {
+                                c.energy -= kineticDamage;
+                                tickEnergyWasted += kineticDamage;
+                            }
+
+                            c.intentMoveX = 0;
+                            c.intentMoveY = 0;
+                            c.intentMove = 0;
+                        }
+                    }
                 }
                 else if (outOfBounds || hitBlock)
                 {
-                    c.facingDirection = (c.facingDirection + 4) % 8;
+                    int dx = (int)c.intentMoveX;
+                    int dy = (int)c.intentMoveY;
+
+                    bool blockedX = c.x + dx < 0 || c.x + dx >= width || grid[(c.x + dx) + (c.y * width)].isBlock;
+                    bool blockedY = c.y + dy < 0 || c.y + dy >= height || grid[c.x + ((c.y + dy) * width)].isBlock;
+
+                    if (blockedX) dx = -dx;
+                    if (blockedY) dy = -dy;
+
+                    for (int d = 0; d < 8; d++)
+                    {
+                        if (DirectionToVector[d].dx == dx && DirectionToVector[d].dy == dy)
+                        {
+                            c.facingDirection = d;
+                            break;
+                        }
+                    }
 
                     float kineticDamage = Config.wallCollisionDmg * c.intentMove * c.GetPheno(PType.BodyMass);
                     if (!NEMO.disableEnergyDrain)
@@ -421,6 +492,7 @@ namespace NEMO
                 if (rand.NextDouble() < c.intentAttack)
                 {
                     tickAttacks++;
+                    c.totalActionAttempts++;
 
                     c.energy -= NEMO.disableEnergyDrain ? 0f
                         : Config.attackCost * c.GetPheno(PType.MetabolicRate) * c.GetPheno(PType.Lethality);
@@ -439,12 +511,18 @@ namespace NEMO
                             float kinship = 1f - ((rDiff + gDiff + bDiff) / 765f);
 
                             if (rand.NextDouble() < (c.GetPheno(PType.SocialCohesion) * kinship)) continue;
+                            c.successfulActions++;
 
                             float rawDamage = Config.baseAttackDmg * c.GetPheno(PType.Lethality) * maturation;
                             rawDamage *= (1f - (c.GetPheno(PType.ScavengerTolerance) * 0.8f));
 
+                            float attackerMass = Math.Max(0.1f, c.GetPheno(PType.BodyMass));
+                            float targetMass = Math.Max(0.1f, target.GetPheno(PType.BodyMass));
+
+                            float massAdvantage = attackerMass / targetMass;
+
                             float targetArmor = target.GetPheno(PType.ArmorDensity);
-                            float finalDamage = rawDamage * (1f - targetArmor);
+                            float finalDamage = rawDamage * massAdvantage * (1f - targetArmor);
 
                             float deathThreshold = target.startingEnergy * Config.deathEnergy;
                             float maxDrain = Math.Max(0, target.energy - deathThreshold);
@@ -453,7 +531,9 @@ namespace NEMO
                             target.energy -= actualDamage;
                             c.damageDealt += actualDamage;
 
-                            float biteEfficiency = c.GetPheno(PType.CarnivoryBias) * (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
+                            float rawEfficiency = MathF.Sqrt(c.GetPheno(PType.CarnivoryBias));
+                            float biteEfficiency = rawEfficiency * (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
+
                             float caloriesAbsorbed = actualDamage * Config.meatEntropyMulti * biteEfficiency;
 
                             c.energy += caloriesAbsorbed;
@@ -467,7 +547,6 @@ namespace NEMO
                                 tickDeaths++;
                                 tickKills++;
                                 c.kills++;
-                                EvaluateSignificance(target);
                                 emaLifespan = (emaLifespan * 0.999f) + (target.age * 0.001f);
 
                                 target.isDead = true;
@@ -587,40 +666,65 @@ namespace NEMO
 
                 c.energy -= tickCost;
 
+                float deathE = c.startingEnergy * Config.deathEnergy;
+                float reproE = c.startingEnergy * c.GetPheno(PType.ReproductionThreshold);
+                float targetMaxE = c.gestationTimer > 0
+                    ? reproE * 0.95f
+                    : reproE + (c.startingEnergy * 0.2f);
+
+                float energyRange = targetMaxE - deathE;
+                float fullness = Math.Clamp((c.energy - deathE) / Math.Max(0.001f, energyRange), 0f, 1f);
+                float appetite = 1f - fullness;
+
                 var currentCell = grid[c.x + (c.y * width)];
-                if (currentCell.foodItem != null)
+                if (currentCell.foodItem != null && appetite > 0.05f)
                 {
                     FoodItem meal = currentCell.foodItem;
-                    float efficiency = meal.isMeat ? c.GetPheno(PType.CarnivoryBias) : (1f - c.GetPheno(PType.CarnivoryBias));
-                    if (meal.isMeat) efficiency *= (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
 
-                    c.energy += meal.nutrition * efficiency;
+                    float stomachCap = c.GetPheno(PType.BodyMass) * Config.tickStomachCapacity;
+                    float attemptedBite = Math.Min(meal.nutrition, stomachCap) * appetite;
 
-                    float poisonTaken = meal.toxicity * Config.baseNutrition * (1f - c.GetPheno(PType.ScavengerTolerance));
-                    c.energy -= Math.Max(0f, poisonTaken);
-
+                    float rawEfficiency = meal.isMeat ? MathF.Sqrt(c.GetPheno(PType.CarnivoryBias)) : MathF.Sqrt(1f - c.GetPheno(PType.CarnivoryBias));
                     if (meal.isMeat)
                     {
-                        tickMeatsEaten++;
-                        c.meatsEaten++;
+                        rawEfficiency *= (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
                     }
-                    else
+
+                    float gutDigestionFactor = meal.isMeat ? 1f : Math.Clamp(c.GetPheno(PType.BodyMass) / 1.5f, 0.2f, 1f);
+                    float efficiency = rawEfficiency * gutDigestionFactor;
+
+                    c.energy += attemptedBite * efficiency;
+
+                    float poisonTaken = (attemptedBite / Config.baseNutrition) * meal.toxicity * Config.baseNutrition * (1f - c.GetPheno(PType.ScavengerTolerance));
+                    c.energy -= Math.Max(0f, poisonTaken);
+
+                    meal.nutrition -= attemptedBite;
+
+                    if (meal.nutrition <= 5f)
                     {
-                        tickPlantsEaten++;
-                        c.plantsEaten++;
+                        if (meal.isMeat) { tickMeatsEaten++; c.meatsEaten++; }
+                        else { tickPlantsEaten++; c.plantsEaten++; }
+
+                        activeFoods.Remove(meal);
+                        currentCell.foodItem = null;
                     }
-                    activeFoods.Remove(meal);
-                    currentCell.foodItem = null;
                 }
+
+                c.intentConsume *= appetite;
+
                 if (c.intentConsume > 0.1f)
                 {
+                    c.totalActionAttempts++;
+
                     float consumeCost = Config.costOfLiving * c.intentConsume;
                     c.energy -= NEMO.disableEnergyDrain ? 0f : consumeCost;
                     bool ateSomething = false;
 
-                    for (int dx = -1; dx <= 1; dx++)
+                    float remainingBiteCapacity = c.GetPheno(PType.BodyMass) * Config.tickStomachCapacity * c.intentConsume;
+
+                    for (int dx = -1; dx <= 1 && remainingBiteCapacity > 1f; dx++)
                     {
-                        for (int dy = -1; dy <= 1; dy++)
+                        for (int dy = -1; dy <= 1 && remainingBiteCapacity > 1f; dy++)
                         {
                             if (dx == 0 && dy == 0) continue;
 
@@ -632,33 +736,64 @@ namespace NEMO
                                 FoodItem? adjMeal = grid[cx + (cy * width)].foodItem;
                                 if (adjMeal != null)
                                 {
-                                    float efficiency = adjMeal.isMeat ? c.GetPheno(PType.CarnivoryBias) : (1f - c.GetPheno(PType.CarnivoryBias));
-                                    if (adjMeal.isMeat) efficiency *= (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
+                                    float bite = Math.Min(adjMeal.nutrition, remainingBiteCapacity);
 
-                                    c.energy += adjMeal.nutrition * efficiency * c.intentConsume;
-
-                                    float poisonTaken = adjMeal.toxicity * Config.baseNutrition * (1f - c.GetPheno(PType.ScavengerTolerance));
-                                    c.energy -= Math.Max(0f, poisonTaken);
-
+                                    float rawEfficiency = adjMeal.isMeat ? MathF.Sqrt(c.GetPheno(PType.CarnivoryBias)) : MathF.Sqrt(1f - c.GetPheno(PType.CarnivoryBias));
                                     if (adjMeal.isMeat)
                                     {
-                                        tickMeatsEaten++;
-                                        c.meatsEaten++;
+                                        rawEfficiency *= (0.5f + (c.GetPheno(PType.ScavengerTolerance) * 0.5f));
                                     }
-                                    else
-                                    {
-                                        tickPlantsEaten++;
-                                        c.plantsEaten++;
-                                    }
-                                    activeFoods.Remove(adjMeal);
-                                    grid[cx + (cy * width)].foodItem = null;
+
+                                    float gutDigestionFactor = adjMeal.isMeat ? 1.0f : Math.Clamp(c.GetPheno(PType.BodyMass) / 1.5f, 0.2f, 1.2f);
+                                    float efficiency = rawEfficiency * gutDigestionFactor;
+
+                                    c.energy += bite * efficiency;
+
+                                    float poisonTaken = (bite / Config.baseNutrition) * adjMeal.toxicity * Config.baseNutrition * (1f - c.GetPheno(PType.ScavengerTolerance));
+                                    c.energy -= Math.Max(0f, poisonTaken);
+
+                                    adjMeal.nutrition -= bite;
+                                    remainingBiteCapacity -= bite;
                                     ateSomething = true;
+
+                                    if (adjMeal.nutrition <= 5f)
+                                    {
+                                        if (adjMeal.isMeat) { tickMeatsEaten++; c.meatsEaten++; }
+                                        else { tickPlantsEaten++; c.plantsEaten++; }
+
+                                        activeFoods.Remove(adjMeal);
+                                        grid[cx + (cy * width)].foodItem = null;
+                                    }
                                 }
                             }
                         }
                     }
 
                     if (!ateSomething) tickEnergyWasted += consumeCost;
+                    else
+                    {
+                        if (c.lastFoodX != -1)
+                        {
+                            float dx = Math.Abs(c.x - c.lastFoodX);
+                            float dy = Math.Abs(c.y - c.lastFoodY);
+                            float displacement = MathF.Sqrt((dx * dx) + (dy * dy));
+
+                            if (displacement > 1.5f)
+                            {
+                                float intentionalDistance = Math.Min(displacement, 15f);
+                                float normalizedDistance = intentionalDistance / 15f;
+
+                                float weightedEfficiency = normalizedDistance * (displacement / Math.Max(1f, c.ticksSinceLastMove));
+                                c.totalPathEfficiencySum += weightedEfficiency;
+                            }
+                        }
+
+                        c.lastFoodX = c.x;
+                        c.lastFoodY = c.y;
+                        c.successfulActions++;
+                        c.foodItemsEaten++;
+                        c.ticksSinceLastMove = 0;
+                    }
                 }
 
                 c.energy = Math.Clamp(c.energy, 0f, 3f * c.startingEnergy);
@@ -666,7 +801,6 @@ namespace NEMO
                 if (c.energy <= c.startingEnergy * Config.deathEnergy)
                 {
                     tickDeaths++;
-                    EvaluateSignificance(c);
                     emaLifespan = (emaLifespan * 0.999f) + (c.age * 0.001f);
 
                     c.isDead = true;
@@ -730,9 +864,7 @@ namespace NEMO
                     if (placed)
                     {
                         tickBirths++;
-                        c.gestationTimer = (int)(Config.maturationTime * 3f * c.GetPheno(PType.GestationPeriod));
-
-                        EvaluateSignificance(c);
+                        c.gestationTimer = (int)(Config.maturationTime * c.GetPheno(PType.GestationPeriod) * Config.gestationPeriod);
 
                         float investment = c.GetPheno(PType.OffspringInvestment);
                         float investedEnergy = c.energy * investment;
@@ -743,6 +875,7 @@ namespace NEMO
                         Creature child = new Creature(spawnX, spawnY, childGenome, this);
 
                         child.energy = investedEnergy * Config.birthEfficiency;
+                        child.gestationTimer = (int)(Config.maturationTime * child.GetPheno(PType.GestationPeriod) * Config.gestationPeriod);
 
                         child.generation = c.generation + 1;
                         child.lineageLifespan = (c.lineageLifespan == 0f) ? c.age : (c.lineageLifespan * 0.8f) + (c.age * 0.2f);
@@ -765,19 +898,32 @@ namespace NEMO
             creatures.AddRange(newbornsBuf);
         }
 
-        public void EvaluateSignificance(Creature c)
+        public float EvaluateSR(Creature c)
         {
             float specificMathLifespan = c.startingEnergy / Math.Max(0.001f, c.GetBaseTickCost());
             float effectiveAge = (c.age * 0.5f) + (c.lineageLifespan * 0.5f);
 
-            float significance = effectiveAge / Math.Max(1f, specificMathLifespan);
+            float survivalRatio = effectiveAge / Math.Max(1f, specificMathLifespan);
+            c.survivalRatio = survivalRatio;
 
-            if (significance > highestSignificance)
+            if (survivalRatio > highestSurvivalRatio)
             {
-                highestSignificance = significance;
+                highestSurvivalRatio = survivalRatio;
                 highestGeneration = c.generation;
-                bestGenome = c.genome.Clone();
+
+                if (bestGenome == null || bestGenome.GenerateExactHash() != c.genomeHash)
+                {
+                    bestGenome = c.genome.Clone();
+                }
             }
+
+            float ceq = c.EvaluateCEQ(survivalRatio);
+            if (ceq > highestCEQ)
+            {
+                highestCEQ = ceq;
+            }
+
+            return survivalRatio;
         }
 
         public bool IsCellObstructed(int x, int y)
@@ -791,7 +937,7 @@ namespace NEMO
             float avgBurnPerCreature = emaEnergyOut / Math.Max(1f, Config.creatureCount);
             float mathLifespan = Config.baseStartingEnergy / Math.Max(0.001f, avgBurnPerCreature);
 
-            float avgAge = 0, avgGen = 0, avgEnergy = 0, avgMeatBias = 0, avgArmor = 0, avgLethality = 0, avgGenes = 0;
+            float avgAge = 0, avgGen = 0, avgEnergy = 0, avgMeatBias = 0, avgGenes = 0;
             float plantEnergy = 0, meatEnergy = 0;
             int herbivores = 0, hunters = 0, scavengers = 0, parasites = 0, omnivores = 0;
             int maxGen = 0;
@@ -806,8 +952,6 @@ namespace NEMO
 
                     avgEnergy += c.energy;
                     avgMeatBias += c.GetPheno(PType.CarnivoryBias);
-                    avgArmor += c.GetPheno(PType.ArmorDensity);
-                    avgLethality += c.GetPheno(PType.Lethality);
                     avgGenes += c.genome.genes.Count;
 
                     float carnivory = c.GetPheno(PType.CarnivoryBias);
@@ -838,8 +982,6 @@ namespace NEMO
                 avgGen /= count;
                 avgEnergy /= count;
                 avgMeatBias /= count;
-                avgArmor /= count;
-                avgLethality /= count;
                 avgGenes /= count;
             }
 
@@ -870,9 +1012,6 @@ namespace NEMO
                     else if (carnivory > 0.65f) dietType = scavenger > 0.5f ? "Scavenger" : "Predator";
                     else if (carnivory < 0.35f) dietType = "Herbivore";
 
-                    float specificMathLifespan = tc.startingEnergy / Math.Max(0.001f, tc.GetBaseTickCost());
-                    float liveSignificance = ((tc.age * 0.5f) + (tc.lineageLifespan * 0.5f)) / Math.Max(1f, specificMathLifespan);
-
                     int sensors = tc.brain.neurons.Count(n => n.type == NType.Sensor);
                     int maths = tc.brain.neurons.Count(n => n.type == NType.Math);
                     int actions = tc.brain.neurons.Count(n => n.type == NType.Action);
@@ -900,7 +1039,9 @@ namespace NEMO
                         id = tc.ID.ToString(),
                         age = tc.age,
                         gen = tc.generation,
-                        significance = liveSignificance,
+                        survivalRatio = tc.survivalRatio,
+                        ceq = tc.ceqScore,
+                        bodyMass = tc.GetPheno(PType.BodyMass),
                         lineage = tc.lineageLifespan,
                         energy = tc.energy,
                         kills = tc.kills,
@@ -937,6 +1078,11 @@ namespace NEMO
             {
                 exportFoods.Add(new ExportFood { x = foodsSnap[i].x, y = foodsSnap[i].y, meat = foodsSnap[i].isMeat });
             }
+
+            var masses = creaturesSnap.Select(c => c.GetPheno(PType.BodyMass)).OrderBy(m => m).ToList();
+            float p10 = masses.Count > 0 ? masses[(int)(masses.Count * 0.10f)] : 0;
+            float p50 = masses.Count > 0 ? masses[(int)(masses.Count * 0.50f)] : 0;
+            float p90 = masses.Count > 0 ? masses[(int)(masses.Count * 0.90f)] : 0;
 
             var exportCreatures = new List<ExportCreature>(creaturesSnap.Length);
             float[] angleMap = new float[] { -90f, -45f, -20f, 0f, 20f, 45f, 90f, 180f };
@@ -990,7 +1136,9 @@ namespace NEMO
                     cones = creatureCones,
                     parentId = c.parentID,
                     diet = dietType,
-                    lineage = c.lineageLifespan
+                    lineage = c.lineageLifespan,
+                    mass = c.GetPheno(PType.BodyMass),
+                    sr = c.survivalRatio
                 });
             }
 
@@ -1010,7 +1158,8 @@ namespace NEMO
                     extinctions = NEMO.extinctionCount,
                     savedGenomesTotal = NEMO.savedGenomesTotal,
                     savedGenomesSession = NEMO.savedGenomesSession,
-                    highestSignificance = highestSignificance,
+                    highestSurvivalRatio = highestSurvivalRatio,
+                    highestCEQ = highestCEQ,
                     plants = foodsSnap.Count(f => !f.isMeat),
                     meat = foodsSnap.Count(f => f.isMeat),
 
@@ -1043,9 +1192,11 @@ namespace NEMO
                     scavengers = scavengers,
                     parasites = parasites,
                     avgCarnivory = avgMeatBias,
-                    avgArmor = avgArmor,
-                    avgLethality = avgLethality,
                     avgGenes = avgGenes,
+
+                    massP10 = p10,
+                    massP50 = p50,
+                    massP90 = p90,
 
                     govCap = govDynamicCapacity,
                     govCurE = govCurrentEnergy,
@@ -1158,9 +1309,9 @@ namespace NEMO
                         {
                             grid[x + (y * width)].isBlock = false;
 
-                            if (rand.NextDouble() < 0.005)
+                            if (rand.NextDouble() < 0.0005)
                             {
-                                int radius = rand.Next(5, 15);
+                                int radius = rand.Next(5, 25);
                                 for (int dx = -radius; dx <= radius; dx++)
                                 {
                                     for (int dy = -radius; dy <= radius; dy++)
@@ -1351,39 +1502,58 @@ namespace NEMO
 
             return Lerp(x1, x2, v);
         }
-
         private float PseudoRandomHash(int x, int y)
         {
             int n = x + y * 57;
             n = (n << 13) ^ n;
             return (1.0f - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f) * 0.5f + 0.5f;
         }
-
         private float Lerp(float a, float b, float t)
         {
             return a + t * (b - a);
         }
     }
 
-    public class Creature
+    public class Creature : ICreature
     {
-        public Guid ID = Guid.NewGuid();
-
         public Genome genome;
         public Brain brain;
         public World world;
 
         #region Initializations
-        public int x;
-        public int y;
-        public int lastX;
-        public int lastY;
+        public Guid ID = Guid.NewGuid();
 
+        IWorld ICreature.world => world;
+        float[] ICreature.phenoCache => phenoCache;
+
+        public int x { get; set; }
+        public int y { get; set; }
+        public int lastX { get; set; }
+        public int lastY { get; set; }
         //0 north, 1 northeast, 2 east, 3 southeast, 4 south, 5 southwest, 6 west, 7 northwest
-        public int facingDirection;
-        public int lastFacing;
+        public int facingDirection { get; set; }
+        public int lastFacing { get; set; }
+        public float startingEnergy { get; set; }
+        public float energy { get; set; } = Config.TbaseStartingEnergy;
+        public bool isDead { get; set; } = false;
 
-        public int age = 0;
+        public float intentMove { get; set; } = 0f;
+        public float intentMoveX { get; set; } = 0f;
+        public float intentMoveY { get; set; } = 0f;
+        public float intentRotate { get; set; } = 0f;
+        public float intentConsume { get; set; } = 0f;
+        public float intentAttack { get; set; } = 0f;
+        public float intentSignalIntensity { get; set; } = 0f;
+        public int intentSignalChannel { get; set; } = -1;
+        public float intentSignalDecay { get; set; } = 0f;
+
+        public int genomeHash { get; set; }
+        public byte colorR { get; set; }
+        public byte colorG { get; set; }
+        public byte colorB { get; set; }
+        public int age { get; set; } = 0;
+
+
         public int generation = 0;
         public float lineageLifespan = 0f;
         public string parentID = "";
@@ -1391,36 +1561,60 @@ namespace NEMO
         public int plantsEaten = 0;
         public float damageDealt = 0f;
         public int kills = 0;
-
-        public float energy = Config.baseStartingEnergy;
-        public bool isDead = false;
         public int gestationTimer = 0;
-
-        public float intentMove = 0f;
-        public float intentMoveX = 0f;
-        public float intentMoveY = 0f;
-        public float intentRotate = 0f;
-        public float intentConsume = 0f;
-        public float intentAttack = 0f;
-        public float intentSignalIntensity = 0f;
-        public int intentSignalChannel = -1;
-        public float intentSignalDecay = 0f;
         public string currentAction = "Idle";
-
-        public int genomeHash;
-        public byte colorR;
-        public byte colorG;
-        public byte colorB;
         public string? trackedSlot;
 
         public float[] phenoCache;
 
-        public float startingEnergy;
+        public int ticksSinceLastMove = 1000;
+        public int lastFoodX = -1;
+        public int lastFoodY = -1;
+        public float totalPathEfficiencySum = 0f;
+        public int foodItemsEaten = 0;
+
+        public float totalActionAttempts = 0f;
+        public float successfulActions = 0f;
+
+        public float lastSensorSum = 0f;
+        public float lastMotorSum = 0f;
+        public float conditionalReactivityScore = 0f;
+        public int reactivitySamples = 0;
+
+        public float ceqScore = 0f;
+        public float survivalRatio = 0f;
         #endregion
 
         public void Update()
         {
-            this.brain.UpdateAllNeurons();
+            brain.UpdateAllNeurons();
+
+            if (age % 10 == 0)
+            {
+                float currentSensorSum = 0f;
+                float currentMotorSum = 0f;
+
+                for (int i = 0; i < brain.neurons.Count; i++)
+                {
+                    Neuron n = brain.neurons[i];
+                    if (n.type == NType.Sensor) currentSensorSum += n.value;
+                    else if (n.type == NType.Action) currentMotorSum += n.value;
+                }
+
+                float sensorDelta = MathF.Abs(currentSensorSum - lastSensorSum);
+                float motorDelta = MathF.Abs(currentMotorSum - lastMotorSum);
+
+                if (sensorDelta > 0.1f)
+                {
+                    reactivitySamples++;
+
+                    float reactivity = Math.Clamp(motorDelta, 0f, 1f);
+                    conditionalReactivityScore += reactivity;
+                }
+
+                lastSensorSum = currentSensorSum;
+                lastMotorSum = currentMotorSum;
+            }
         }
 
         public void ResetIntents()
@@ -1440,13 +1634,35 @@ namespace NEMO
 
         public float GetBaseTickCost()
         {
+            float massFactor = MathF.Pow(Math.Max(0.1f, GetPheno(PType.BodyMass)), 0.75f);
+
             return Config.costOfLiving
                  * GetPheno(PType.MetabolicRate)
-                 * GetPheno(PType.BodyMass)
+                 * massFactor
                  * GetPheno(PType.BrainSize)
                  * (1f + GetPheno(PType.VisionAcuity) * 0.1f)
                  * (1f + GetPheno(PType.SpikeCoating) * 0.2f)
                  * (1f + GetPheno(PType.Camouflage) * 0.2f);
+        }
+
+        public float EvaluateCEQ(float survivalRatio)
+        {
+            if (age < 100 || generation < 2)
+            {
+                ceqScore = 0f;
+                return 0f;
+            }
+
+            float causality = foodItemsEaten > 0 ? (totalPathEfficiencySum / foodItemsEaten) : 0f;
+            float precision = totalActionAttempts > 0 ? (successfulActions / totalActionAttempts) : 0f;
+            float entropy = reactivitySamples > 0 ? (conditionalReactivityScore / reactivitySamples) : 0f;
+
+            float rawScore = (causality * 0.35f) + (precision * 0.25f) + (entropy * 0.40f);
+            float confidence = Math.Clamp((age - 100) / 200f, 0f, 1f);
+
+            ceqScore = rawScore * confidence;
+
+            return ceqScore;
         }
 
         public Creature(int x, int y, Genome genome, World world)
@@ -1486,17 +1702,20 @@ namespace NEMO
         }
     }
 
-    public class Cell
+    public class Cell : ICell
     {
         public int x;
         public int y;
 
-        public bool isBlock = false;
-        public bool isOasis = false;
+        public bool isBlock { get; set; } = false;
+        public bool isOasis { get; set; } = false;
+        public SignalData[] signals { get; set; } = new SignalData[16];
+
         public FoodItem? foodItem = null;
         public Creature? occupant = null;
 
-        public SignalData[] signals = new SignalData[16];
+        object? ICell.foodItem => foodItem;
+        ICreature? ICell.occupant => occupant;
 
         public Cell(int x, int y)
         {

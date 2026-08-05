@@ -29,7 +29,7 @@ namespace NEMO
 
                 //metabolism
                 //efficiency from meat/plants
-                { PType.CarnivoryBias, new PhenoFlag(0.5f, 0.0f, 1.0f) },
+                { PType.CarnivoryBias, new PhenoFlag(0.5f, 0.0f, 1.0f, 20f) },
                 //stronger and fast but consumes more energy
                 { PType.MetabolicRate, new PhenoFlag(1.0f, 0.5f, 3.0f, 0.5f) },
                 //reduces resting cost, increases moving cost
@@ -39,7 +39,7 @@ namespace NEMO
 
                 //morphology
                 //higher start energy and priority, higher cost
-                { PType.BodyMass, new PhenoFlag(1.0f, 0.5f, 5.0f, 0.25f) },
+                { PType.BodyMass, new PhenoFlag(1.0f, 0.2f, 5.0f, 0.75f) },
                 //less damage, expensive movement
                 { PType.ArmorDensity, new PhenoFlag(0.0f, 0.0f, 0.9f, 0.5f) },
                 //reflects damage, increases cost of living

@@ -301,11 +301,11 @@
     </div>
 
     <div id="controls">
-        <div style="grid-column: span 2; color: #8fdfff; font-weight: bold; margin-bottom: 8px; font-size: 18px; text-align: center; border-bottom: 1px solid #444; padding-bottom: 5px;">NEMO CONTROLS</div>
+        <div style="grid-column: span 2; color: #8fdfff; font-weight: bold; margin-bottom: 8px; font-size: 18px; text-align: center; border-bottom: 1px solid #444; padding-bottom: 5px; letter-spacing: 1px;">NEMO CONTROLS</div>
 
         <div style="display: flex; flex-direction: column;">
-            <button id="repopBtn" onclick="toggleGenomeBank()" style="border-color: palegreen; color: palegreen; margin-bottom: 8px;">OPEN GENOME BANK</button>
             <button onclick="openWorldBank()" style="border-color: palegreen; color: palegreen; margin-bottom: 8px;">OPEN WORLD BANK</button>
+            <button id="repopBtn" onclick="toggleGenomeBank()" style="border-color: palegreen; color: palegreen; margin-bottom: 8px;">OPEN GENOME BANK</button>
             <button onclick="clearLineage()" style="border-color: #ff99cc; color: #ff99cc; margin-bottom: 8px;">CLEAR MARKED</button>
 
             <div class="panel-section">
@@ -341,7 +341,8 @@
 
                 <div style="display: flex; gap: 6px; margin-bottom: 8px;">
                     <select id="champCriteria" style="width: 50%; font-size: 11px; padding: 4px; background: #222; color: white; border: 1px solid #555; border-radius: 4px; outline: none; cursor: pointer; font-family: consolas;">
-                        <option value="sig">Highest Sig.</option>
+                        <option value="sig">Highest SR</option>
+                        <option value="sig">Highest Int.</option>
                         <option value="kills">Most Kills</option>
                         <option value="meat">Most Meat</option>
                         <option value="plants">Most Plants</option>
@@ -360,6 +361,39 @@
                 </div>
             </div>
 
+            <div class="panel-section" style="border-top-color: #8fdfff; margin-top: 10px;">
+                <div class="panel-header" style="color: #8fdfff;">Trainer</div>
+
+                <button onclick="startTrainer()" style="border-color: #8fdfff; color: #8fdfff; margin-bottom: 12px; ">START TRAINING</button>
+                <button onclick="openConditionEditor()" style="border-color: #8fdfff; color: #8fdfff; margin-bottom: 12px; ">CUSTOM CONDITION</button>
+                <button onclick="findTrainerChampion()" style="border-color: #ffcc00; color: #ffcc00; margin-bottom: 12px; ">FIND FITTEST</button>
+
+                <div style="margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Weight: Kills</span><span id="twKillsDisp" style="color: #ffcc00; font-weight: bold;">1.0</span>
+                    </div>
+                    <input type="range" id="twKills" min="0" max="5" step="0.1" value="1.0" style="width: 100%; accent-color: #ffcc00;" oninput="updateTrainerWeights()">
+                </div>
+                <div style="margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Weight: Efficiency</span><span id="twEffDisp" style="color: palegreen; font-weight: bold;">0.0</span>
+                    </div>
+                    <input type="range" id="twEff" min="0" max="5" step="0.1" value="0.0" style="width: 100%; accent-color: palegreen;" oninput="updateTrainerWeights()">
+                </div>
+                <div style="margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Weight: Survival</span><span id="twSurvDisp" style="color: #8fdfff; font-weight: bold;">0.0</span>
+                    </div>
+                    <input type="range" id="twSurv" min="0" max="5" step="0.1" value="0.0" style="width: 100%; accent-color: #8fdfff;" oninput="updateTrainerWeights()">
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
+                        <span>Weight: CEQ / Intel</span><span id="twCEQDisp" style="color: #ff99cc; font-weight: bold;">0.0</span>
+                    </div>
+                    <input type="range" id="twCEQ" min="0" max="5" step="0.1" value="0.0" style="width: 100%; accent-color: #ff99cc;" oninput="updateTrainerWeights()">
+                </div>
+            </div>
+
             <div class="split-button" style="margin-bottom: 8px; width: 100%; display: flex;">
                 <button class="split-main" onclick="switchView(1, 'genome.html')" style="flex: 1;">View Genomes</button>
                 <button class="split-side" onclick="window.open('genome.html', '_blank', 'width=' + window.outerWidth + ',height=' + window.outerHeight)" title="New Window">↗</button>
@@ -372,6 +406,8 @@
 
         <div style="display: flex; flex-direction: column;">
             <button onclick="startSimulation()" style="border-color: palegreen; color: palegreen;">START</button>
+            <button onclick="copyToNewWorld()" style="border-color: #8fdfff; color: #8fdfff; ">COPY -> NEW WORLD</button>
+            <button onclick="saveSnapshot()" style="border-color: #8fdfff; color: #8fdfff;">SAVE WORLD</button>
             <button id="pauseBtn" onclick="togglePause()">PAUSE</button>
             <button onclick="openRawConfig()">EDIT CONFIG</button>
             <button onclick="reloadConfig()">RELOAD CONFIG</button>
@@ -401,7 +437,7 @@
                     <div style="display: flex; justify-content: space-between; font-size: 11px; color: #ccc;">
                         <span>Waste Penalty:</span><span id="wasteDisplay" style="color: #8fdfff; font-weight: bold;">0.50</span>
                     </div>
-                    <input type="range" id="wasteSlider" min="0.0" max="5.0" step="0.05" value="0.5" style="width: 100%; accent-color: #8fdfff;" oninput="updateConfigValue('wastePenaltyMultiplier', 'wasteSlider', 'wasteDisplay')">
+                    <input type="range" id="wasteSlider" min="0.0" max="0.5" step="0.05" value="0.25" style="width: 100%; accent-color: #8fdfff;" oninput="updateConfigValue('wastePenaltyMultiplier', 'wasteSlider', 'wasteDisplay')">
                 </div>
             </div>
 
@@ -451,6 +487,8 @@
                     <option value="diet">Diet Type</option>
                     <option value="lineage">Lineage Lifespan</option>
                     <option value="energy">Current Energy</option>
+                    <option value="mass">Body Mass</option>
+                    <option value="sr">Survival Ratio</option>
                 </select>
             </div>
 
@@ -497,7 +535,7 @@
     width: 270px;
     max-height: 90vh;
     overflow-y: auto;">
-        <div style="color: #8fdfff; font-weight: bold; margin-bottom: 8px; font-size: 14px; text-align: center; border-bottom: 1px solid #444; padding-bottom: 5px;">NEMO TELEMETRY</div>
+        <div style="color: #8fdfff; font-weight: bold; margin-bottom: 8px; font-size: 14px; text-align: center; border-bottom: 1px solid #444; padding-bottom: 5px; letter-spacing: 1px;">NEMO TELEMETRY</div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px;">
             <span style="color:#aaa;">TPS / Ticks:</span> <span id="t-tps-ticks" style="color: white; text-align: right;">0 / 0</span>
@@ -505,7 +543,8 @@
             <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="pop"> Population:</span> <span id="t-pop" style="color: white; font-weight: bold; text-align: right;">0</span>
             <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="extinctions"> Extinctions:</span> <span id="t-extinctions" style="color: tomato; text-align: right;">0</span>
             <span style="color:#aaa;">Saved (S/T):</span> <span id="t-saved" style="color: #8fdfff; text-align: right;">0 / 0</span>
-            <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="highestSignificance"> Highest Sig.:</span> <span id="t-significance" style="color: #8fdfff; text-align: right;">0</span>
+            <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="highestSurvivalRatio"> Highest SR:</span> <span id="t-survivalRatio" style="color: #8fdfff; text-align: right;">0</span>
+            <span style="color:#aaa;"><input type="checkbox" class="graph-cb" value="highestCEQ"> Highest Int.:</span> <span id="t-CEQ" style="color: #8fdfff; text-align: right;">0</span>
             <span style="color:#aaa;">Plants | Meat:</span> <span id="t-food" style="text-align: right; grid-column: span 1;">0 | 0</span>
         </div>
 
@@ -541,9 +580,8 @@
             <span style="color:#888;"><input type="checkbox" class="graph-cb" value="attacks"> Attacks/1k:</span> <span id="t-attacks" style="text-align: right;">0</span>
             <span style="color:#888;"><input type="checkbox" class="graph-cb" value="killRate"> Kills/1k:</span> <span id="t-killrate" style="text-align: right;">0</span>
             <span style="margin-top:4px;"><input type="checkbox" class="graph-cb" value="avgCarnivory"> Avg Meat Bias:</span> <span id="t-meatbias" style="margin-top:4px; text-align: right;">0.00</span>
-            <span><input type="checkbox" class="graph-cb" value="avgArmor"> Avg Armor:</span> <span id="t-armor" style="text-align: right;">0.00</span>
-            <span><input type="checkbox" class="graph-cb" value="avgLethality"> Avg Lethality:</span> <span id="t-lethal" style="text-align: right;">0.00</span>
             <span><input type="checkbox" class="graph-cb" value="avgGenes"> Avg Gene Count:</span> <span id="t-genes" style="text-align: right;">0.0</span>
+            <span style="color:#aaa; margin-top:4px;">Mass (10/50/90):</span> <span id="t-massdist" style="text-align: right; color: palegreen; margin-top:4px;">0.0 | 0.0 | 0.0</span>
         </div>
 
         <div style="color: #8fdfff; font-weight: bold; margin-top: 8px; border-bottom: 1px dashed #444;">Governor System</div>
@@ -641,6 +679,23 @@
         </div>
     </div>
 
+    <div id="conditionModal" class="graph-modal" style="display: none; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 550px; height: 450px; z-index: 3500; position: fixed;">
+        <div class="graph-header" style="cursor: grab;" id="conditionHeader">
+            <span style="color: #8fdfff; font-weight: bold; font-size: 13px;">CUSTOM C# CONDITION</span>
+            <button onclick="closeConditionEditor()" style="width: 24px; height: 24px; min-width: 24px; margin: 0; padding: 0; background: #222; border: 1px solid tomato; border-radius: 4px; color: tomato; cursor: pointer; font-weight: bold; font-family: consolas; font-size: 14px; display: flex; align-items: center; justify-content: center; line-height: 1;">X</button>
+        </div>
+        <div style="flex-grow: 1; padding: 10px; display: flex; flex-direction: column;">
+            <div style="color: #aaa; font-size: 11px; margin-bottom: 6px;">Available variables: <span style="color: #8fdfff;">x, y, age, energy, kills, width, height</span></div>
+            <textarea id="conditionTextarea" spellcheck="false" class="custom-scroll" style="width: 100%; height: 100%; background: #111; color: #ccc; border: 1px solid #555; border-radius: 4px; font-family: consolas; padding: 10px; box-sizing: border-box; resize: none;" placeholder="(x > (world.width/2)-25 && x < (world.width/2)+25)"></textarea>
+            <div id="conditionConsole" class="custom-scroll" style="height: 80px; background: #0a0a0a; border: 1px solid #333; margin-top: 10px; padding: 8px; font-size: 11px; color: #ffcc00; overflow-y: auto;">Awaiting compilation...</div>
+        </div>
+        <div style="padding: 10px; border-top: 1px solid #444; background: rgba(20,20,20,0.95); border-radius: 0 0 6px 6px; display: flex; gap: 10px;">
+            <button onclick="checkCondition()" style="margin: 0; border-color: #ffcc00; color: #ffcc00; flex: 1;">CHECK SYNTAX</button>
+            <button onclick="applyCondition()" style="margin: 0; border-color: palegreen; color: palegreen; flex: 1;">APPLY TO TRAINER</button>
+            <button onclick="clearCondition()" style="margin: 0; border-color: tomato; color: tomato; flex: 1;">CLEAR</button>
+        </div>
+    </div>
+
     <div id="sim-container">
         <div id="genOverlay" style="
             display: none;
@@ -663,6 +718,46 @@
         ">
             GENERATING WORLD...
         </div>
+
+        <div id="arenaDashboard" style="display: none; position: absolute; bottom: 0; left: 0; right: 0; height: 300px; background: rgba(15, 15, 15, 0.95); border-top: 2px solid #333; z-index: 2000; padding: 15px; font-family: consolas, monospace; flex-direction: row; gap: 20px; pointer-events: auto; box-sizing: border-box;">
+
+            <div style="flex: 0 0 250px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="color: #8fdfff; font-weight: bold; font-size: 14px; letter-spacing: 1px; border-bottom: 1px solid #444; padding-bottom: 4px;">TRAINER</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px;">
+                    <span style="color:#aaa;">Generation:</span><span id="ad-gen" style="color: #8fdfff; text-align: right; font-weight: bold;">0</span>
+                    <span style="color:#aaa;">Round Ticks:</span><span id="ad-ticks" style="color: palegreen; text-align: right;">0</span>
+                    <span style="color:#aaa;">Engine TPS:</span><span id="ad-tps" style="color: #ffcc00; text-align: right;">0</span>
+
+                    <div style="grid-column: span 2; border-top: 1px dashed #444; margin: 2px 0;"></div>
+
+                    <span style="color:#aaa;">Hunters Alive:</span><span id="ad-active" style="color: tomato; text-align: right;">0</span>
+                    <span style="color:#aaa;">Bait Left:</span><span id="ad-bait" style="color: white; text-align: right;">0</span>
+
+                    <div style="grid-column: span 2; border-top: 1px dashed #444; margin: 2px 0;"></div>
+
+                    <span style="color:#aaa;" title="Max / Avg Score">Fitness (M/A):</span><span style="color: #ffcc00; text-align: right;"><span id="ad-maxScore">0</span> / <span id="ad-avgScore">0</span></span>
+                    <span style="color:#aaa;" title="Max / Avg Kills">Kills (M/A):</span><span style="color: tomato; text-align: right;"><span id="ad-maxKills">0</span> / <span id="ad-avgKills">0</span></span>
+                    <span style="color:#aaa;">Avg Survival:</span><span id="ad-avgSurv" style="color: #8fdfff; text-align: right;">0</span>
+                    <span style="color:#aaa;">Avg Path Eff:</span><span id="ad-avgEff" style="color: palegreen; text-align: right;">0.00</span>
+                </div>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow: hidden;">
+                <div style="flex: 1; position: relative; min-height: 0; overflow: hidden;">
+                    <div style="position: absolute; top: 3px; left: 8px; color: #8fdfff; font-size: 9px; font-weight: bold; pointer-events: none;">CEQ (MAX / AVG)</div>
+                    <canvas id="arenaCEQGraph" style="width: 100%; height: 100%; background: #111; border: 1px solid #333; border-radius: 4px; display: block; box-sizing: border-box;"></canvas>
+                </div>
+                <div style="flex: 1; position: relative; min-height: 0; overflow: hidden;">
+                    <div style="position: absolute; top: 3px; left: 8px; color: #ffcc00; font-size: 9px; font-weight: bold; pointer-events: none;">FITNESS (MAX / AVG)</div>
+                    <canvas id="arenaScoreGraph" style="width: 100%; height: 100%; background: #111; border: 1px solid #333; border-radius: 4px; display: block; box-sizing: border-box;"></canvas>
+                </div>
+                <div style="flex: 1; position: relative; min-height: 0; overflow: hidden;">
+                    <div style="position: absolute; top: 3px; left: 8px; color: tomato; font-size: 9px; font-weight: bold; pointer-events: none;">KILLS (MAX / AVG)</div>
+                    <canvas id="arenaKillsGraph" style="width: 100%; height: 100%; background: #111; border: 1px solid #333; border-radius: 4px; display: block; box-sizing: border-box;"></canvas>
+                </div>
+            </div>
+        </div>
+
         <canvas id="worldCanvas"></canvas>
     </div>
 
@@ -684,7 +779,9 @@
             <span style="color:#aaa;">Meat / Plants:</span> <span id="ci-food" style="text-align: right; color: palegreen;">0 / 0</span>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; margin-top: 2px;">
-            <span style="color:#aaa;">Significance:</span> <span id="ci-sig" style="text-align: right; color: #8fdfff;">0.00</span>
+            <span style="color:#aaa;">Survival Ratio:</span> <span id="ci-sig" style="text-align: right; color: #8fdfff;">0.00</span>
+            <span style="color:#aaa;">Cognitive EQ:</span> <span id="ci-ceq" style="text-align: right; color: #8fdfff;">0.00</span>
+            <span style="color:#aaa;">Body Mass:</span> <span id="ci-mass" style="text-align: right; color: palegreen;">0.00</span>
             <span style="color:#aaa;">Lineage Life:</span> <span id="ci-lineage" style="text-align: right; color: #ff99cc;">0</span>
         </div>
 
@@ -757,9 +854,18 @@
             <span id="pb-tick">Tick: 0</span>
         </div>
         <input type="range" id="pb-slider" min="0" max="100" value="0" style="width: 100%; accent-color: #8fdfff; cursor: pointer;" oninput="scrubTimelineDrag()" onchange="scrubTimelineRelease()">
-        <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
-            <button onclick="restoreTimeline()" style="width:150px; border-color:palegreen; color:palegreen; font-weight:bold;">RESTORE HERE</button>
-            <button onclick="exitPlayback()" style="width:150px; border-color:tomato; color:tomato; font-weight:bold;">EXIT PLAYBACK</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap: 10px;">
+            <div style="display:flex; align-items:center; gap: 10px;">
+                <button id="pb-playBtn" onclick="togglePlaybackPlay()" style="width:70px; border-color:#ffcc00; color:#ffcc00; font-weight:bold; margin:0;">PLAY</button>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <input type="range" id="pb-speed" min="1" max="30" value="5" style="width:80px; accent-color:#ffcc00;" oninput="updatePlaybackSpeed()">
+                    <span id="pb-speed-disp" style="color:#ffcc00; font-size:11px; font-weight:bold;">5 FPS</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="restoreTimeline()" style="width:130px; border-color:palegreen; color:palegreen; font-weight:bold; margin:0;">RESTORE</button>
+                <button onclick="exitPlayback()" style="width:130px; border-color:tomato; color:tomato; font-weight:bold; margin:0;">EXIT</button>
+            </div>
         </div>
     </div>
 
@@ -786,6 +892,7 @@
 
         const socket = new WebSocket(wsAddress);
 
+        //#region Initializations
         const canvas = document.getElementById('worldCanvas');
         const ctx = canvas.getContext('2d');
         const contextMenu = document.getElementById('context-menu');
@@ -821,6 +928,9 @@
         let isPlaybackMode = false;
         let playbackRunID = "";
         let playbackAvailableTicks = [];
+        let isPlaybackPlaying = false;
+        let playbackTimer = null;
+        let playbackFPS = 5;
         let debounceTimer = null;
         let cachedWorlds = [];
         let currentlyShownRunIDs = [];
@@ -874,18 +984,26 @@
         let spawnOffsetY = 30;
         let currentLifeMeas = 50;
 
+        let isArenaMode = false;
+        let arenaGen = 0;
+        const arenaHistory = {
+            maxScore: [], avgScore: [], maxKills: [], avgKills: [], maxCEQ: [], avgCEQ: []
+        };
+
         const colorPalette = ['#8fdfff', '#ffcc00', '#ff99cc', 'palegreen', 'tomato', 'mediumpurple', '#ffaa00', '#00ffff'];
         const masterCanvas = document.getElementById('masterCanvas');
         const masterCtx = masterCanvas.getContext('2d');
         const masterSlider = document.getElementById('masterSlider');
         makeDraggable(document.getElementById('masterGraph'), document.getElementById('masterGraphHeader'));
         makeDraggable(document.getElementById('rawConfigModal'), document.getElementById('rawConfigHeader'));
+        makeDraggable(document.getElementById('conditionModal'), document.getElementById('conditionHeader'));
 
         const overlay = document.getElementById('connectionOverlay');
         const statusEl = document.getElementById('connStatus');
         if (sessionStorage.getItem('nemo_booted')) {
             if (overlay) overlay.style.display = 'none';
         }
+        //#endregion
 
         socket.onopen = () => {
             console.log("Connected to NEMO");
@@ -946,6 +1064,7 @@
         socket.onmessage = (event) => {
             try {
                 if (event.data.includes('"creatures":') && !event.data.includes('"event":')) {
+                    if (isPlaybackMode) return;
                     latestWorldData = event.data;
                     return;
                 }
@@ -1167,8 +1286,10 @@
                         buildSprites(CELL_SIZE);
                     }
 
-                    staticBlocks = snap.blocks;
-                    bgNeedsUpdate = true;
+                    if (snap.blocks && snap.blocks.length !== staticBlocks.length) {
+                        staticBlocks = snap.blocks;
+                        bgNeedsUpdate = true;
+                    }
 
                     const currentFoodIDs = new Set();
                     snap.foods.forEach(f => {
@@ -1229,57 +1350,61 @@
                     }
 
                     if (snap.stats) {
-                        document.getElementById('t-pop').innerText = snap.stats.pop;
-                        document.getElementById('t-extinctions').innerText = snap.stats.extinctions;
-                        document.getElementById('t-food').innerText = `${snap.stats.plants} | ${snap.stats.meat}`;
-                        document.getElementById('t-significance').innerText = snap.stats.highestSignificance.toFixed(2);
-                        document.getElementById('t-ein').innerText = snap.stats.eIn.toFixed(1);
-                        document.getElementById('t-eout').innerText = snap.stats.eOut.toFixed(1);
+                        document.getElementById('t-pop').innerText = snap.stats.pop ?? 0;
+                        document.getElementById('t-extinctions').innerText = snap.stats.extinctions ?? 0;
+                        document.getElementById('t-food').innerText = `${snap.stats.plants ?? 0} | ${snap.stats.meat ?? 0}`;
+                        document.getElementById('t-survivalRatio').innerText = (snap.stats.highestSurvivalRatio ?? 0).toFixed(2);
+                        document.getElementById('t-CEQ').innerText = (snap.stats.highestCEQ ?? 0).toFixed(2);
+                        document.getElementById('t-ein').innerText = (snap.stats.eIn ?? 0).toFixed(1);
+                        document.getElementById('t-eout').innerText = (snap.stats.eOut ?? 0).toFixed(1);
 
-                        let eRatio = snap.stats.eOut > 0 ? (snap.stats.eIn / snap.stats.eOut) : 0;
+                        let eRatio = (snap.stats.eOut > 0) ? (snap.stats.eIn / snap.stats.eOut) : 0;
                         let ratioEl = document.getElementById('t-eratio');
                         ratioEl.innerText = eRatio.toFixed(2);
                         ratioEl.style.color = eRatio >= 1.0 ? "palegreen" : "tomato";
 
-                        document.getElementById('t-te-plant').innerText = formatNum(snap.stats.totalPlantE);
-                        document.getElementById('t-te-meat').innerText = formatNum(snap.stats.totalMeatE);
-                        document.getElementById('t-te-bio').innerText = formatNum(snap.stats.totalCreatureE);
+                        document.getElementById('t-te-plant').innerText = formatNum(snap.stats.totalPlantE ?? 0);
+                        document.getElementById('t-te-meat').innerText = formatNum(snap.stats.totalMeatE ?? 0);
+                        document.getElementById('t-te-bio').innerText = formatNum(snap.stats.totalCreatureE ?? 0);
 
-                        document.getElementById('t-births').innerText = (snap.stats.births * 1000).toFixed(1);
-                        document.getElementById('t-deaths').innerText = (snap.stats.deaths * 1000).toFixed(1);
-                        document.getElementById('t-lifeact').innerText = snap.stats.lifeMeas.toFixed(0);
-                        document.getElementById('t-lifemath').innerText = snap.stats.lifeMath.toFixed(0);
-                        document.getElementById('t-peaten').innerText = (snap.stats.plantsEaten * 1000).toFixed(1);
-                        document.getElementById('t-meaten').innerText = (snap.stats.meatsEaten * 1000).toFixed(1);
-                        document.getElementById('t-attacks').innerText = (snap.stats.attacks * 1000).toFixed(1);
-                        document.getElementById('t-killrate').innerText = (snap.stats.killRate * 1000).toFixed(1);
+                        document.getElementById('t-births').innerText = ((snap.stats.births ?? 0) * 1000).toFixed(1);
+                        document.getElementById('t-deaths').innerText = ((snap.stats.deaths ?? 0) * 1000).toFixed(1);
+                        document.getElementById('t-lifeact').innerText = (snap.stats.lifeMeas ?? 0).toFixed(0);
+                        document.getElementById('t-lifemath').innerText = (snap.stats.lifeMath ?? 0).toFixed(0);
+                        document.getElementById('t-peaten').innerText = ((snap.stats.plantsEaten ?? 0) * 1000).toFixed(1);
+                        document.getElementById('t-meaten').innerText = ((snap.stats.meatsEaten ?? 0) * 1000).toFixed(1);
+                        document.getElementById('t-attacks').innerText = ((snap.stats.attacks ?? 0) * 1000).toFixed(1);
+                        document.getElementById('t-killrate').innerText = ((snap.stats.killRate ?? 0) * 1000).toFixed(1);
 
-                        document.getElementById('t-avggen').innerText = snap.stats.avgGen.toFixed(1);
-                        document.getElementById('t-maxgen').innerText = snap.stats.maxGen;
+                        document.getElementById('t-avggen').innerText = (snap.stats.avgGen ?? 0).toFixed(1);
+                        document.getElementById('t-maxgen').innerText = snap.stats.maxGen ?? 0;
 
-                        document.getElementById('t-herbs').innerText = snap.stats.herbivores;
-                        document.getElementById('t-omnis').innerText = snap.stats.omnivores;
-                        document.getElementById('t-hunts').innerText = snap.stats.hunters;
-                        document.getElementById('t-scavs').innerText = snap.stats.scavengers;
-                        document.getElementById('t-paras').innerText = snap.stats.parasites;
+                        document.getElementById('t-herbs').innerText = snap.stats.herbivores ?? 0;
+                        document.getElementById('t-omnis').innerText = snap.stats.omnivores ?? 0;
+                        document.getElementById('t-hunts').innerText = snap.stats.hunters ?? 0;
+                        document.getElementById('t-scavs').innerText = snap.stats.scavengers ?? 0;
+                        document.getElementById('t-paras').innerText = snap.stats.parasites ?? 0;
 
-                        document.getElementById('t-meatbias').innerText = snap.stats.avgCarnivory.toFixed(2);
-                        document.getElementById('t-armor').innerText = snap.stats.avgArmor.toFixed(2);
-                        document.getElementById('t-lethal').innerText = snap.stats.avgLethality.toFixed(2);
-                        document.getElementById('t-genes').innerText = snap.stats.avgGenes.toFixed(1);
+                        document.getElementById('t-meatbias').innerText = (snap.stats.avgCarnivory ?? 0).toFixed(2);
+                        document.getElementById('t-genes').innerText = (snap.stats.avgGenes ?? 0).toFixed(1);
 
-                        document.getElementById('t-gov-cap').innerText = formatNum(snap.stats.govCap);
-                        document.getElementById('t-gov-cure').innerText = formatNum(snap.stats.govCurE);
-                        let capRatio = snap.stats.govCap > 0 ? (snap.stats.govCurE / snap.stats.govCap) : 0;
+                        let p10 = snap.stats.massP10 ?? 0;
+                        let p50 = snap.stats.massP50 ?? 0;
+                        let p90 = snap.stats.massP90 ?? 0;
+                        document.getElementById('t-massdist').innerText = `${p10.toFixed(1)} | ${p50.toFixed(1)} | ${p90.toFixed(1)}`;
+
+                        document.getElementById('t-gov-cap').innerText = formatNum(snap.stats.govCap ?? 0);
+                        document.getElementById('t-gov-cure').innerText = formatNum(snap.stats.govCurE ?? 0);
+                        let capRatio = (snap.stats.govCap > 0) ? (snap.stats.govCurE / snap.stats.govCap) : 0;
                         let govRatioEl = document.getElementById('t-gov-ratio');
                         govRatioEl.innerText = capRatio.toFixed(2);
                         govRatioEl.style.color = capRatio <= 1.0 ? "palegreen" : "tomato";
 
-                        document.getElementById('t-gov-actlife').innerText = snap.stats.govActLife.toFixed(0);
-                        document.getElementById('t-gov-lifes').innerText = `${snap.stats.govMathLife.toFixed(0)} | ${snap.stats.lifeMeas.toFixed(0)}`;
-                        document.getElementById('t-gov-blend').innerText = `${(snap.stats.govBlend * 100).toFixed(0)}%`;
-                        document.getElementById('t-gov-mom').innerText = snap.stats.govMom.toFixed(2);
-                        document.getElementById('t-gov-waste').innerText = snap.stats.govWastePen.toFixed(2);
+                        document.getElementById('t-gov-actlife').innerText = (snap.stats.govActLife ?? 0).toFixed(0);
+                        document.getElementById('t-gov-lifes').innerText = `${(snap.stats.govMathLife ?? 0).toFixed(0)} | ${(snap.stats.lifeMeas ?? 0).toFixed(0)}`;
+                        document.getElementById('t-gov-blend').innerText = `${((snap.stats.govBlend ?? 0) * 100).toFixed(0)}%`;
+                        document.getElementById('t-gov-mom').innerText = (snap.stats.govMom ?? 0).toFixed(2);
+                        document.getElementById('t-gov-waste').innerText = (snap.stats.govWastePen ?? 0).toFixed(2);
                     }
                 }
 
@@ -1294,35 +1419,10 @@
                     return;
                 }
 
-                if (data.event === "playbackTelemetry") {
-                    Object.keys(simHistory).forEach(k => delete simHistory[k]);
-
-                    data.statsList.forEach(statTick => {
-                        Object.keys(statTick).forEach(key => {
-                            if (!simHistory[key]) {
-                                simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
-                            }
-
-                            const hist = simHistory[key];
-                            const val = statTick[key];
-
-                            hist.raw.push(val);
-
-                            hist.midSum += val; hist.midCount++;
-                            if (hist.midCount >= 10) {
-                                hist.mid.push(hist.midSum / hist.midCount);
-                                hist.midSum = 0; hist.midCount = 0;
-                            }
-
-                            hist.longSum += val; hist.longCount++;
-                            if (hist.longCount >= 100) {
-                                hist.long.push(hist.longSum / hist.longCount);
-                                hist.longSum = 0; hist.longCount = 0;
-                            }
-                        });
-                    });
-
-                    drawMasterGraph();
+                if (data.event === "conditionValidation") {
+                    const consoleDiv = document.getElementById('conditionConsole');
+                    consoleDiv.innerText = data.message;
+                    consoleDiv.style.color = data.success ? "palegreen" : "tomato";
                     return;
                 }
 
@@ -1434,7 +1534,6 @@
             lastDrawX = -1;
             lastDrawY = -1;
         });
-
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -1597,11 +1696,11 @@
             let nrg = c.energy || 0;
 
             if (colorMode === 'diet') {
-                if (diet === 0) { r = 100; g = 251; b = 100; }      
-                else if (diet === 1) { r = 255; g = 99; b = 71; }   
-                else if (diet === 2) { r = 244; g = 164; b = 96; }  
-                else if (diet === 3) { r = 147; g = 112; b = 219; } 
-                else { r = 95; g = 158; b = 160; }                  
+                if (diet === 0) { r = 100; g = 251; b = 100; }
+                else if (diet === 1) { r = 255; g = 45; b = 32; }
+                else if (diet === 2) { r = 244; g = 164; b = 96; }
+                else if (diet === 3) { r = 147; g = 112; b = 219; }
+                else { r = 95; g = 158; b = 160; }
             }
             else if (colorMode === 'lineage') {
                 let mid = Math.max(1, currentLifeMeas || 1);
@@ -1631,6 +1730,24 @@
                     b = 0;
                 }
             }
+            else if (colorMode === 'mass') {
+                let m = Math.max(0.1, Math.min(3.0, c.mass || 1.0));
+                let ratio = (m - 0.1) / 2.9;
+                r = Math.round(ratio * 255);
+                g = Math.round((1 - ratio) * 255);
+                b = 255;
+            }
+            else if (colorMode === 'sr') {
+                let sr = Math.max(0, Math.min(1.5, c.sr || 0));
+                let ratio = sr / 1.5;
+                if (ratio < 0.5) {
+                    r = 255; g = Math.round(ratio * 2 * 255); b = 0;
+                } else {
+                    r = Math.round((1 - (ratio - 0.5) * 2) * 255); g = 255; b = 0;
+                }
+            }
+
+            return { r: r || 0, g: g || 0, b: b || 0 };
 
             return { r: r || 0, g: g || 0, b: b || 0 };
         }
@@ -1684,6 +1801,41 @@
                 const data = JSON.parse(latestWorldData);
                 latestWorldData = null;
 
+                let isArenaMode = false;
+                if (data.fertMap === "") {
+                    isArenaMode = true;
+                    document.getElementById('arenaDashboard').style.display = 'flex';
+
+                    document.getElementById('ad-gen').innerText = data.stats.maxGen;
+                    document.getElementById('ad-ticks').innerText = data.stats.ticks;
+                    document.getElementById('ad-tps').innerText = data.stats.tps;
+                    document.getElementById('ad-active').innerText = data.stats.hunters;
+                    document.getElementById('ad-bait').innerText = data.stats.herbivores;
+
+                    document.getElementById('ad-maxScore').innerText = (data.stats.lastGenMaxScore || 0).toFixed(2);
+                    document.getElementById('ad-avgScore').innerText = (data.stats.lastGenAvgScore || 0).toFixed(2);
+                    document.getElementById('ad-maxKills').innerText = data.stats.lastGenMaxKills || 0;
+                    document.getElementById('ad-avgKills').innerText = (data.stats.lastGenAvgKills || 0).toFixed(2);
+                    document.getElementById('ad-avgSurv').innerText = (data.stats.lastGenAvgSurvival || 0).toFixed(0);
+                    document.getElementById('ad-avgEff').innerText = (data.stats.lastGenAvgEfficiency || 0).toFixed(2);
+
+                    if (data.stats.maxGen > arenaGen) {
+                        arenaGen = data.stats.maxGen;
+                        if (arenaGen > 1) {
+                            arenaHistory.maxScore.push(data.stats.lastGenMaxScore || 0);
+                            arenaHistory.avgScore.push(data.stats.lastGenAvgScore || 0);
+                            arenaHistory.maxKills.push(data.stats.lastGenMaxKills || 0);
+                            arenaHistory.avgKills.push(data.stats.lastGenAvgKills || 0);
+                            arenaHistory.maxCEQ.push(data.stats.lastGenMaxCEQ || 0);
+                            arenaHistory.avgCEQ.push(data.stats.lastGenAvgCEQ || 0);
+                            drawArenaGraphs();
+                        }
+                    }
+                } else {
+                    document.getElementById('arenaDashboard').style.display = 'none';
+                    arenaGen = 0; // Reset
+                }
+
                 if (!data.creatures) return;
                 document.getElementById('genOverlay').style.display = 'none';
 
@@ -1714,36 +1866,38 @@
                         data.stats.eRatio = eRatio;
                         data.stats.capRatio = capRatio;
 
-                        Object.keys(data.stats).forEach(key => {
-                            if (typeof data.stats[key] === 'number') {
-                                if (!simHistory[key]) {
-                                    simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
+                        if (!isPlaybackMode) {
+                            Object.keys(data.stats).forEach(key => {
+                                if (typeof data.stats[key] === 'number') {
+                                    if (!simHistory[key]) {
+                                        simHistory[key] = { raw: [], mid: [], midSum: 0, midCount: 0, long: [], longSum: 0, longCount: 0 };
+                                    }
+
+                                    const hist = simHistory[key];
+                                    const val = data.stats[key];
+
+                                    hist.raw.push(val);
+                                    if (hist.raw.length > 1000) hist.raw.shift();
+
+                                    hist.midSum += val;
+                                    hist.midCount++;
+                                    if (hist.midCount >= 10) {
+                                        hist.mid.push(hist.midSum / hist.midCount);
+                                        hist.midSum = 0; hist.midCount = 0;
+                                        if (hist.mid.length > 1000) hist.mid.shift();
+                                    }
+
+                                    hist.longSum += val;
+                                    hist.longCount++;
+                                    if (hist.longCount >= 100) {
+                                        hist.long.push(hist.longSum / hist.longCount);
+                                        hist.longSum = 0; hist.longCount = 0;
+                                        if (hist.long.length > 1000) hist.long.shift();
+                                    }
                                 }
-
-                                const hist = simHistory[key];
-                                const val = data.stats[key];
-
-                                hist.raw.push(val);
-                                if (hist.raw.length > 1000) hist.raw.shift();
-
-                                hist.midSum += val;
-                                hist.midCount++;
-                                if (hist.midCount >= 10) {
-                                    hist.mid.push(hist.midSum / hist.midCount);
-                                    hist.midSum = 0; hist.midCount = 0;
-                                    if (hist.mid.length > 1000) hist.mid.shift();
-                                }
-
-                                hist.longSum += val;
-                                hist.longCount++;
-                                if (hist.longCount >= 100) {
-                                    hist.long.push(hist.longSum / hist.longCount);
-                                    hist.longSum = 0; hist.longCount = 0;
-                                    if (hist.long.length > 1000) hist.long.shift();
-                                }
-                            }
-                        });
-                        drawMasterGraph();
+                            });
+                            drawMasterGraph();
+                        }
                     }
 
                     document.getElementById('t-pop').innerText = data.stats.pop;
@@ -1757,7 +1911,8 @@
                     document.getElementById('t-tps-ticks').innerText = `${data.stats.tps} / ${formatNum(data.stats.ticks)}`;
                     document.getElementById('t-perf').innerText = `${data.stats.simLoad.toFixed(2)}ms / ${data.stats.uiLoad.toFixed(2)}ms`;
                     document.getElementById('t-saved').innerText = `${data.stats.savedGenomesSession} / ${data.stats.savedGenomesTotal}`;
-                    document.getElementById('t-significance').innerText = data.stats.highestSignificance.toFixed(2);
+                    document.getElementById('t-survivalRatio').innerText = data.stats.highestSurvivalRatio.toFixed(2);
+                    document.getElementById('t-CEQ').innerText = data.stats.highestCEQ.toFixed(2);
 
                     document.getElementById('t-peaten').innerText = (data.stats.plantsEaten * 1000).toFixed(1);
                     document.getElementById('t-meaten').innerText = (data.stats.meatsEaten * 1000).toFixed(1);
@@ -1790,9 +1945,14 @@
                     document.getElementById('t-maxgen').innerText = data.stats.maxGen;
 
                     document.getElementById('t-meatbias').innerText = data.stats.avgCarnivory.toFixed(2);
-                    document.getElementById('t-armor').innerText = data.stats.avgArmor.toFixed(2);
-                    document.getElementById('t-lethal').innerText = data.stats.avgLethality.toFixed(2);
                     document.getElementById('t-genes').innerText = data.stats.avgGenes.toFixed(1);
+
+                    if (data.stats.massP10 !== undefined) {
+                        let p10 = data.stats.massP10 ?? 0;
+                        let p50 = data.stats.massP50 ?? 0;
+                        let p90 = data.stats.massP90 ?? 0;
+                        document.getElementById('t-massdist').innerText = `${p10.toFixed(1)} | ${p50.toFixed(1)} | ${p90.toFixed(1)}`;
+                    }
 
                     if (data.stats.govCap !== undefined) {
                         document.getElementById('t-gov-cap').innerText = formatNum(data.stats.govCap);
@@ -1899,7 +2059,9 @@
                             energy: c.energy,
                             parentId: c.parentId,
                             diet: c.diet,
-                            lineage: c.lineage
+                            lineage: c.lineage,
+                            mass: c.mass,
+                            sr: c.sr
                         });
                     } else {
                         let existing = creaturesMap.get(c.id);
@@ -1911,6 +2073,8 @@
                         existing.energy = c.energy;
                         existing.diet = c.diet;
                         existing.lineage = c.lineage;
+                        existing.mass = c.mass;
+                        existing.sr = c.sr;
 
                         while (existing.targetAngle - existing.angle > Math.PI) existing.targetAngle -= Math.PI * 2;
                         while (existing.targetAngle - existing.angle < -Math.PI) existing.targetAngle += Math.PI * 2;
@@ -2015,53 +2179,55 @@
             ctx.scale(scale, scale);
             ctx.drawImage(bgCanvas, 0, 0);
 
-            if (renderPopDensity) {
-                ctx.save();
-                ctx.globalCompositeOperation = 'screen';
+            if (!isArenaMode) {
+                if (renderPopDensity) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'screen';
 
-                creaturesMap.forEach(c => {
-                    const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
-                    const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
+                    creaturesMap.forEach(c => {
+                        const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
+                        const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
 
-                    const color = getRenderColor(c);
+                        const color = getRenderColor(c);
 
-                    const blurRadius = CELL_SIZE * 18;
-                    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, blurRadius);
+                        const blurRadius = CELL_SIZE * 18;
+                        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, blurRadius);
 
-                    gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 0.1)`);
-                    gradient.addColorStop(0.4, `rgba(${color.r}, ${color.g}, ${color.b}, 0.01)`);
-                    gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+                        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 0.1)`);
+                        gradient.addColorStop(0.4, `rgba(${color.r}, ${color.g}, ${color.b}, 0.01)`);
+                        gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
 
-                    ctx.fillStyle = gradient;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, blurRadius, 0, Math.PI * 2);
-                    ctx.fill();
-                });
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, blurRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
 
-                ctx.restore();
-            }
+                    ctx.restore();
+                }
 
-            if (renderFoods) {
-                for (let [id, f] of foodsMap.entries()) {
-                    f.scale = lerp(f.scale, f.targetScale, 0.03);
+                if (renderFoods) {
+                    for (let [id, f] of foodsMap.entries()) {
+                        f.scale = lerp(f.scale, f.targetScale, 0.03);
 
-                    if (f.targetScale === 0 && f.scale < 0.05) {
-                        foodsMap.delete(id);
-                        continue;
-                    }
+                        if (f.targetScale === 0 && f.scale < 0.05) {
+                            foodsMap.delete(id);
+                            continue;
+                        }
 
-                    if (f.scale > 0.01) {
-                        const cx = (f.x * CELL_SIZE) + (CELL_SIZE / 2);
-                        const cy = (f.y * CELL_SIZE) + (CELL_SIZE / 2);
-                        const currentSize = CELL_SIZE * f.scale;
+                        if (f.scale > 0.01) {
+                            const cx = (f.x * CELL_SIZE) + (CELL_SIZE / 2);
+                            const cy = (f.y * CELL_SIZE) + (CELL_SIZE / 2);
+                            const currentSize = CELL_SIZE * f.scale;
 
-                        ctx.drawImage(
-                            f.meat ? meatSprite : plantSprite,
-                            cx - currentSize / 2,
-                            cy - currentSize / 2,
-                            currentSize,
-                            currentSize
-                        );
+                            ctx.drawImage(
+                                f.meat ? meatSprite : plantSprite,
+                                cx - currentSize / 2,
+                                cy - currentSize / 2,
+                                currentSize,
+                                currentSize
+                            );
+                        }
                     }
                 }
             }
@@ -2071,10 +2237,11 @@
                 c.y = lerp(c.y, c.targetY, 0.2);
                 c.angle = lerp(c.angle, c.targetAngle, 0.2);
 
-                const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
-                const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
+                if (!isArenaMode && renderCreatures) {
 
-                if (renderCreatures) {
+                    const cx = (c.x * CELL_SIZE) + (CELL_SIZE / 2);
+                    const cy = (c.y * CELL_SIZE) + (CELL_SIZE / 2);
+
                     const cos = Math.cos(c.angle), sin = Math.sin(c.angle);
                     ctx.setTransform(scale * cos, scale * sin, -scale * sin, scale * cos, cx * scale + panX, cy * scale + panY);
 
@@ -2141,7 +2308,7 @@
 
             ctx.setTransform(scale, 0, 0, scale, panX, panY);
 
-            if (renderFertility) {
+            if (!isArenaMode && renderFertility) {
                 ctx.globalCompositeOperation = 'screen';
                 ctx.imageSmoothingEnabled = true;
                 ctx.drawImage(fertCanvas, 0, 0, canvas.width, canvas.height);
@@ -2174,27 +2341,33 @@
                     infoBox.style.top = `${screenY - 80}px`;
 
                     if (latestTrackedInfo) {
-                        document.getElementById('ci-age-gen').innerText = `${latestTrackedInfo.age} / ${latestTrackedInfo.gen}`;
-                        document.getElementById('ci-energy').innerText = `${latestTrackedInfo.energy.toFixed(1)} (${(latestTrackedInfo.energyPct * 100).toFixed(0)}%)`;
-                        document.getElementById('ci-action').innerText = latestTrackedInfo.action;
-                        document.getElementById('ci-diet').innerText = latestTrackedInfo.diet;
+                        document.getElementById('ci-age-gen').innerText = `${latestTrackedInfo.age ?? 0} / ${latestTrackedInfo.gen ?? 0}`;
+                        document.getElementById('ci-energy').innerText = `${(latestTrackedInfo.energy ?? 0).toFixed(1)} (${((latestTrackedInfo.energyPct ?? 0) * 100).toFixed(0)}%)`;
+                        document.getElementById('ci-action').innerText = latestTrackedInfo.action ?? "Idle";
+                        document.getElementById('ci-diet').innerText = latestTrackedInfo.diet ?? "Unknown";
 
-                        document.getElementById('ci-brain-nodes').innerText = `${latestTrackedInfo.sensors}/${latestTrackedInfo.maths}/${latestTrackedInfo.actions}`;
-                        document.getElementById('ci-brain-genes').innerText = `${latestTrackedInfo.totalGenes} / ${latestTrackedInfo.activeConnections}`;
+                        document.getElementById('ci-brain-nodes').innerText = `${latestTrackedInfo.sensors ?? 0}/${latestTrackedInfo.maths ?? 0}/${latestTrackedInfo.actions ?? 0}`;
+                        document.getElementById('ci-brain-genes').innerText = `${latestTrackedInfo.totalGenes ?? 0} / ${latestTrackedInfo.activeConnections ?? 0}`;
 
-                        document.getElementById('ci-kills').innerText = `${latestTrackedInfo.kills} / ${latestTrackedInfo.damageDealt.toFixed(1)}`;
-                        document.getElementById('ci-food').innerText = `${latestTrackedInfo.meatsEaten} / ${latestTrackedInfo.plantsEaten}`;
+                        document.getElementById('ci-kills').innerText = `${latestTrackedInfo.kills ?? 0} / ${(latestTrackedInfo.damageDealt ?? 0).toFixed(1)}`;
+                        document.getElementById('ci-food').innerText = `${latestTrackedInfo.meatsEaten ?? 0} / ${latestTrackedInfo.plantsEaten ?? 0}`;
 
-                        document.getElementById('ci-sig').innerText = latestTrackedInfo.significance.toFixed(2);
-                        document.getElementById('ci-lineage').innerText = latestTrackedInfo.lineage.toFixed(0);
+                        document.getElementById('ci-sig').innerText = (latestTrackedInfo.survivalRatio ?? latestTrackedInfo.sr ?? 0).toFixed(2);
+                        document.getElementById('ci-ceq').innerText = (latestTrackedInfo.ceq ?? 0).toFixed(2);
+                        document.getElementById('ci-mass').innerText = (latestTrackedInfo.bodyMass ?? latestTrackedInfo.mass ?? 0).toFixed(2);
+                        document.getElementById('ci-lineage').innerText = (latestTrackedInfo.lineage ?? 0).toFixed(0);
 
                         const phenoDiv = document.getElementById('ci-phenos');
                         phenoDiv.innerHTML = '';
-                        latestTrackedInfo.phenos.forEach(p => {
-                            let sign = p.diff >= 0 ? '+' : '';
-                            let color = p.diff >= 0 ? 'palegreen' : 'tomato';
-                            phenoDiv.innerHTML += `<div style="display: flex; justify-content: space-between;"><span>${p.name}</span><span style="color: white; font-weight: bold;">${p.val.toFixed(2)} <span style="color:${color}; font-size:10px; margin-left:4px;">(${sign}${p.diff.toFixed(2)})</span></span></div>`;
-                        });
+                        if (latestTrackedInfo.phenos) {
+                            latestTrackedInfo.phenos.forEach(p => {
+                                let sign = p.diff >= 0 ? '+' : '';
+                                let color = p.diff >= 0 ? 'palegreen' : 'tomato';
+                                let pVal = p.val ?? 0;
+                                let pDiff = p.diff ?? 0;
+                                phenoDiv.innerHTML += `<div style="display: flex; justify-content: space-between;"><span>${p.name}</span><span style="color: white; font-weight: bold;">${pVal.toFixed(2)} <span style="color:${color}; font-size:10px; margin-left:4px;">(${sign}${pDiff.toFixed(2)})</span></span></div>`;
+                            });
+                        }
                     }
                 } else if (!isHUDTracking) {
                     infoBox.style.display = 'none';
@@ -2297,13 +2470,21 @@
                 masterCtx.lineWidth = 1.5;
                 masterCtx.lineJoin = 'round';
 
-                for (let i = 0; i < dataArr.length; i++) {
+                const step = Math.max(1, Math.floor(dataArr.length / masterCanvas.width));
+
+                for (let i = 0; i < dataArr.length; i += step) {
                     const x = i * stepX;
                     const normalizedY = (dataArr[i] - min) / range;
                     const y = masterCanvas.height - (normalizedY * masterCanvas.height * 0.8) - (masterCanvas.height * 0.1);
 
                     if (i === 0) masterCtx.moveTo(x, y); else masterCtx.lineTo(x, y);
                 }
+
+                if (dataArr.length > 1 && step > 1) {
+                    const lastY = masterCanvas.height - (((dataArr[dataArr.length - 1] - min) / range) * masterCanvas.height * 0.8) - (masterCanvas.height * 0.1);
+                    masterCtx.lineTo(masterCanvas.width, lastY);
+                }
+
                 masterCtx.stroke();
             });
         }
@@ -2544,7 +2725,7 @@
                     else if (criteria === 'meat') suffix += `_Meat${latestTrackedInfo.meatsEaten}`;
                     else if (criteria === 'plants') suffix += `_Plants${latestTrackedInfo.plantsEaten}`;
                     else if (criteria === 'age') suffix += `_Age${latestTrackedInfo.age}`;
-                    else suffix += `_Sig${latestTrackedInfo.significance.toFixed(1)}`;
+                    else suffix += `_Sig${latestTrackedInfo.survivalRatio.toFixed(1)}`;
                 }
 
                 document.getElementById('saveNameInput').value = "Apex_" + suffix;
@@ -2662,35 +2843,35 @@
 
                     let compressUI = "";
                     if (w.compressedPct > 0) {
-                        let estUncompressedMB = mb * 12; 
+                        let estUncompressedMB = mb * 12;
                         let estSizeStr = estUncompressedMB >= 1024 ? (estUncompressedMB / 1024).toFixed(2) + " GB" : estUncompressedMB.toFixed(1) + " MB";
 
                         compressUI = `
-                            <div style="margin-top: 8px; border-top: 1px dashed #555; padding-top: 8px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
-                                    <span style="color:#ff99cc; font-size:11px; font-weight:bold;">${w.compressedPct}% Compressed</span>
-                                    <button onclick="decompressWorld('${w.id}', event)" style="width: auto; margin: 0; padding: 4px 8px; font-size: 10px; border-color: #ff99cc; color: #ff99cc; cursor: pointer;">DECOMPRESS</button>
+                                <div style="margin-top: 8px; border-top: 1px dashed #555; padding-top: 8px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                                        <span style="color:#ff99cc; font-size:11px; font-weight:bold;">${w.compressedPct}% Compressed</span>
+                                        <button onclick="decompressWorld('${w.id}', event)" style="width: auto; margin: 0; padding: 4px 8px; font-size: 10px; border-color: #ff99cc; color: #ff99cc; cursor: pointer;">DECOMPRESS</button>
+                                    </div>
+                                    <div style="color:#888; font-size:10px; text-align: right;">Est. Final Size: ~${estSizeStr}</div>
+                                    <div id="prog-container-${w.id}" style="display:none; width: 100%; height: 6px; background: #111; border: 1px solid #333; border-radius: 3px; margin-top: 6px; overflow: hidden;">
+                                        <div id="prog-bar-${w.id}" style="width: 0%; height: 100%; background: #ff99cc; transition: width 0.1s linear;"></div>
+                                    </div>
                                 </div>
-                                <div style="color:#888; font-size:10px; text-align: right;">Est. Final Size: ~${estSizeStr}</div>
-                                <div id="prog-container-${w.id}" style="display:none; width: 100%; height: 6px; background: #111; border: 1px solid #333; border-radius: 3px; margin-top: 6px; overflow: hidden;">
-                                    <div id="prog-bar-${w.id}" style="width: 0%; height: 100%; background: #ff99cc; transition: width 0.1s linear;"></div>
-                                </div>
-                            </div>
-                        `;
+                            `;
                     }
 
                     div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <div style="color:#8fdfff; font-weight:bold; font-size:13px;">${y}-${mo}-${d} ${h}:${mi}</div>
-                            <div style="color:#555; font-size:10px;">${w.id}</div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                            <div style="color:#aaa; font-size:11px;">Duration: <span style="color:white;">${formatNum(w.lastTick)}</span> Ticks</div>
-                            <div style="color:palegreen; font-weight:bold; font-size:12px;">${sizeStr}</div>
-                        </div>
-                        <div style="color:#aaa; font-size:11px;">Frames: <span style="color:white; font-weight:bold;">${w.frameCount}</span></div>
-                        ${compressUI}
-                    `;
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <div style="color:#8fdfff; font-weight:bold; font-size:13px;">${y}-${mo}-${d} ${h}:${mi}</div>
+                                <div style="color:#555; font-size:10px;">${w.id}</div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                <div style="color:#aaa; font-size:11px;">Duration: <span style="color:white;">${formatNum(w.lastTick)}</span> Ticks</div>
+                                <div style="color:palegreen; font-weight:bold; font-size:12px;">${sizeStr}</div>
+                            </div>
+                            <div style="color:#aaa; font-size:11px;">Frames: <span style="color:white; font-weight:bold;">${w.frameCount}</span></div>
+                            ${compressUI}
+                        `;
 
                     div.onclick = () => loadPlayback(w.id, w.ticks);
                     scroll.appendChild(div);
@@ -2757,7 +2938,6 @@
         function exitPlayback() {
             isPlaybackMode = false;
             document.getElementById('playbackUI').style.display = 'none';
-            socket.send(JSON.stringify({ action: "getRawConfig" }));
         }
 
         function toggleRenderFertility() { renderFertility = !renderFertility; }
@@ -2820,13 +3000,188 @@
                 socket.send(JSON.stringify({ action: "restoreWorld", runID: playbackRunID, tick: targetTick }));
             }
         }
+        function togglePlaybackPlay() {
+            isPlaybackPlaying = !isPlaybackPlaying;
+            const btn = document.getElementById('pb-playBtn');
+            if (isPlaybackPlaying) {
+                btn.innerText = "PAUSE";
+                btn.style.borderColor = "tomato";
+                btn.style.color = "tomato";
+                runPlaybackLoop();
+            } else {
+                btn.innerText = "PLAY";
+                btn.style.borderColor = "#ffcc00";
+                btn.style.color = "#ffcc00";
+                clearTimeout(playbackTimer);
+            }
+        }
+        function updatePlaybackSpeed() {
+            playbackFPS = parseInt(document.getElementById('pb-speed').value);
+            document.getElementById('pb-speed-disp').innerText = playbackFPS + " FPS";
+        }
+        function runPlaybackLoop() {
+            if (!isPlaybackPlaying) return;
+
+            const slider = document.getElementById('pb-slider');
+            let idx = parseInt(slider.value);
+
+            if (idx < playbackAvailableTicks.length - 1) {
+                idx++;
+                slider.value = idx;
+
+                const targetTick = playbackAvailableTicks[idx];
+                document.getElementById('pb-tick').innerText = "Tick: " + formatNum(targetTick);
+
+                socket.send(JSON.stringify({ action: "loadFrame", runID: playbackRunID, tick: targetTick }));
+
+                playbackTimer = setTimeout(runPlaybackLoop, 1000 / playbackFPS);
+            } else {
+                togglePlaybackPlay();
+            }
+        }
+        function exitPlayback() {
+            if (isPlaybackPlaying) togglePlaybackPlay();
+            isPlaybackMode = false;
+            document.getElementById('playbackUI').style.display = 'none';
+        }
 
         function scatterFood(type, amount) { socket.send(JSON.stringify({ action: "scatterFood", type: type, amount: amount })); }
         function scatterBait(amount) { socket.send(JSON.stringify({ action: "scatterBait", amount: amount })); }
         function cullSpecific(type) { socket.send(JSON.stringify({ action: "cullSpecific", type: type })); }
         function toggleSimFlag(flag) { socket.send(JSON.stringify({ action: "toggleSimFlag", flag: flag })); }
 
+        function copyToNewWorld() { socket.send(JSON.stringify({ action: "copyToNewWorld" })); }
+        function saveSnapshot() { socket.send(JSON.stringify({ action: "saveSnapshot" })); }
+
+        function updateTrainerWeights() {
+            const wKills = parseFloat(document.getElementById('twKills').value);
+            const wEff = parseFloat(document.getElementById('twEff').value);
+            const wSurv = parseFloat(document.getElementById('twSurv').value);
+            const wCEQ = parseFloat(document.getElementById('twCEQ').value);
+
+            document.getElementById('twKillsDisp').innerText = wKills.toFixed(1);
+            document.getElementById('twEffDisp').innerText = wEff.toFixed(1);
+            document.getElementById('twSurvDisp').innerText = wSurv.toFixed(1);
+            document.getElementById('twCEQDisp').innerText = wCEQ.toFixed(1);
+
+            socket.send(JSON.stringify({
+                action: "updateTrainerWeights",
+                kills: wKills,
+                efficiency: wEff,
+                survival: wSurv,
+                ceq: wCEQ
+            }));
+        }
+        function findTrainerChampion() {
+            socket.send(JSON.stringify({ action: "findTrainerChampion" }));
+        }
+        function drawArenaGraphs() {
+            const drawLineGraph = (canvasId, dataMax, dataAvg, colorMax, colorAvg) => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas || dataMax.length === 0) return;
+
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                let maxVal = Math.max(...dataMax);
+                let minVal = Math.min(...dataAvg);
+                if (maxVal === 0) maxVal = 1;
+
+                const range = (maxVal - minVal) * 1.1;
+
+                const stepX = canvas.width / Math.max(1, dataMax.length - 1);
+
+                ctx.beginPath();
+                ctx.setLineDash([2, 4]);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+                ctx.moveTo(0, canvas.height * 0.15);
+                ctx.lineTo(canvas.width, canvas.height * 0.15);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+                ctx.font = "10px consolas";
+                ctx.textAlign = "right";
+                ctx.fillText(maxVal.toFixed(1), canvas.width - 10, (canvas.height * 0.15) + 12);
+
+                ctx.beginPath();
+                ctx.fillStyle = colorAvg;
+                ctx.moveTo(0, canvas.height);
+                for (let i = 0; i < dataAvg.length; i++) {
+                    const x = i * stepX;
+                    const y = canvas.height - (((dataAvg[i] - minVal) / range) * canvas.height * 0.85);
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.strokeStyle = colorMax;
+                ctx.lineWidth = 1.5;
+                ctx.lineJoin = 'round';
+                for (let i = 0; i < dataMax.length; i++) {
+                    const x = i * stepX;
+                    const y = canvas.height - (((dataMax[i] - minVal) / range) * canvas.height * 0.85);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            };
+
+            drawLineGraph('arenaCEQGraph', arenaHistory.maxCEQ, arenaHistory.avgCEQ, '#8fdfff', 'rgba(143, 223, 255, 0.2)');
+            drawLineGraph('arenaScoreGraph', arenaHistory.maxScore, arenaHistory.avgScore, '#ffcc00', 'rgba(255, 204, 0, 0.2)');
+            drawLineGraph('arenaKillsGraph', arenaHistory.maxKills, arenaHistory.avgKills, 'tomato', 'rgba(255, 99, 71, 0.2)');
+        }
+        function startTrainer() {
+            const cbs = document.querySelectorAll('.bank-file-cb:checked');
+            const files = Array.from(cbs).map(cb => cb.value);
+
+            if (files.length === 0) {
+                if (!confirm("You have not selected any base genomes from the Genome Bank.\n\nStart training with random brains?")) {
+                    return;
+                }
+            }
+
+            Object.keys(simHistory).forEach(k => delete simHistory[k]);
+            arenaHistory.maxScore = []; arenaHistory.avgScore = [];
+            arenaHistory.maxKills = []; arenaHistory.avgKills = [];
+            arenaGen = 0;
+            drawMasterGraph();
+            drawArenaGraphs();
+            document.getElementById('extinctionModal').style.display = 'none';
+
+            socket.send(JSON.stringify({ action: "startTrainer", files: files }));
+        }
+        function openConditionEditor() { document.getElementById('conditionModal').style.display = 'flex'; }
+        function closeConditionEditor() { document.getElementById('conditionModal').style.display = 'none'; }
+
+        function checkCondition() {
+            const code = document.getElementById('conditionTextarea').value;
+            const consoleDiv = document.getElementById('conditionConsole');
+            consoleDiv.innerText = "Compiling via Roslyn...";
+            consoleDiv.style.color = "white";
+            socket.send(JSON.stringify({ action: "validateCondition", code: code }));
+        }
+        function applyCondition() {
+            const code = document.getElementById('conditionTextarea').value;
+            socket.send(JSON.stringify({ action: "applyCondition", code: code }));
+            document.getElementById('conditionConsole').innerText = "Compiled condition to trainer!";
+            document.getElementById('conditionConsole').style.color = "palegreen";
+        }
+        function clearCondition() {
+            document.getElementById('conditionTextarea').value = "";
+            socket.send(JSON.stringify({ action: "applyCondition", code: "" }));
+            const consoleDiv = document.getElementById('conditionConsole');
+            consoleDiv.innerText = "Condition wiped. Trainer operating normally.";
+            consoleDiv.style.color = "#ccc";
+        }
+
         requestAnimationFrame(render);
+        toggleConsole();
     </script>
 </body>
 </html>

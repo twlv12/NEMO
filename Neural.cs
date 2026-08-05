@@ -2,7 +2,7 @@
 
 namespace NEMO
 {
-	public struct VisionOffset
+    public struct VisionOffset
 	{
 		public int dx;
 		public int dy;
@@ -41,7 +41,7 @@ namespace NEMO
 		public NFunc func;
 		public uint ID;
 
-		public Creature? host;
+		public ICreature? host;
 
 		public float value = 0f; //current committed output
 		public float slotASum = 0f; //new values for input
@@ -87,7 +87,7 @@ namespace NEMO
 
 			int w = host?.world.width ?? 0;
 			int h = host?.world.height ?? 0;
-			Cell[] grid = host?.world.grid;
+			ICell[] grid = host?.world.iGrid;
 			int hx = host?.x ?? 0;
 			int hy = host?.y ?? 0;
 
@@ -152,7 +152,7 @@ namespace NEMO
 							int cy = hy + dy;
 							if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 							{
-								Cell cell = grid[cx + (cy * w)];
+								ICell cell = grid[cx + (cy * w)];
 								if (targetType == 0 && (cell.occupant != null || cell.foodItem != null || cell.isBlock)) hits++;
 								else if (targetType == 1 && cell.foodItem != null) hits++;
 								else if (targetType == 2 && cell.occupant != null && cell.occupant != host) hits++;
@@ -199,7 +199,7 @@ namespace NEMO
 
 						if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 						{
-							Creature target = grid[cx + (cy * w)].occupant;
+							ICreature target = grid[cx + (cy * w)].occupant;
 
 							if (target != null && target != host && !target.isDead)
 							{
@@ -237,7 +237,7 @@ namespace NEMO
 								break;
 							}
 
-							Cell cell = grid[cx + (cy * w)];
+							ICell cell = grid[cx + (cy * w)];
 							if (cell.isBlock || cell.foodItem != null || (cell.occupant != null && cell.occupant != host))
 							{
 								hitValue = offset.weight;
@@ -256,7 +256,7 @@ namespace NEMO
 							int cy = hy + offset.dy;
 							if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 							{
-								Cell cell = grid[cx + (cy * w)];
+								ICell cell = grid[cx + (cy * w)];
 								if (cell.isBlock || cell.foodItem != null || (cell.occupant != null && cell.occupant != host))
 								{
 									totalScore += offset.weight;
@@ -288,7 +288,7 @@ namespace NEMO
 
 						if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 						{
-							Creature target = grid[cx + (cy * w)].occupant;
+							ICreature target = grid[cx + (cy * w)].occupant;
 							if (target != null && target != host)
 							{
 								float currentSim = 0f;
@@ -336,7 +336,7 @@ namespace NEMO
 							continue;
 						}
 
-						Cell cell = grid[cx + (cy * w)];
+						ICell cell = grid[cx + (cy * w)];
 						bool hit = false;
 
 						if (proxTarget == 0 && (cell.occupant != null || cell.foodItem != null || cell.isBlock)) hit = true;
@@ -372,7 +372,7 @@ namespace NEMO
 
 						if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 						{
-							Creature target = grid[cx + (cy * w)].occupant;
+							ICreature target = grid[cx + (cy * w)].occupant;
 							if (target != null && target != host)
 							{
 								float traitValue = 0f;
@@ -403,7 +403,7 @@ namespace NEMO
 
 						if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 						{
-							Creature target = grid[cx + (cy * w)].occupant;
+							ICreature target = grid[cx + (cy * w)].occupant;
 							if (target != null && target != host && !target.isDead)
 							{
 								float hRatio = target.energy / (target.startingEnergy * 3f);
@@ -429,7 +429,7 @@ namespace NEMO
 
 						if ((uint)cx < (uint)w && (uint)cy < (uint)h)
 						{
-							Creature target = grid[cx + (cy * w)].occupant;
+							ICreature target = grid[cx + (cy * w)].occupant;
 							if (target != null && target != host && !target.isDead)
 							{
 								int neighbors = 0;

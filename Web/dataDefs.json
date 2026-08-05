@@ -11,28 +11,6 @@
       "type": "Int"
     }
   ],
-  "Blockage": [
-    {
-      "name": "angle",
-      "type": "Int"
-    },
-    {
-      "name": "fov",
-      "type": "Int"
-    },
-    {
-      "name": "distance",
-      "type": "Int"
-    },
-    {
-      "name": "targetMode",
-      "type": "Int"
-    },
-    {
-      "name": "steepness",
-      "type": "Int"
-    }
-  ],
   "Gradient": [
     {
       "name": "axis",
@@ -69,7 +47,89 @@
       "type": "Int"
     }
   ],
-  "GeneSimilarity": [
+  "Age": [],
+  "Energy": [],
+  "Oscillator": [
+    {
+      "name": "useWorldTime",
+      "type": "Bool"
+    },
+    {
+      "name": "speciesSync",
+      "type": "Bool"
+    },
+    {
+      "name": "periodScale",
+      "type": "Int"
+    }
+  ],
+  "VisionBlockage": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "targetMode",
+      "type": "Int"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "VisionProximity": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "targetType",
+      "type": "Int"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "VisionTrait": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "phenotype",
+      "type": "Int"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "VisionGenSim": [
     {
       "name": "angle",
       "type": "Int"
@@ -95,7 +155,72 @@
       "type": "Int"
     }
   ],
-  "Age": [],
+  "VisionKinematics": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "targetAction",
+      "type": "Int"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "VisionHealth": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "massMode",
+      "type": "Bool"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
+  "VisionIsolation": [
+    {
+      "name": "angle",
+      "type": "Int"
+    },
+    {
+      "name": "fov",
+      "type": "Int"
+    },
+    {
+      "name": "distance",
+      "type": "Int"
+    },
+    {
+      "name": "searchRadius",
+      "type": "Int"
+    },
+    {
+      "name": "steepness",
+      "type": "Int"
+    }
+  ],
   "Relay": [
     {
       "name": "bias",
@@ -154,6 +279,18 @@
       "type": "Float"
     }
   ],
+  "Transistor": [
+    {
+      "name": "slotAIsGate",
+      "type": "Bool"
+    },
+    {
+      "name": "invertGate",
+      "type": "Bool"
+    }
+  ],
+  "Derivative": [],
+  "Divide": [],
   "Move": [
     {
       "name": "sensitivity",
@@ -195,49 +332,5 @@
     }
   ],
   "Consume": [],
-  "Attack": [],
-  "Proximity": [
-    {
-      "name": "angle",
-      "type": "Int"
-    },
-    {
-      "name": "fov",
-      "type": "Int"
-    },
-    {
-      "name": "distance",
-      "type": "Int"
-    },
-    {
-      "name": "targetType",
-      "type": "Int"
-    },
-    {
-      "name": "steepness",
-      "type": "Int"
-    }
-  ],
-  "TraitVision": [
-    {
-      "name": "angle",
-      "type": "Int"
-    },
-    {
-      "name": "fov",
-      "type": "Int"
-    },
-    {
-      "name": "distance",
-      "type": "Int"
-    },
-    {
-      "name": "phenotype",
-      "type": "Int"
-    },
-    {
-      "name": "steepness",
-      "type": "Int"
-    }
-  ]
+  "Attack": []
 }

@@ -32,6 +32,7 @@ namespace NEMO
         public static float plantGrowthRate;
 
         public static float baseNutrition;
+        public static float tickStomachCapacity;
         public static float meatNutritionMultiplier;
         public static float meatEntropyMulti;
         public static float meatDecayRate;
@@ -39,6 +40,7 @@ namespace NEMO
 
         public static float baseStartingEnergy;
         public static int maturationTime;
+        public static float gestationPeriod;
         public static float birthEfficiency;
         public static float costOfLiving;
         public static float movementCost;
@@ -55,6 +57,24 @@ namespace NEMO
         public static int autoChampTickDelay;
         public static int recorderTickDelay;
         public static int recorderMaxGB;
+
+
+
+        public static int TworldHeight;
+        public static int TworldWidth;
+        public static int TmaxTime;
+        public static int TnumActiveCreatures;
+        public static int TnumBaitCreatures;
+        public static int TnumToSelect;
+        public static float TbaseStartingEnergy;
+        public static float TcostOfLiving;
+        public static float TmovementCost;
+        public static float TrotationMulti;
+        public static float TbaseNutrition;      
+        public static bool TinstantKills;      
+        public static bool TwallDeath;      
+
+
 
         public static bool maintainPopulation;
 
@@ -106,6 +126,8 @@ namespace NEMO
         public static bool pauseWithoutUI;
         public static bool compressRecordings;
         public static List<string> customIPs = new List<string>();
+
+
 
         public static string MainConfigFile = GetResolvedConfigPath();
         public static string projectDirectory = GetResolvedProjectDirectory();

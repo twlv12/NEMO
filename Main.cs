@@ -1,4 +1,6 @@
 ﻿using Fleck;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
@@ -9,20 +11,12 @@ using System.Text.RegularExpressions;
 namespace NEMO
 {
     //TODO - NEVER IN ORDER
-    //add significance/CEQ bias to mutation?
-    //add world switching - copy creatures to new world.
-    //extinction prevention
-    //do somethign about predator rotation jittering.
-    //why creatures not using signals?
-    //-- add signal ovelay.
-    //test creature location goals
-    //fix governor overcorrction/oscilaltion
+    //add signal ovelay
     //add family tree
-    //add save heavy current world frame data in separate tab.
-    //add a smart system for tailoring specific behaviours
-    //fix birthing dead children
-    //potentially remove creatureCount from governor calcs
-    //make restfactor increase movement cost
+    //why oflactory sensitivity?
+    //add trainer stop at generation
+    //trainer disable kills
+    //trainer only alive
 
     public static class NEMO
     {
@@ -32,6 +26,10 @@ namespace NEMO
         public static World? activeWorld = null;
         public static bool isPaused = false;
         public static string trackedCreatureId = "";
+
+        public static string currentMode = "Petri";
+        public static TWorld? activeTrainer = null;
+        public static List<Simulation> sims = new List<Simulation>();
 
         public static int extinctionCount = 0;
         public static int savedGenomesTotal = 0;
@@ -63,6 +61,7 @@ namespace NEMO
         public static int isGenerating = 0;
         public static int terrainVersion = 0;
         public static int lastBroadcastTerrainVersion = -1;
+        public static long requestedPlaybackTick = -1;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool AllocConsole();
@@ -127,6 +126,7 @@ namespace NEMO
             }
 
             Config.Load();
+
             if (!Config.hideConsole)
             {
                 AllocConsole();
@@ -140,19 +140,13 @@ namespace NEMO
                 StreamWriter standardOutput = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
                 Console.SetOut(standardOutput);
             }
-
             ConsoleLog = new WebConsoleWriter(Console.Out);
             Console.SetOut(ConsoleLog);
             FleckLog.Level = LogLevel.Error;
 
             NeuronDicts.ExportNeuronDefs();
             NeuronDicts.ExportDataDefs();
-            List<Simulation> sims = [
-                new("alpha"),
-                new("beta"),
-                new("gamma"),
-                new("delta")
-            ];
+            sims = new List<Simulation> { new("alpha"), new("beta"), new("gamma"), new("delta") };
 
             Directory.CreateDirectory(Config.SavedGenomesFolder);
             Directory.CreateDirectory(Config.RecordingsFolder);
@@ -160,269 +154,15 @@ namespace NEMO
 
             if (Config.runLegacyPatcher)
                 PatchLegacyRecordings();
-            #endregion
 
-            #region Servers Handler
-
-            #region Startup
-
-            Process? browserProcess = null;
-
-            void LaunchUI()
-            {
-                try
-                {
-                    if (browserProcess != null && !browserProcess.HasExited)
-                    {
-                        browserProcess.Kill();
-                    }
-                }
-                catch { }
-
-                try { browserProcess = Process.Start(new ProcessStartInfo { FileName = "chrome", Arguments = "--app=http://localhost:8000", UseShellExecute = true }); }
-                catch
-                {
-                    try { browserProcess = Process.Start(new ProcessStartInfo { FileName = "msedge", Arguments = "--app=http://localhost:8000", UseShellExecute = true }); }
-                    catch { browserProcess = Process.Start(new ProcessStartInfo { FileName = "http://localhost:8000", UseShellExecute = true }); }
-                }
-            }
-
-            if (!Config.hideConsole)
-            {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine(@"
-    _   _  _____ __  __  ____  
-   | \ | || ____|  \/  |/ __ \ 
-   |  \| ||  _| | |\/| | |  | |
-   | |\  || |___| |  | | |__| |
-   |_| \_||_____|_|  |_|\____/  v1.1
-                                ");
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("==================================================");
-                Console.WriteLine(" PHYSICS ENGINE RUNNING");
-                Console.WriteLine("--------------------------------------------------");
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine(" Controls:");
-                Console.WriteLine(" [W] - Open / Reopen Web UI");
-                Console.WriteLine(" [X] - Safely Quit Server");
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("==================================================\n");
-                Console.ResetColor();
-
-                Task.Run(() =>
-                {
-                    while (true)
-                    {
-                        if (!Config.hideConsole && Console.KeyAvailable)
-                        {
-                            var key = Console.ReadKey(true).Key;
-                            if (key == ConsoleKey.W) LaunchUI();
-                            if (key == ConsoleKey.X) Environment.Exit(0);
-                        }
-                        Thread.Sleep(50);
-                    }
-                });
-            }
-
-            Task.Run(() =>
-            {
-                var listener = new System.Net.HttpListener();
-
-                listener.Prefixes.Add("http://localhost:8000/");
-                listener.Prefixes.Add("http://127.0.0.1:8000/");
-
-                if (Config.customIPs != null)
-                {
-                    foreach (string ip in Config.customIPs)
-                    {
-                        if (string.IsNullOrWhiteSpace(ip)) continue;
-
-                        string prefix = ip.Trim();
-                        if (!prefix.StartsWith("http://") && !prefix.StartsWith("https://"))
-                            prefix = "http://" + prefix;
-
-                        if (prefix.LastIndexOf(':') <= 5)
-                            prefix += ":8000";
-
-                        if (!prefix.EndsWith("/"))
-                            prefix += "/";
-
-                        listener.Prefixes.Add(prefix);
-                    }
-                }
-
-                bool httpStarted = false;
-                bool fallbackAttempted = false;
-
-                while (!httpStarted)
-                {
-                    try
-                    {
-                        listener.Start();
-                        httpStarted = true;
-                        if (!Config.hideConsole) NEMO.Log("[Network] Web Server running on port 8000", "palegreen", ConsoleColor.Green);
-                        LaunchUI();
-                    }
-                    catch (System.Net.HttpListenerException e) when (e.ErrorCode == 5 && !fallbackAttempted)
-                    {
-                        fallbackAttempted = true;
-                        NEMO.Log("[Network] Admin rights missing for custom network IPs. Falling back to localhost only...", "#ffcc00", ConsoleColor.Yellow);
-
-                        try { listener.Close(); } catch { }
-
-                        listener = new System.Net.HttpListener();
-                        listener.Prefixes.Add("http://localhost:8000/");
-                        listener.Prefixes.Add("http://127.0.0.1:8000/");
-                    }
-                    catch (Exception e)
-                    {
-                        NEMO.Log($"[Network] Waiting for port 8000 to free... ({e.Message})", "tomato", ConsoleColor.Red);
-                        Thread.Sleep(1000);
-                    }
-                }
-
-                while (true)
-                {
-                    try
-                    {
-                        var context = listener.GetContext();
-                        string path = context.Request.Url.AbsolutePath;
-                        if (path == "/") path = "/index.html";
-
-                        string webDir = Config.WebFolder;
-                        string fullPath = Path.GetFullPath(Path.Combine(webDir, path.TrimStart('/')));
-
-                        bool isRootFile = false;
-                        if (path.Equals("/Config.json", StringComparison.OrdinalIgnoreCase) ||
-                            path.Equals("/neuronDefs.json", StringComparison.OrdinalIgnoreCase) ||
-                            path.Equals("/dataDefs.json", StringComparison.OrdinalIgnoreCase))
-                        {
-                            string rootPath = Path.Combine(Config.projectDirectory, path.TrimStart('/'));
-                            if (File.Exists(rootPath))
-                            {
-                                fullPath = rootPath;
-                                isRootFile = true;
-                            }
-                        }
-
-                        if (File.Exists(fullPath) && (fullPath.StartsWith(webDir) || isRootFile))
-                        {
-                            byte[] buffer = File.ReadAllBytes(fullPath);
-                            context.Response.ContentLength64 = buffer.Length;
-                            if (path.EndsWith(".html")) context.Response.ContentType = "text/html";
-                            else if (path.EndsWith(".js")) context.Response.ContentType = "application/javascript";
-                            else if (path.EndsWith(".css")) context.Response.ContentType = "text/css";
-                            else if (path.EndsWith(".png")) context.Response.ContentType = "image/png";
-                            else if (path.EndsWith(".json")) context.Response.ContentType = "application/json";
-
-                            context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-                        }
-                        else context.Response.StatusCode = 404;
-
-                        context.Response.Close();
-                    }
-                    catch { }
-                }
-            });
-
-            string GetToolPath(string toolName)
-            {
-                string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, toolName);
-                if (File.Exists(localPath)) return localPath;
-
-                string devPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "Tools", toolName));
-                if (File.Exists(devPath)) return devPath;
-
-                return "";
-            }
-
-            string caddyPath = GetToolPath("caddy.exe");
-            Process? caddyServer = null;
-            if (!string.IsNullOrEmpty(caddyPath))
-            {
-                caddyServer = new Process();
-                caddyServer.StartInfo.FileName = caddyPath;
-                caddyServer.StartInfo.Arguments = "run";
-                caddyServer.StartInfo.UseShellExecute = false;
-                caddyServer.StartInfo.CreateNoWindow = true;
-                caddyServer.StartInfo.WorkingDirectory = Path.GetDirectoryName(caddyPath);
-
-                try { caddyServer.Start(); Console.ForegroundColor = ConsoleColor.Green; Console.WriteLine("[Caddy] Running on 8090"); Console.ResetColor(); } catch { }
-            }
-
-            string zrokPath = GetToolPath("zrok.exe");
-            if (string.IsNullOrEmpty(zrokPath)) zrokPath = GetToolPath("zrok2.exe");
-
-            Process? zrokServer = null;
-            if (!string.IsNullOrEmpty(zrokPath) && !string.IsNullOrEmpty(caddyPath))
-            {
-                zrokServer = new Process();
-                zrokServer.StartInfo.FileName = zrokPath;
-                zrokServer.StartInfo.Arguments = "share public http://localhost:8090 -n public:nemo --backend-mode proxy";
-                zrokServer.StartInfo.UseShellExecute = false;
-                zrokServer.StartInfo.CreateNoWindow = true;
-                zrokServer.StartInfo.WorkingDirectory = Path.GetDirectoryName(zrokPath);
-
-                try { zrokServer.Start(); Console.ForegroundColor = ConsoleColor.Magenta; Console.WriteLine("[Zrok] Tunnel running."); Console.ResetColor(); } catch { }
-            }
-
-            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
-            {
-                NEMO.Log("[SHUTDOWN] Initiating shutdown...", "tomato", ConsoleColor.Red);
-                try { if (caddyServer != null && !caddyServer.HasExited) caddyServer.Kill(); } catch { }
-                try { if (zrokServer != null && !zrokServer.HasExited) zrokServer.Kill(); } catch { }
-                try { if (browserProcess != null && !browserProcess.HasExited) browserProcess.Kill(); } catch { }
-            };
-            #endregion
-
-            var server = new WebSocketServer("ws://0.0.0.0:8181");
-            bool socketStarted = false;
-            while (!socketStarted)
-            {
-                try
-                {
-                    server.Start(socket =>
-                    {
-                        socket.OnOpen = () =>
-                        {
-                            clients.Add(socket);
-                            hasUIConnectedOnce = true;
-                            lastBroadcastTerrainVersion = -1;
-                            NEMO.Log($"[Socket] UI Connected. Clients: {clients.Count}", "palegreen", ConsoleColor.Green);
-                            BroadcastState();
-                        };
-
-                        socket.OnClose = () =>
-                        {
-                            clients.Remove(socket);
-                            if (!Config.hideConsole) NEMO.Log($"[Socket] UI Disconnected. Clients: {clients.Count}", "tomato", ConsoleColor.Yellow);
-
-                            if (clients.Count == 0 && Config.hideConsole && hasUIConnectedOnce)
-                            {
-                                Task.Delay(5000).ContinueWith(_ => {
-                                    if (clients.Count == 0) Environment.Exit(0);
-                                });
-                            }
-                        };
-
-                        socket.OnMessage = message => { ProcessSocketMessage(message, sims, socket); };
-                    });
-
-                    socketStarted = true;
-                }
-                catch (Exception ex)
-                {
-                    NEMO.Log($"[Socket] Waiting for port 8181 to release... {ex}", "tomato", ConsoleColor.Red);
-                    Thread.Sleep(1000);
-                }
-            }
+            StartServers();
 
             Stopwatch tickTimer = Stopwatch.StartNew();
             Stopwatch petriTimer = Stopwatch.StartNew();
             Stopwatch brainTimer = Stopwatch.StartNew();
             Stopwatch genomeTimer = Stopwatch.StartNew();
             Stopwatch profiler = new Stopwatch();
-            #endregion
+            #endregion   
 
             while (true)
             {
@@ -434,24 +174,43 @@ namespace NEMO
                     continue;
                 }
 
-                World? currentWorld = activeWorld;
-
-                if (currentWorld != null && !isPaused)
+                if (!isPaused)
                 {
                     double delay = Config.maxSpeed ? 0 : 1000.0 / Config.tickRate;
                     if (delay == 0 || tickTimer.ElapsedMilliseconds >= delay)
                     {
                         profiler.Restart();
+
                         try
                         {
-                            currentWorld.Update();
+                            if (currentMode == "Petri" && activeWorld != null)
+                            {
+                                activeWorld.Update();
+
+                                if (activeWorld.creatures.Count == 0 && !worldWasEmpty)
+                                {
+                                    extinctionCount++;
+                                    worldWasEmpty = true;
+                                    if (pauseOnExtinction) isPaused = true;
+
+                                    var msg = JsonSerializer.Serialize(new { @event = "simEnded" });
+                                    foreach (var client in clients.ToList()) client.Send(msg);
+                                }
+                                else if (activeWorld.creatures.Count > 0)
+                                {
+                                    worldWasEmpty = false;
+                                }
+                            }
+                            else if (currentMode == "Trainer" && activeTrainer != null)
+                            {
+                                activeTrainer.Update();
+                            }
                         }
                         catch (Exception ex)
                         {
-                            NEMO.Log($"[PHYSICS] Tick {currentWorld.totalTicks}: {ex.Message}\n{ex.StackTrace}", "tomato", ConsoleColor.Red);
+                            NEMO.Log($"[ERROR]: {ex.Message}\n{ex.StackTrace}", "tomato", ConsoleColor.Red);
                             isPaused = true;
                         }
-                        emaSimTime = (emaSimTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
 
                         if (delay > 0) tickTimer.Restart();
 
@@ -462,48 +221,19 @@ namespace NEMO
                             ticksThisSecond = 0;
                             tpsTimer.Restart();
                         }
-
-                        bool worldIsEmpty = currentWorld.creatures.Count == 0 && !Config.maintainPopulation;
-
-                        if (worldIsEmpty && !worldWasEmpty)
-                        {
-                            extinctionCount++;
-
-                            string logLine = $"[EXTINCT ][{DateTime.Now:yyyy-MM-dd HH:mm:ss}] extinction #{extinctionCount} | ticks: {currentWorld.totalTicks} | max Gen: {currentWorld.highestGeneration} | avg Ein: {currentWorld.emaEnergyIn:F1} | avg Eout: {currentWorld.emaEnergyOut:F1}";
-                            File.AppendAllText($"{Config.SavedGenomesFolder}/ExtinctionLogs.txt", logLine + Environment.NewLine);
-
-                            TryAutoSaveChampion(currentWorld, $"Ext{extinctionCount}");
-
-                            NEMO.Log(logLine, "tomato", ConsoleColor.Red);
-
-                            if (pauseOnExtinction)
-                            {
-                                isPaused = true;
-                                foreach (var client in clients.ToList())
-                                    client.Send(JsonSerializer.Serialize(new { @event = "simEnded" }));
-                            }
-
-                            BroadcastState();
-                        }
-
-                        if (currentWorld.totalTicks > 0 && currentWorld.totalTicks % Config.autoChampTickDelay == 0)
-                            TryAutoSaveChampion(currentWorld, $"AutoChamp_Tick{currentWorld.totalTicks}");
-
-                        if (isRecording && currentWorld.totalTicks > 0 && currentWorld.totalTicks % Config.recorderTickDelay == 0)
-                            RecordWorldState(currentWorld);
-
-                        worldWasEmpty = worldIsEmpty;
                     }
                 }
 
-                emaSimTime = (emaSimTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
-                profiler.Restart();
-
                 if (petriTimer.ElapsedMilliseconds >= Config.uiRate)
                 {
-                    if (activeWorld != null) UpdatePetriView(activeWorld);
+                    if (currentMode == "Petri" && activeWorld != null)
+                        UpdatePetriView(activeWorld);
+                    else if (currentMode == "Trainer" && activeTrainer != null)
+                        UpdateTrainerView(activeTrainer);
+
                     petriTimer.Restart();
                 }
+
                 if (brainTimer.ElapsedMilliseconds >= 100)
                 {
                     UpdateBrainView(sims);
@@ -516,11 +246,10 @@ namespace NEMO
                 }
 
                 emaUiTime = (emaUiTime * 0.95) + (profiler.Elapsed.TotalMilliseconds * 0.05);
-                if (isPaused)
-                    Thread.Sleep(10);
+                if (isPaused) Thread.Sleep(10);
             }
         }
-
+        
         public static void BroadcastState()
         {
             var state = new
@@ -549,6 +278,33 @@ namespace NEMO
             foreach (var client in clients.ToList()) client.Send(json);
         }
 
+        public static void UpdateTrainerView(TWorld trainer)
+        {
+            if (isBroadcasting) return;
+            isBroadcasting = true;
+
+            TCreature[] activeSnap = trainer.activeCreatures?.ToArray() ?? Array.Empty<TCreature>();
+            TCreature[] baitSnap = trainer.baitCreatures?.ToArray() ?? Array.Empty<TCreature>();
+            TCreature[] allCreatures = activeSnap.Concat(baitSnap).ToArray();
+
+            IWebSocketConnection[] clientsSnap = clients.ToArray();
+
+            Task.Run(() =>
+            {
+                Stopwatch uiProfiler = Stopwatch.StartNew();
+                try
+                {
+                    string stateJson = trainer.GetStateJson(allCreatures);
+                    foreach (var client in clientsSnap) client.Send(stateJson);
+                }
+                catch (Exception ex) { Console.WriteLine($"[UI] {ex.Message}"); }
+                finally
+                {
+                    isBroadcasting = false;
+                    NEMO.emaUiTime = (NEMO.emaUiTime * 0.95) + (uiProfiler.Elapsed.TotalMilliseconds * 0.05);
+                }
+            });
+        }
         public static void UpdatePetriView(World world)
         {
             if (isBroadcasting) return;
@@ -663,7 +419,7 @@ namespace NEMO
 
         public static void TryAutoSaveChampion(World currentWorld, string prefix)
         {
-            if (currentWorld.bestGenome != null && currentWorld.highestSignificance >= Config.selectionThreshold)
+            if (currentWorld.bestGenome != null && currentWorld.highestSurvivalRatio >= Config.selectionThreshold)
             {
                 var genColor = currentWorld.bestGenome.GenerateColor();
                 bool isTooSimilar = false;
@@ -686,11 +442,11 @@ namespace NEMO
                 if (!isTooSimilar)
                 {
                     sessionSavedColors.Add((genColor.r, genColor.g, genColor.b));
-                    SaveGenomeToDisk(currentWorld.bestGenome, $"{prefix}_Gen{currentWorld.highestGeneration}_Sig{currentWorld.highestSignificance:F1}");
+                    SaveGenomeToDisk(currentWorld.bestGenome, $"{prefix}_Gen{currentWorld.highestGeneration}_Sig{currentWorld.highestSurvivalRatio:F1}");
                 }
             }
         }
-        public static void RecordWorldState(World world)
+        public static void RecordWorldState(World world, string runID = null)
         {
             long currentTick = world.totalTicks;
             var blocks = world.staticBlocks.ToList();
@@ -710,8 +466,6 @@ namespace NEMO
             float avgAge = pop > 0 ? (float)world.creatures.Average(c => c.age) : 0;
             float avgGen = pop > 0 ? (float)world.creatures.Average(c => c.generation) : 0;
             float avgCarnivory = pop > 0 ? world.creatures.Average(c => c.GetPheno(PType.CarnivoryBias)) : 0;
-            float avgArmor = pop > 0 ? world.creatures.Average(c => c.GetPheno(PType.ArmorDensity)) : 0;
-            float avgLethality = pop > 0 ? world.creatures.Average(c => c.GetPheno(PType.Lethality)) : 0;
             float avgGenes = pop > 0 ? (float)world.creatures.Average(c => c.genome.genes.Count) : 0;
 
             int herbivores = 0, hunters = 0, scavengers = 0, parasites = 0, omnivores = 0;
@@ -728,14 +482,14 @@ namespace NEMO
 
             var frameStats = new Dictionary<string, float>
             {
-                { "pop", pop }, { "extinctions", NEMO.extinctionCount }, { "highestSignificance", world.highestSignificance },
+                { "pop", pop }, { "extinctions", NEMO.extinctionCount }, { "highestSurvivalRatio", world.highestSurvivalRatio },
                 { "plants", plants }, { "meat", meat }, { "eIn", world.emaEnergyIn }, { "eOut", world.emaEnergyOut },
                 { "totalCreatureE", totalBioE }, { "totalPlantE", totalPlantE }, { "totalMeatE", totalMeatE },
                 { "births", world.emaBirths }, { "deaths", world.emaDeaths }, { "lifeMeas", world.emaLifespan }, { "lifeMath", world.govMathLifespan },
                 { "plantsEaten", world.emaPlantsEaten }, { "meatsEaten", world.emaMeatsEaten }, { "attacks", world.emaAttacks }, { "killRate", world.emaKills },
                 { "avgAge", avgAge }, { "avgGen", avgGen }, { "maxGen", world.highestGeneration },
                 { "herbivores", herbivores }, { "omnivores", omnivores }, { "hunters", hunters }, { "scavengers", scavengers }, { "parasites", parasites },
-                { "avgCarnivory", avgCarnivory }, { "avgArmor", avgArmor }, { "avgLethality", avgLethality }, { "avgGenes", avgGenes },
+                { "avgCarnivory", avgCarnivory }, { "avgGenes", avgGenes },
                 { "govCap", world.govDynamicCapacity }, { "govCurE", world.govCurrentEnergy }, { "govBaseE", world.govBaselineEnergy },
                 { "govActLife", world.govActiveLifespan }, { "govBlend", world.govBlendFactor }, { "govMom", world.govMomentum },
                 { "govWastePen", world.govWastePenalty }, { "govDiet", world.govDietFactor }
@@ -778,13 +532,25 @@ namespace NEMO
                         return;
                     }
 
+                    var masses = world.creatures.Select(c => c.GetPheno(PType.BodyMass)).OrderBy(m => m).ToList();
+                    float p10 = masses.Count > 0 ? masses[(int)(masses.Count * 0.10f)] : 0;
+                    float p50 = masses.Count > 0 ? masses[(int)(masses.Count * 0.50f)] : 0;
+                    float p90 = masses.Count > 0 ? masses[(int)(masses.Count * 0.90f)] : 0;
+
                     var frameStats = new Dictionary<string, float>
                     {
-                        { "pop", creatures.Count },
-                        { "eIn", world.emaEnergyIn },
-                        { "eOut", world.emaEnergyOut },
-                        { "lifeMeas", world.emaLifespan },
-                        { "avgGen", world.highestGeneration },
+                    { "pop", pop }, { "extinctions", NEMO.extinctionCount }, { "highestSurvivalRatio", world.highestSurvivalRatio }, { "highestCEQ", world.highestCEQ },
+                    { "plants", plants }, { "meat", meat }, { "eIn", world.emaEnergyIn }, { "eOut", world.emaEnergyOut },
+                    { "totalCreatureE", totalBioE }, { "totalPlantE", totalPlantE }, { "totalMeatE", totalMeatE },
+                    { "births", world.emaBirths }, { "deaths", world.emaDeaths }, { "lifeMeas", world.emaLifespan }, { "lifeMath", world.govMathLifespan },
+                    { "plantsEaten", world.emaPlantsEaten }, { "meatsEaten", world.emaMeatsEaten }, { "attacks", world.emaAttacks }, { "killRate", world.emaKills },
+                    { "avgAge", avgAge }, { "avgGen", avgGen }, { "maxGen", world.highestGeneration },
+                    { "herbivores", herbivores }, { "omnivores", omnivores }, { "hunters", hunters }, { "scavengers", scavengers }, { "parasites", parasites },
+                    { "avgCarnivory", avgCarnivory }, { "avgGenes", avgGenes },
+                    { "massP10", p10 }, { "massP50", p50 }, { "massP90", p90 },
+                    { "govCap", world.govDynamicCapacity }, { "govCurE", world.govCurrentEnergy }, { "govBaseE", world.govBaselineEnergy },
+                    { "govActLife", world.govActiveLifespan }, { "govBlend", world.govBlendFactor }, { "govMom", world.govMomentum },
+                    { "govWastePen", world.govWastePenalty }, { "govDiet", world.govDietFactor }
                     };
 
                     var snap = new WorldSnapshot
@@ -800,17 +566,25 @@ namespace NEMO
                     JsonSerializerOptions options = new JsonSerializerOptions { IncludeFields = true, Converters = { new JsonStringEnumConverter() } };
                     string json = JsonSerializer.Serialize(snap, options);
 
-                    string runFolder = Path.Combine(recPath, world.runID);
+                    string runFolder = Path.Combine(recPath, runID ?? world.runID);
                     Directory.CreateDirectory(runFolder);
 
                     string telemetryPath = Path.Combine(runFolder, "telemetry.json");
-                    List<Dictionary<string, float>> runTelemetry = new();
-                    if (File.Exists(telemetryPath))
+                    string newStatJson = JsonSerializer.Serialize(frameStats);
+
+                    if (!File.Exists(telemetryPath))
                     {
-                        try { runTelemetry = JsonSerializer.Deserialize<List<Dictionary<string, float>>>(File.ReadAllText(telemetryPath)) ?? new(); } catch { }
+                        File.WriteAllText(telemetryPath, "[" + newStatJson + "]");
                     }
-                    runTelemetry.Add(frameStats);
-                    File.WriteAllText(telemetryPath, JsonSerializer.Serialize(runTelemetry));
+                    else
+                    {
+                        using (var stream = new FileStream(telemetryPath, FileMode.Open, FileAccess.ReadWrite))
+                        {
+                            stream.Seek(-1, SeekOrigin.End);
+                            byte[] appendBytes = System.Text.Encoding.UTF8.GetBytes("," + newStatJson + "]");
+                            stream.Write(appendBytes, 0, appendBytes.Length);
+                        }
+                    }
 
                     string ext = Config.compressRecordings ? ".json.gz" : ".json";
                     string filePath = Path.Combine(runFolder, $"Frame_{currentTick:D9}{ext}");
@@ -973,7 +747,6 @@ namespace NEMO
                     if (actionType == "startWorld")
                     {
                         if (Interlocked.CompareExchange(ref isGenerating, 1, 0) == 1) return;
-
                         Task.Run(() =>
                         {
                             try
@@ -986,6 +759,8 @@ namespace NEMO
                                     foreach (var n in s.brain.neurons) n.host = null;
                                 }
                                 activeWorld = null;
+                                activeTrainer = null;
+                                currentMode = "Petri";
 
                                 var genMsg = JsonSerializer.Serialize(new { @event = "worldGenerating" });
                                 foreach (var x in clients.ToList()) x.Send(genMsg);
@@ -1002,6 +777,64 @@ namespace NEMO
                                 Interlocked.Exchange(ref isGenerating, 0);
                             }
                         });
+                        return;
+                    }
+                    if (actionType == "copyToNewWorld")
+                    {
+                        if (Interlocked.CompareExchange(ref isGenerating, 1, 0) == 1) return;
+
+                        Task.Run(() =>
+                        {
+                            try
+                            {
+                                List<Genome> currentGenomes = new List<Genome>();
+                                if (activeWorld != null)
+                                {
+                                    currentGenomes.AddRange(activeWorld.creatures.Select(c => c.genome.Clone()));
+                                    currentGenomes.AddRange(activeWorld.pendingNewborns.Select(c => c.genome.Clone()));
+                                }
+
+                                foreach (var s in sims)
+                                {
+                                    if (s.trackedCreature != null) s.trackedCreature.trackedSlot = null;
+                                    s.trackedCreature = null;
+                                    foreach (var n in s.brain.neurons) n.host = null;
+                                }
+
+                                activeWorld = null;
+                                activeTrainer = null;
+                                currentMode = "Petri";
+
+                                var genMsg = JsonSerializer.Serialize(new { @event = "worldGenerating" });
+                                foreach (var x in clients.ToList()) x.Send(genMsg);
+
+                                World newWorld = new World(Config.worldWidth, Config.worldHeight, currentGenomes);
+
+                                activeWorld = newWorld;
+                                terrainVersion++;
+                                isPaused = false;
+                                BroadcastState();
+                            }
+                            finally
+                            {
+                                Interlocked.Exchange(ref isGenerating, 0);
+                            }
+                        });
+                        return;
+                    }
+                    if (actionType == "saveSnapshot")
+                    {
+                        if (activeWorld != null)
+                        {
+                            string snapId = "WRLD_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+                            RecordWorldState(activeWorld, snapId);
+
+                            NEMO.Log($"[WORLD] World state saved to archives as {snapId}", "#8fdfff", ConsoleColor.Cyan);
+
+                            var bankMsg = JsonSerializer.Serialize(new { action = "getWorldBank" });
+                            ProcessSocketMessage(bankMsg, sims, client);
+                        }
                         return;
                     }
                     if (actionType == "togglePause")
@@ -1066,20 +899,34 @@ namespace NEMO
                     {
                         string slot = root.GetProperty("slot").GetString()!;
                         string creatureId = root.GetProperty("creatureId").GetString()!;
-                        Console.WriteLine($"[LOAD] Slot: {slot} | Creature ID: {creatureId}");
+                        Console.WriteLine($"[EDITOR] Moved to slot: {slot} | Creature ID: {creatureId}");
 
-                        if (activeWorld != null)
+                        var loadSim = sims.FirstOrDefault(s => s.name == slot);
+                        if (loadSim != null)
                         {
-                            var c = activeWorld.creatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
-                            if (c != null)
+                            if (activeWorld != null)
                             {
-                                var loadSim = sims.FirstOrDefault(s => s.name == slot);
-                                if (loadSim != null)
+                                var c = activeWorld.creatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
+                                if (c != null)
                                 {
                                     loadSim.trackedCreature = c;
                                     loadSim.genome = c.genome;
                                     loadSim.brain = c.brain;
                                     loadSim.trackedCreature.trackedSlot = slot;
+
+                                    if (safeEditMode)
+                                        isPaused = true;
+                                    BroadcastState();
+                                }
+                            }
+                            else if (activeTrainer != null)
+                            {
+                                var tc = activeTrainer.activeCreatures.FirstOrDefault(x => x.ID.ToString() == creatureId);
+                                if (tc != null)
+                                {
+                                    loadSim.trackedCreature = null;
+                                    loadSim.genome = tc.genome.Clone();
+                                    RebuildLiveBrain(loadSim);
 
                                     if (safeEditMode)
                                         isPaused = true;
@@ -1524,10 +1371,16 @@ namespace NEMO
                             else if (criteria == "meat") champ = activeWorld.creatures.OrderByDescending(c => c.meatsEaten).First();
                             else if (criteria == "plants") champ = activeWorld.creatures.OrderByDescending(c => c.plantsEaten).First();
                             else if (criteria == "age") champ = activeWorld.creatures.OrderByDescending(c => c.age).First();
+                            else if (criteria == "sig")
+                            {
+                                champ = activeWorld.creatures
+                                    .OrderByDescending(c => c.survivalRatio)
+                                    .ThenByDescending(c => c.generation).First();
+                            }
                             else
                             {
                                 champ = activeWorld.creatures
-                                    .OrderByDescending(c => ((c.age * 0.5f) + (c.lineageLifespan * 0.5f)) / Math.Max(1f, c.startingEnergy / Math.Max(0.001f, c.GetBaseTickCost())))
+                                    .OrderByDescending(c => c.ceqScore)
                                     .ThenByDescending(c => c.generation).First();
                             }
 
@@ -1701,17 +1554,21 @@ namespace NEMO
                     if (actionType == "loadFrame")
                     {
                         string runID = root.GetProperty("runID").GetString()!;
-                        int tick = root.GetProperty("tick").GetInt32();
+                        long tick = root.GetProperty("tick").GetInt32(); // Cast to long
+
+                        Interlocked.Exchange(ref requestedPlaybackTick, tick);
 
                         string runFolder = Path.Combine(Config.RecordingsFolder, runID);
                         string nemoPath = Path.Combine(runFolder, $"Frame_{tick:D9}.nemo");
-                        string jsonPath = Path.Combine(runFolder, $"Frame_{tick:D9}.json"); 
+                        string jsonPath = Path.Combine(runFolder, $"Frame_{tick:D9}.json");
                         string gzPath = Path.Combine(runFolder, $"Frame_{tick:D9}.json.gz");
 
                         _ = Task.Run(async () =>
                         {
                             try
                             {
+                                if (Interlocked.Read(ref requestedPlaybackTick) != tick) return;
+
                                 string rawJson = null;
 
                                 if (File.Exists(nemoPath))
@@ -1740,6 +1597,8 @@ namespace NEMO
                                     }
                                 }
 
+                                if (Interlocked.Read(ref requestedPlaybackTick) != tick) return;
+
                                 if (!string.IsNullOrEmpty(rawJson))
                                 {
                                     string payload = $"{{\"event\":\"playbackFrame\",\"frameData\":{rawJson}}}";
@@ -1747,12 +1606,12 @@ namespace NEMO
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"[PLAYBACK WARNING] Frame {tick} not found.");
+                                    Console.WriteLine($"[PLAYBACK] Frame {tick} not found.");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine($"[PLAYBACK ERROR] Frame {tick}: {ex.Message}");
+                                Console.WriteLine($"[PLAYBACK] Error at Frame {tick}: {ex.Message}");
                             }
                         });
 
@@ -1997,6 +1856,157 @@ namespace NEMO
                         }
                         return;
                     }
+                    if(actionType == "startTrainer")
+                    {
+                        if (Interlocked.CompareExchange(ref isGenerating, 1, 0) == 1) return;
+
+                        var filesArray = root.TryGetProperty("files", out var fElement)
+                            ? fElement.EnumerateArray().Select(x => x.GetString()!).ToList()
+                            : new List<string>();
+
+                        Task.Run(() =>
+                        {
+                            try
+                            {
+                                foreach (var s in sims)
+                                {
+                                    if (s.trackedCreature != null) s.trackedCreature.trackedSlot = null;
+                                    s.trackedCreature = null;
+                                    foreach (var n in s.brain.neurons) n.host = null;
+                                }
+
+                                activeWorld = null;
+                                currentMode = "Trainer";
+
+                                var genMsg = JsonSerializer.Serialize(new { @event = "worldGenerating" });
+                                foreach (var x in clients.ToList()) x.Send(genMsg);
+
+                                TWorld newTrainer = new TWorld(Config.TworldWidth, Config.TworldHeight);
+
+                                List<Genome> initPool = new List<Genome>();
+                                if (filesArray.Count > 0)
+                                {
+                                    List<Genome> loadedGenomes = new List<Genome>();
+                                    foreach (var f in filesArray)
+                                    {
+                                        string path = Path.Combine(Config.SavedGenomesFolder, f);
+                                        if (File.Exists(path))
+                                        {
+                                            Genome? g = LoadGenomeFromDisk(File.ReadAllText(path));
+                                            if (g != null) loadedGenomes.Add(g);
+                                        }
+                                    }
+
+                                    for (int i = 0; i < Config.TnumActiveCreatures; i++)
+                                    {
+                                        if (loadedGenomes.Count > 0)
+                                        {
+                                            Genome baseGenome = loadedGenomes[TWorld.rand.Next(loadedGenomes.Count)].Clone();
+                                            initPool.Add(GeneTools.MutateGenome(baseGenome));
+                                        }
+                                        else initPool.Add(GeneTools.GenerateGenome());
+                                    }
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < Config.TnumActiveCreatures; i++)
+                                        initPool.Add(GeneTools.GenerateGenome());
+                                }
+
+                                newTrainer.ScatterActive(Config.TnumActiveCreatures, initPool);
+                                newTrainer.ScatterBait(Config.TnumBaitCreatures);
+
+                                activeTrainer = newTrainer;
+                                isPaused = false;
+                                BroadcastState();
+                            }
+                            finally
+                            {
+                                Interlocked.Exchange(ref isGenerating, 0);
+                            }
+                        });
+                        return;
+                    }
+                    if (actionType == "updateTrainerWeights")
+                    {
+                        if (activeTrainer != null)
+                        {
+                            activeTrainer.weightKills = (float)root.GetProperty("kills").GetDecimal();
+                            activeTrainer.weightEfficiency = (float)root.GetProperty("efficiency").GetDecimal();
+                            activeTrainer.weightSurvival = (float)root.GetProperty("survival").GetDecimal();
+                            activeTrainer.weightCEQ = (float)root.GetProperty("ceq").GetDecimal();
+
+                            NEMO.Log($"[TWORLD] Weights -> Kills: {activeTrainer.weightKills}, Efficiency: {activeTrainer.weightEfficiency}, Survival: {activeTrainer.weightSurvival}, CEQ: {activeTrainer.weightCEQ}", "#ff99cc", ConsoleColor.Magenta);
+                        }
+                        return;
+                    }
+                    if (actionType == "findTrainerChampion")
+                    {
+                        if (activeTrainer != null)
+                        {
+                            var allCandidates = activeTrainer.activeCreatures.Concat(activeTrainer.deadActiveCreatures).ToList();
+                            if (allCandidates.Count > 0)
+                            {
+                                var best = allCandidates.OrderByDescending(c => c.trainerScore).First();
+                                trackedCreatureId = best.ID.ToString();
+                                isPaused = true;
+                                client.Send(JsonSerializer.Serialize(new { @event = "champFound", id = trackedCreatureId }));
+                                BroadcastState();
+                            }
+                        }
+                        return;
+                    }
+                    if (actionType == "validateCondition")
+                    {
+                        string code = root.GetProperty("code").GetString()!;
+                        try
+                        {
+                            var script = CSharpScript.Create<bool>(code, ScriptOptions.Default.WithImports("System", "System.Math"), typeof(TVars));
+                            var diagnostics = script.Compile();
+
+                            var errors = diagnostics.Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error).ToList();
+                            if (errors.Count > 0)
+                            {
+                                string errStr = string.Join("\n", errors.Select(e => e.GetMessage()));
+                                client.Send(JsonSerializer.Serialize(new { @event = "conditionValidation", success = false, message = errStr }));
+                            }
+                            else
+                            {
+                                client.Send(JsonSerializer.Serialize(new { @event = "conditionValidation", success = true, message = "Compilation Successful." }));
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            client.Send(JsonSerializer.Serialize(new { @event = "conditionValidation", success = false, message = ex.Message }));
+                        }
+                        return;
+                    }
+                    if (actionType == "applyCondition")
+                    {
+                        string code = root.GetProperty("code").GetString()!;
+                        if (activeTrainer != null)
+                        {
+                            if (string.IsNullOrWhiteSpace(code))
+                            {
+                                activeTrainer.customCondition = null;
+                                NEMO.Log("[TRAINER] Custom condition removed.", "palegreen", ConsoleColor.Green);
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    var script = CSharpScript.Create<bool>(code, ScriptOptions.Default.WithImports("System", "System.Math"), typeof(TVars));
+                                    activeTrainer.customCondition = script.CreateDelegate();
+                                    NEMO.Log("[TRAINER] Custom condition compiled successfully.", "palegreen", ConsoleColor.Green);
+                                }
+                                catch (Exception ex)
+                                {
+                                    NEMO.Log($"[TRAINER] Failed to condition: {ex.Message}", "tomato", ConsoleColor.Red);
+                                }
+                            }
+                        }
+                        return;
+                    }
                 }
 
                 EditorAction? action = JsonSerializer.Deserialize<EditorAction>(
@@ -2139,6 +2149,259 @@ namespace NEMO
         public static float Remap(float value, float from1, float to1, float from2, float to2)
         {
             return (value - from1) / (to1 - from1) * (to2 - from2) + from2;
+        }
+
+        public static void StartServers()
+        {
+            Process? browserProcess = null;
+
+            void LaunchUI()
+            {
+                try
+                {
+                    if (browserProcess != null && !browserProcess.HasExited)
+                    {
+                        browserProcess.Kill();
+                    }
+                }
+                catch { }
+
+                try { browserProcess = Process.Start(new ProcessStartInfo { FileName = "chrome", Arguments = "--app=http://localhost:8000", UseShellExecute = true }); }
+                catch
+                {
+                    try { browserProcess = Process.Start(new ProcessStartInfo { FileName = "msedge", Arguments = "--app=http://localhost:8000", UseShellExecute = true }); }
+                    catch { browserProcess = Process.Start(new ProcessStartInfo { FileName = "http://localhost:8000", UseShellExecute = true }); }
+                }
+            }
+
+            if (!Config.hideConsole)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine(@"
+    _   _  _____ __  __  ____  
+   | \ | || ____|  \/  |/ __ \ 
+   |  \| ||  _| | |\/| | |  | |
+   | |\  || |___| |  | | |__| |
+   |_| \_||_____|_|  |_|\____/  v1.2
+                                ");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine("==================================================");
+                Console.WriteLine(" PHYSICS ENGINE RUNNING");
+                Console.WriteLine("--------------------------------------------------");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine(" Controls:");
+                Console.WriteLine(" [W] - Open / Reopen Web UI");
+                Console.WriteLine(" [X] - Safely Quit Server");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine("==================================================\n");
+                Console.ResetColor();
+
+                Task.Run(() =>
+                {
+                    while (true)
+                    {
+                        if (!Config.hideConsole && Console.KeyAvailable)
+                        {
+                            var key = Console.ReadKey(true).Key;
+                            if (key == ConsoleKey.W) LaunchUI();
+                            if (key == ConsoleKey.X) Environment.Exit(0);
+                        }
+                        Thread.Sleep(50);
+                    }
+                });
+            }
+
+            Task.Run(() =>
+            {
+                var listener = new System.Net.HttpListener();
+
+                listener.Prefixes.Add("http://localhost:8000/");
+                listener.Prefixes.Add("http://127.0.0.1:8000/");
+
+                if (Config.customIPs != null)
+                {
+                    foreach (string ip in Config.customIPs)
+                    {
+                        if (string.IsNullOrWhiteSpace(ip)) continue;
+
+                        string prefix = ip.Trim();
+                        if (!prefix.StartsWith("http://") && !prefix.StartsWith("https://"))
+                            prefix = "http://" + prefix;
+
+                        if (prefix.LastIndexOf(':') <= 5)
+                            prefix += ":8000";
+
+                        if (!prefix.EndsWith("/"))
+                            prefix += "/";
+
+                        listener.Prefixes.Add(prefix);
+                    }
+                }
+
+                bool httpStarted = false;
+                bool fallbackAttempted = false;
+
+                while (!httpStarted)
+                {
+                    try
+                    {
+                        listener.Start();
+                        httpStarted = true;
+                        if (!Config.hideConsole) NEMO.Log("[Network] Web Server running on port 8000", "palegreen", ConsoleColor.Green);
+                        LaunchUI();
+                    }
+                    catch (System.Net.HttpListenerException e) when (e.ErrorCode == 5 && !fallbackAttempted)
+                    {
+                        fallbackAttempted = true;
+                        NEMO.Log("[Network] Admin rights missing for custom network IPs. Falling back to localhost only...", "#ffcc00", ConsoleColor.Yellow);
+
+                        try { listener.Close(); } catch { }
+
+                        listener = new System.Net.HttpListener();
+                        listener.Prefixes.Add("http://localhost:8000/");
+                        listener.Prefixes.Add("http://127.0.0.1:8000/");
+                    }
+                    catch (Exception e)
+                    {
+                        NEMO.Log($"[Network] Waiting for port 8000 to free... ({e.Message})", "tomato", ConsoleColor.Red);
+                        Thread.Sleep(1000);
+                    }
+                }
+
+                while (true)
+                {
+                    try
+                    {
+                        var context = listener.GetContext();
+                        string path = context.Request.Url.AbsolutePath;
+                        if (path == "/") path = "/index.html";
+
+                        string webDir = Config.WebFolder;
+                        string fullPath = Path.GetFullPath(Path.Combine(webDir, path.TrimStart('/')));
+
+                        bool isRootFile = false;
+                        if (path.Equals("/Config.json", StringComparison.OrdinalIgnoreCase) ||
+                            path.Equals("/neuronDefs.json", StringComparison.OrdinalIgnoreCase) ||
+                            path.Equals("/dataDefs.json", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string rootPath = Path.Combine(Config.projectDirectory, path.TrimStart('/'));
+                            if (File.Exists(rootPath))
+                            {
+                                fullPath = rootPath;
+                                isRootFile = true;
+                            }
+                        }
+
+                        if (File.Exists(fullPath) && (fullPath.StartsWith(webDir) || isRootFile))
+                        {
+                            byte[] buffer = File.ReadAllBytes(fullPath);
+                            context.Response.ContentLength64 = buffer.Length;
+                            if (path.EndsWith(".html")) context.Response.ContentType = "text/html";
+                            else if (path.EndsWith(".js")) context.Response.ContentType = "application/javascript";
+                            else if (path.EndsWith(".css")) context.Response.ContentType = "text/css";
+                            else if (path.EndsWith(".png")) context.Response.ContentType = "image/png";
+                            else if (path.EndsWith(".json")) context.Response.ContentType = "application/json";
+
+                            context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+                        }
+                        else context.Response.StatusCode = 404;
+
+                        context.Response.Close();
+                    }
+                    catch { }
+                }
+            });
+
+            string GetToolPath(string toolName)
+            {
+                string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, toolName);
+                if (File.Exists(localPath)) return localPath;
+
+                string devPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "Tools", toolName));
+                if (File.Exists(devPath)) return devPath;
+
+                return "";
+            }
+
+            string caddyPath = GetToolPath("caddy.exe");
+            Process? caddyServer = null;
+            if (!string.IsNullOrEmpty(caddyPath))
+            {
+                caddyServer = new Process();
+                caddyServer.StartInfo.FileName = caddyPath;
+                caddyServer.StartInfo.Arguments = "run";
+                caddyServer.StartInfo.UseShellExecute = false;
+                caddyServer.StartInfo.CreateNoWindow = true;
+                caddyServer.StartInfo.WorkingDirectory = Path.GetDirectoryName(caddyPath);
+
+                try { caddyServer.Start(); Console.ForegroundColor = ConsoleColor.Green; Console.WriteLine("[Caddy] Running on 8090"); Console.ResetColor(); } catch { }
+            }
+
+            string zrokPath = GetToolPath("zrok.exe");
+            if (string.IsNullOrEmpty(zrokPath)) zrokPath = GetToolPath("zrok2.exe");
+
+            Process? zrokServer = null;
+            if (!string.IsNullOrEmpty(zrokPath) && !string.IsNullOrEmpty(caddyPath))
+            {
+                zrokServer = new Process();
+                zrokServer.StartInfo.FileName = zrokPath;
+                zrokServer.StartInfo.Arguments = "share public http://localhost:8090 -n public:nemo --backend-mode proxy";
+                zrokServer.StartInfo.UseShellExecute = false;
+                zrokServer.StartInfo.CreateNoWindow = true;
+                zrokServer.StartInfo.WorkingDirectory = Path.GetDirectoryName(zrokPath);
+
+                try { zrokServer.Start(); Console.ForegroundColor = ConsoleColor.Magenta; Console.WriteLine("[Zrok] Tunnel running."); Console.ResetColor(); } catch { }
+            }
+
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                NEMO.Log("[SHUTDOWN] Initiating shutdown...", "tomato", ConsoleColor.Red);
+                try { if (caddyServer != null && !caddyServer.HasExited) caddyServer.Kill(); } catch { }
+                try { if (zrokServer != null && !zrokServer.HasExited) zrokServer.Kill(); } catch { }
+                try { if (browserProcess != null && !browserProcess.HasExited) browserProcess.Kill(); } catch { }
+            };
+
+            var server = new WebSocketServer("ws://0.0.0.0:8181");
+            bool socketStarted = false;
+            while (!socketStarted)
+            {
+                try
+                {
+                    server.Start(socket =>
+                    {
+                        socket.OnOpen = () =>
+                        {
+                            clients.Add(socket);
+                            hasUIConnectedOnce = true;
+                            lastBroadcastTerrainVersion = -1;
+                            NEMO.Log($"[Socket] UI Connected. Clients: {clients.Count}", "palegreen", ConsoleColor.Green);
+                            BroadcastState();
+                        };
+
+                        socket.OnClose = () =>
+                        {
+                            clients.Remove(socket);
+                            if (!Config.hideConsole) NEMO.Log($"[Socket] UI Disconnected. Clients: {clients.Count}", "tomato", ConsoleColor.Yellow);
+
+                            if (clients.Count == 0 && Config.hideConsole && hasUIConnectedOnce)
+                            {
+                                Task.Delay(5000).ContinueWith(_ => {
+                                    if (clients.Count == 0) Environment.Exit(0);
+                                });
+                            }
+                        };
+
+                        socket.OnMessage = message => { ProcessSocketMessage(message, sims, socket); };
+                    });
+
+                    socketStarted = true;
+                }
+                catch (Exception ex)
+                {
+                    NEMO.Log($"[Socket] Waiting for port 8181 to release... {ex}", "tomato", ConsoleColor.Red);
+                    Thread.Sleep(1000);
+                }
+            }
         }
     }
 

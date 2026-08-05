@@ -159,9 +159,9 @@
 
         const isHttps = window.location.protocol === "https:";
         const wsProtocol = isHttps ? "wss:" : "ws:";
-        
+
         let wsAddress;
-        if (window.location.port === "8000") {
+        if (window.location.port === "8000" || window.location.port === "") {
             wsAddress = `${wsProtocol}//${window.location.hostname}:8181`;
         } else {
             wsAddress = `${wsProtocol}//${window.location.host}/ws`;
@@ -475,15 +475,16 @@
 
             networks.push({ name, data, network, box, graphDiv, deadOverlay });
         }
-        async function loadConfig()  {
+        async function loadConfig() {
             const response = await fetch("Config.json");
-            runtimeConfig = await response.json();
+            const text = await response.text();
+
+            const cleanText = text.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+            runtimeConfig = JSON.parse(cleanText);
             console.log(runtimeConfig);
         }
 
-        async function start() {
-            await loadConfig();
-
+        function start() {
             for (const name of graphNames) {
                 createGraphContainer(name);
             }

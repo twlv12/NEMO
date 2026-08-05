@@ -1,0 +1,577 @@
+{
+  "genes": [
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Energy",
+        "ID": 108,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Attack",
+        "ID": 42,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 33996,
+      "disabled": true,
+      "graphID": 0
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Constant",
+        "ID": 77,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "EmitSignal",
+        "ID": 96,
+        "data": 1
+      },
+      "slot": 1,
+      "weight": 63259,
+      "disabled": true,
+      "graphID": 4
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionBlockage",
+        "ID": 101,
+        "data": 26212
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Attack",
+        "ID": 85,
+        "data": 0
+      },
+      "slot": 1,
+      "weight": 52397,
+      "disabled": false,
+      "graphID": 5
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionProximity",
+        "ID": 67,
+        "data": 15242
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Pulse",
+        "ID": 109,
+        "data": 15249
+      },
+      "slot": 1,
+      "weight": 1462,
+      "disabled": false,
+      "graphID": 6
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionBlockage",
+        "ID": 7,
+        "data": 53991
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 0,
+        "data": 26
+      },
+      "slot": 0,
+      "weight": 17574,
+      "disabled": false,
+      "graphID": 7
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionBlockage",
+        "ID": 7,
+        "data": 53991
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Divide",
+        "ID": 32,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 36908,
+      "disabled": false,
+      "graphID": 10
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionTrait",
+        "ID": 107,
+        "data": 31896
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 75,
+        "data": 3
+      },
+      "slot": 1,
+      "weight": 5846,
+      "disabled": false,
+      "graphID": 16
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Constant",
+        "ID": 53,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 0,
+        "data": 26
+      },
+      "slot": 1,
+      "weight": 60755,
+      "disabled": false,
+      "graphID": 19
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Transistor",
+        "ID": 83,
+        "data": 2
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Consume",
+        "ID": 102,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 58673,
+      "disabled": false,
+      "graphID": 23
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Transistor",
+        "ID": 83,
+        "data": 2
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Pulse",
+        "ID": 99,
+        "data": 256
+      },
+      "slot": 1,
+      "weight": 56634,
+      "disabled": false,
+      "graphID": 27
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Constant",
+        "ID": 53,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Amplify",
+        "ID": 80,
+        "data": 42
+      },
+      "slot": 0,
+      "weight": 3714,
+      "disabled": false,
+      "graphID": 31
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 103,
+        "data": 128
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Move",
+        "ID": 95,
+        "data": 287
+      },
+      "slot": 0,
+      "weight": 7153,
+      "disabled": true,
+      "graphID": 32
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionTrait",
+        "ID": 4,
+        "data": 13971
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Divide",
+        "ID": 32,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 15329,
+      "disabled": false,
+      "graphID": 33
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Divide",
+        "ID": 97,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Pulse",
+        "ID": 99,
+        "data": 256
+      },
+      "slot": 1,
+      "weight": 5583,
+      "disabled": true,
+      "graphID": 35
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Density",
+        "ID": 104,
+        "data": 90
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Amplify",
+        "ID": 80,
+        "data": 42
+      },
+      "slot": 0,
+      "weight": 38463,
+      "disabled": true,
+      "graphID": 39
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Divide",
+        "ID": 32,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 0,
+        "data": 26
+      },
+      "slot": 1,
+      "weight": 2118,
+      "disabled": false,
+      "graphID": 43
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionTrait",
+        "ID": 4,
+        "data": 13971
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Attack",
+        "ID": 42,
+        "data": 0
+      },
+      "slot": 1,
+      "weight": 15929,
+      "disabled": true,
+      "graphID": 45
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 84,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Threshold",
+        "ID": 84,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 22720,
+      "disabled": true,
+      "graphID": 47
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Transistor",
+        "ID": 83,
+        "data": 2
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Rotate",
+        "ID": 75,
+        "data": 3
+      },
+      "slot": 0,
+      "weight": 33081,
+      "disabled": false,
+      "graphID": 49
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Transistor",
+        "ID": 83,
+        "data": 2
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Attack",
+        "ID": 105,
+        "data": 0
+      },
+      "slot": 0,
+      "weight": 9085,
+      "disabled": true,
+      "graphID": 53
+    },
+    {
+      "src": {
+        "type": "Math",
+        "func": "Divide",
+        "ID": 32,
+        "data": 0
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Consume",
+        "ID": 106,
+        "data": 0
+      },
+      "slot": 1,
+      "weight": 52004,
+      "disabled": false,
+      "graphID": 55
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "VisionProximity",
+        "ID": 67,
+        "data": 15242
+      },
+      "tgt": {
+        "type": "Action",
+        "func": "Move",
+        "ID": 88,
+        "data": 520
+      },
+      "slot": 0,
+      "weight": 65326,
+      "disabled": false,
+      "graphID": 57
+    },
+    {
+      "src": {
+        "type": "Sensor",
+        "func": "Gradient",
+        "ID": 72,
+        "data": 1
+      },
+      "tgt": {
+        "type": "Math",
+        "func": "Divide",
+        "ID": 97,
+        "data": 0
+      },
+      "slot": 1,
+      "weight": 35553,
+      "disabled": false,
+      "graphID": 59
+    }
+  ],
+  "phenotypes": {
+    "ReproductionThreshold": {
+      "value": 0.3958801,
+      "min": 0.1,
+      "max": 0.9,
+      "mutateSensitivity": 0.5
+    },
+    "OffspringInvestment": {
+      "value": 0.18775165,
+      "min": 0.1,
+      "max": 0.9,
+      "mutateSensitivity": 1
+    },
+    "MutationVolatility": {
+      "value": 0.708965,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 0.5
+    },
+    "GestationPeriod": {
+      "value": 0.54688656,
+      "min": 0.25,
+      "max": 4,
+      "mutateSensitivity": 0.75
+    },
+    "CarnivoryBias": {
+      "value": 1,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 20
+    },
+    "MetabolicRate": {
+      "value": 1.0141097,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 0.5
+    },
+    "RestingEfficiency": {
+      "value": 0.589756,
+      "min": 0.1,
+      "max": 2,
+      "mutateSensitivity": 1
+    },
+    "ScavengerTolerance": {
+      "value": 0.36231378,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "BodyMass": {
+      "value": 4.5761924,
+      "min": 0.2,
+      "max": 5,
+      "mutateSensitivity": 0.75
+    },
+    "ArmorDensity": {
+      "value": 0.22645476,
+      "min": 0,
+      "max": 0.9,
+      "mutateSensitivity": 0.5
+    },
+    "SpikeCoating": {
+      "value": 0.7485379,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "Camouflage": {
+      "value": 0.0033485065,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "ToxicCorpse": {
+      "value": 0.5673514,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "FastTwitchMuscle": {
+      "value": 2.6389318,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "RotationalAgility": {
+      "value": 2.7167919,
+      "min": 0.2,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "JitterEfficiency": {
+      "value": 1.9676198,
+      "min": 0.1,
+      "max": 2,
+      "mutateSensitivity": 1
+    },
+    "VisionAcuity": {
+      "value": 1.8299539,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 0.5
+    },
+    "FovSpecialization": {
+      "value": 2.4231806,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "OlfactorySensitivity": {
+      "value": 2.7223275,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 1
+    },
+    "BrainSize": {
+      "value": 0.5470327,
+      "min": 0.5,
+      "max": 3,
+      "mutateSensitivity": 0.1
+    },
+    "Lethality": {
+      "value": 4.905792,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 1
+    },
+    "SocialCohesion": {
+      "value": 0.3240401,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "PheromoneVolume": {
+      "value": 1.9747528,
+      "min": 0.1,
+      "max": 5,
+      "mutateSensitivity": 1
+    },
+    "ChemicalVolatility": {
+      "value": 0.25045294,
+      "min": 0.1,
+      "max": 3,
+      "mutateSensitivity": 1
+    },
+    "Parasitism": {
+      "value": 0.8657315,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    },
+    "Symbiosis": {
+      "value": 0.26111853,
+      "min": 0,
+      "max": 1,
+      "mutateSensitivity": 1
+    }
+  },
+  "nextGeneID": 62
+}
